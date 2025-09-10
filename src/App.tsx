@@ -13,6 +13,7 @@ import { CommunityFeed } from '@/components/CommunityFeed'
 import { ReportProblem } from '@/components/ReportProblem'
 import { AboutGuaira } from '@/components/AboutGuaira'
 import { AdminPanel } from '@/components/AdminPanel'
+import { BusinessRegistration } from '@/components/BusinessRegistration'
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
@@ -137,12 +138,96 @@ function App() {
               </Card>
             </section>
 
+            {/* Business Registration */}
+            <section className="container mx-auto px-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="border-accent/30 bg-accent/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Building className="w-5 h-5 text-accent" />
+                      Cadastre sua empresa
+                    </CardTitle>
+                    <CardDescription>
+                      Divulgue seu negócio gratuitamente no portal da cidade
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
+                        <span>Divulgação gratuita</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
+                        <span>Localização no mapa</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
+                        <span>Contato direto via WhatsApp</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
+                        <span>Galeria de fotos</span>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      variant="default"
+                      onClick={() => setActiveTab('cadastro-empresa')}
+                    >
+                      Cadastrar Empresa
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-secondary/30 bg-secondary/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <MessageCircle className="w-5 h-5 text-secondary" />
+                      Participe do mural
+                    </CardTitle>
+                    <CardDescription>
+                      Compartilhe novidades e conecte-se com a comunidade
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>
+                        <span>Publique fotos e vídeos</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>
+                        <span>Compartilhe eventos locais</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>
+                        <span>Conecte-se com vizinhos</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>
+                        <span>Moderação segura</span>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      variant="secondary"
+                      onClick={() => setActiveTab('mural')}
+                    >
+                      Ver Mural
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+
             <AboutGuaira />
             <CommunityFeed isPreview />
           </div>
         )}
 
         {activeTab === 'empresas' && <CompanyDirectory />}
+        {activeTab === 'cadastro-empresa' && <BusinessRegistration />}
         {activeTab === 'mural' && <CommunityFeed />}
         {activeTab === 'problemas' && <ReportProblem />}
         {activeTab === 'sobre' && <AboutGuaira />}
