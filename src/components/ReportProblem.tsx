@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Warning, MapPin, Phone, Camera, CheckCircle, Clock, ArrowRight } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
+import { MapLocationPicker } from '@/components/MapLocationPicker'
 
 interface Issue {
   id: string
@@ -99,10 +100,30 @@ function ReportForm({ onSubmit }: ReportFormProps) {
     phone: '',
     address: '',
     neighborhood: '',
-    isAnonymous: false
+    isAnonymous: false,
+    coordinates: { lat: -20.3186, lng: -48.3103 } // Default to Guaíra center
   })
 
   const [selectedImages, setSelectedImages] = useState<string[]>([])
+
+  const handleLocationSelect = (location: { lat: number; lng: number; address?: string }) => {
+    setFormData(prev => ({
+      ...prev,
+      coordinates: { lat: location.lat, lng: location.lng }
+    }))
+    
+    if (location.address) {
+      // Try to extract neighborhood and address from the selected location
+      const addressParts = location.address.split(',')
+      if (addressParts.length >= 2) {
+        setFormData(prev => ({
+          ...prev,
+          address: location.address || prev.address,
+          neighborhood: addressParts[addressParts.length - 2]?.trim() || prev.neighborhood
+        }))
+      }
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,7 +139,7 @@ function ReportForm({ onSubmit }: ReportFormProps) {
       status: 'received',
       createdAt: new Date().toISOString(),
       protocol,
-      coordinates: { lat: -20.3186, lng: -48.3103 } // Guaíra coordinates
+      coordinates: formData.coordinates
     }
 
     onSubmit(newIssue)
@@ -133,7 +154,8 @@ function ReportForm({ onSubmit }: ReportFormProps) {
       phone: '',
       address: '',
       neighborhood: '',
-      isAnonymous: false
+      isAnonymous: false,
+      coordinates: { lat: -20.3186, lng: -48.3103 }
     })
     setSelectedImages([])
   }
@@ -222,18 +244,25 @@ function ReportForm({ onSubmit }: ReportFormProps) {
               </div>
             </div>
 
+            {/* Map Location Picker */}
+            <div className="space-y-2">
+              <Label>Localização Exata no Mapa</Label>
+              <p className="text-sm text-muted-foreground">
+                Marque no mapa o local exato onde está o problema para facilitar a identificação
+              </p>
+              <MapLocationPicker
+                onLocationSelect={handleLocationSelect}
+                initialLocation={formData.coordinates}
+                initialAddress={formData.address}
+                height="300px"
+              />
+            </div>
+
             <Card className="bg-muted/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="w-4 h-4" />
-                  <span>Clique no mapa para marcar a localização exata (opcional)</span>
-                </div>
-                <div className="mt-2 aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Mapa interativo</p>
-                    <p className="text-xs text-muted-foreground">Funcionalidade em desenvolvimento</p>
-                  </div>
+                  <span>Dica: A localização no mapa ajuda muito na identificação e resolução do problema</span>
                 </div>
               </CardContent>
             </Card>

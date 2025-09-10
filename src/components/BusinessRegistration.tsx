@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Building, MapPin, Phone, Mail, Upload, Check } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
 import { toast } from 'sonner'
+import { MapLocationPicker } from '@/components/MapLocationPicker'
 
 export function BusinessRegistration() {
   const [companies, setCompanies] = useKV('companies', [])
@@ -30,7 +31,8 @@ export function BusinessRegistration() {
     website: '',
     instagram: '',
     facebook: '',
-    selectedCategories: [] as string[]
+    selectedCategories: [] as string[],
+    coordinates: { lat: -20.3186, lng: -48.3103 } // Default to Guaíra center
   })
 
   const handleInputChange = (field: string, value: string) => {
@@ -44,6 +46,25 @@ export function BusinessRegistration() {
         ? prev.selectedCategories.filter(id => id !== categoryId)
         : [...prev.selectedCategories, categoryId]
     }))
+  }
+
+  const handleLocationSelect = (location: { lat: number; lng: number; address?: string }) => {
+    setFormData(prev => ({
+      ...prev,
+      coordinates: { lat: location.lat, lng: location.lng }
+    }))
+    
+    if (location.address) {
+      // Try to extract neighborhood and address from the selected location
+      const addressParts = location.address.split(',')
+      if (addressParts.length >= 2) {
+        setFormData(prev => ({
+          ...prev,
+          address: location.address || prev.address,
+          neighborhood: addressParts[addressParts.length - 2]?.trim() || prev.neighborhood
+        }))
+      }
+    }
   }
 
   const handleCepChange = async (cep: string) => {
@@ -115,7 +136,8 @@ export function BusinessRegistration() {
         website: '',
         instagram: '',
         facebook: '',
-        selectedCategories: []
+        selectedCategories: [],
+        coordinates: { lat: -20.3186, lng: -48.3103 }
       })
 
     } catch (error) {
@@ -300,6 +322,20 @@ export function BusinessRegistration() {
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   placeholder="Rua Principal, 123, Centro"
+                />
+              </div>
+
+              {/* Map Location Picker */}
+              <div className="space-y-2">
+                <Label>Localização no Mapa</Label>
+                <p className="text-sm text-muted-foreground">
+                  Marque a localização exata da sua empresa no mapa para facilitar que os clientes te encontrem
+                </p>
+                <MapLocationPicker
+                  onLocationSelect={handleLocationSelect}
+                  initialLocation={formData.coordinates}
+                  initialAddress={formData.address}
+                  height="300px"
                 />
               </div>
             </CardContent>

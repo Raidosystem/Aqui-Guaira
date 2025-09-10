@@ -29,6 +29,7 @@ interface Company {
   website?: string
   status: 'approved' | 'pending' | 'rejected'
   createdAt: string
+  coordinates?: { lat: number; lng: number }
 }
 
 interface Category {
@@ -128,7 +129,8 @@ export function useInitializeData() {
           hours: '24 horas',
           website: 'https://farmacia-popular.com.br',
           status: 'pending',
-          createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() // 3 hours ago
+          createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
+          coordinates: { lat: -20.3180, lng: -48.3100 }
         },
         {
           id: '2',
@@ -141,7 +143,8 @@ export function useInitializeData() {
           categories: ['restaurantes'],
           hours: '11:00 às 14:00',
           status: 'approved',
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days ago
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+          coordinates: { lat: -20.3190, lng: -48.3110 }
         },
         {
           id: '3',
@@ -153,7 +156,8 @@ export function useInitializeData() {
           categories: ['mecanicas', 'servicos'],
           hours: '08:00 às 18:00',
           status: 'approved',
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days ago
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+          coordinates: { lat: -20.3200, lng: -48.3120 }
         },
         {
           id: '4',
@@ -165,7 +169,8 @@ export function useInitializeData() {
           categories: ['comercio'],
           hours: 'Nunca abre',
           status: 'pending',
-          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() // 1 hour ago
+          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
+          coordinates: { lat: -20.3170, lng: -48.3090 }
         }
       ]
       setCompanies(sampleCompanies)

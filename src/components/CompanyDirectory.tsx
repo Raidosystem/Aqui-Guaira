@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Building, Phone, MapPin, Clock, ExternalLink, Search, WhatsappLogo } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
+import { MapDisplay } from '@/components/MapDisplay'
 
 interface Company {
   id: string
@@ -21,6 +22,7 @@ interface Company {
   logoUrl?: string
   website?: string
   status: 'approved' | 'pending' | 'rejected'
+  coordinates?: { lat: number; lng: number }
 }
 
 interface Category {
@@ -220,7 +222,7 @@ function CompanyCard({ company, getCategoryColor, getCategoryName }: CompanyCard
         </Card>
       </DialogTrigger>
 
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start gap-3 mb-4">
             {company.logoUrl ? (
@@ -300,6 +302,19 @@ function CompanyCard({ company, getCategoryColor, getCategoryName }: CompanyCard
                 Visitar site
               </a>
             </Button>
+          )}
+
+          {/* Location Map */}
+          {company.coordinates && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Localização</h4>
+              <MapDisplay
+                location={company.coordinates}
+                title={company.name}
+                address={company.address}
+                height="200px"
+              />
+            </div>
           )}
         </div>
       </DialogContent>
