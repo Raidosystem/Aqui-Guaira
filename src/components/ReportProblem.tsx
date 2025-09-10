@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Warning, MapPin, Phone, Camera, CheckCircle, Clock, ArrowRight } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
 import { MapLocationPicker } from '@/components/MapLocationPicker'
+import { DirectionsButton } from '@/components/DirectionsButton'
 
 interface Issue {
   id: string
@@ -420,11 +421,23 @@ function IssueCard({ issue }: IssueCardProps) {
       <CardContent>
         <p className="text-sm mb-4">{issue.description}</p>
         
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+        <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground mb-4">
           <div className="flex items-center gap-1">
             <MapPin className="w-4 h-4" />
             {issue.address}, {issue.neighborhood}
           </div>
+          
+          {/* Directions button for issues with coordinates */}
+          {issue.coordinates && (
+            <DirectionsButton
+              destination={{
+                lat: issue.coordinates.lat,
+                lng: issue.coordinates.lng,
+                name: issue.title,
+                address: `${issue.address}, ${issue.neighborhood}`
+              }}
+            />
+          )}
         </div>
 
         {/* Status Timeline */}

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { MapPin } from '@phosphor-icons/react'
+import { DirectionsButton } from '@/components/DirectionsButton'
 
 interface MapDisplayProps {
   location: {
@@ -11,6 +12,7 @@ interface MapDisplayProps {
   address?: string
   className?: string
   height?: string
+  showDirections?: boolean
 }
 
 export function MapDisplay({
@@ -18,7 +20,8 @@ export function MapDisplay({
   title = 'Localização',
   address,
   className = '',
-  height = '200px'
+  height = '200px',
+  showDirections = false
 }: MapDisplayProps) {
   const mapRef = useRef<HTMLDivElement>(null)
 
@@ -131,6 +134,18 @@ export function MapDisplay({
                 </p>
               </div>
             </div>
+            {showDirections && (
+              <div className="mt-3">
+                <DirectionsButton
+                  destination={{
+                    lat: location.lat,
+                    lng: location.lng,
+                    name: title,
+                    address: address
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
       </CardContent>

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Building, Phone, MapPin, Clock, ExternalLink, Search, WhatsappLogo } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
 import { MapDisplay } from '@/components/MapDisplay'
+import { DirectionsButton } from '@/components/DirectionsButton'
 
 interface Company {
   id: string
@@ -218,6 +219,20 @@ function CompanyCard({ company, getCategoryColor, getCategoryName }: CompanyCard
               <Phone className="w-3 h-3" />
               {company.phone}
             </div>
+
+            {/* Quick directions for companies with coordinates */}
+            {company.coordinates && (
+              <div className="mt-2 pt-2 border-t">
+                <DirectionsButton
+                  destination={{
+                    lat: company.coordinates.lat,
+                    lng: company.coordinates.lng,
+                    name: company.name,
+                    address: company.address
+                  }}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </DialogTrigger>
@@ -313,6 +328,7 @@ function CompanyCard({ company, getCategoryColor, getCategoryName }: CompanyCard
                 title={company.name}
                 address={company.address}
                 height="200px"
+                showDirections={true}
               />
             </div>
           )}
