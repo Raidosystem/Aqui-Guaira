@@ -35,13 +35,14 @@ interface Category {
 
 interface CompanyDirectoryProps {
   onNavigate?: (tab: string) => void
+  initialCategory?: string
 }
 
-export function CompanyDirectory({ onNavigate }: CompanyDirectoryProps = {}) {
+export function CompanyDirectory({ onNavigate, initialCategory }: CompanyDirectoryProps = {}) {
   const [companies] = useKV<Company[]>('companies', [])
   const [categories] = useKV<Category[]>('categories', [])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all')
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'name' | 'distance'>('name')
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)

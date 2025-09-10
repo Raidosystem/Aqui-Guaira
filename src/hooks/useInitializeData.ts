@@ -200,6 +200,34 @@ export function useInitializeData() {
           status: 'pending',
           createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
           coordinates: { lat: -20.3170, lng: -48.3090 }
+        },
+        {
+          id: '7',
+          name: 'Clínica Saúde Total',
+          description: 'Clínica médica com especialidades em cardiologia, dermatologia e clínica geral. Consultas e exames.',
+          phone: '(17) 3331-2222',
+          whatsapp: '17999112233',
+          address: 'Rua da Saúde, 555',
+          neighborhood: 'Centro',
+          categories: ['saude'],
+          hours: '07:00 às 17:00',
+          status: 'approved',
+          createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
+          coordinates: { lat: -20.3165, lng: -48.3085 }
+        },
+        {
+          id: '8',
+          name: 'TechInfo Informática',
+          description: 'Assistência técnica em computadores, notebooks e celulares. Vendas de equipamentos e acessórios.',
+          phone: '(17) 3331-8888',
+          whatsapp: '17987765544',
+          address: 'Rua da Tecnologia, 99',
+          neighborhood: 'Vila Nova',
+          categories: ['servicos'],
+          hours: '08:00 às 18:00',
+          status: 'approved',
+          createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
+          coordinates: { lat: -20.3195, lng: -48.3115 }
         }
       ]
       setCompanies(sampleCompanies)

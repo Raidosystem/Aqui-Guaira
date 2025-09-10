@@ -15,13 +15,14 @@ import { AboutGuaira } from '@/components/AboutGuaira'
 import { AdminPanel } from '@/components/AdminPanel'
 import { BusinessRegistration } from '@/components/BusinessRegistration'
 import { LocationManager } from '@/components/LocationManager'
-import { FavoritesWidget } from '@/components/FavoritesWidget'
+import { CategoriesWidget } from '@/components/CategoriesWidget'
 import { RecentDestinationsWidget } from '@/components/RecentDestinationsWidget'
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined)
 
   // Initialize sample data
   useInitializeData()
@@ -38,6 +39,13 @@ function App() {
     }
     checkUserStatus()
   }, [])
+
+  // Reset category selection when leaving empresas tab
+  useEffect(() => {
+    if (activeTab !== 'empresas') {
+      setSelectedCategory(undefined)
+    }
+  }, [activeTab])
 
   const navigation = [
     { id: 'home', label: 'Início', icon: Building },
@@ -72,7 +80,10 @@ function App() {
                 <Button 
                   key={id}
                   variant={activeTab === id ? "default" : "ghost"}
-                  onClick={() => setActiveTab(id)}
+                  onClick={() => {
+                    setActiveTab(id)
+                    if (id !== 'empresas') setSelectedCategory(undefined)
+                  }}
                   className="gap-2"
                 >
                   <Icon className="w-4 h-4" />
@@ -102,6 +113,7 @@ function App() {
                     variant={activeTab === id ? "default" : "ghost"}
                     onClick={() => {
                       setActiveTab(id)
+                      if (id !== 'empresas') setSelectedCategory(undefined)
                       setIsMobileMenuOpen(false)
                     }}
                     className="justify-start gap-2"
@@ -135,7 +147,10 @@ function App() {
                       placeholder="Ex: farmácia, restaurante, mecânico..."
                       className="flex-1"
                     />
-                    <Button onClick={() => setActiveTab('empresas')}>
+                    <Button onClick={() => {
+                      setSelectedCategory(undefined)
+                      setActiveTab('empresas')
+                    }}>
                       <Search className="w-4 h-4" />
                     </Button>
                   </div>
@@ -166,11 +181,14 @@ function App() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => setActiveTab('locais')}
+                        onClick={() => {
+                          setSelectedCategory(undefined)
+                          setActiveTab('empresas')
+                        }}
                         className="gap-2"
                       >
-                        <Clock className="w-3 h-3" />
-                        Recentes
+                        <Building className="w-3 h-3" />
+                        Por Categoria
                       </Button>
                     </div>
                   </div>
@@ -178,14 +196,15 @@ function App() {
               </Card>
             </section>
 
-            {/* Quick Access to Saved Locations */}
+            {/* Categories and Recent Locations */}
             <section className="container mx-auto px-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FavoritesWidget 
-                  maxItems={3}
-                  onBusinessSelect={(business) => {
-                    // Could navigate to map view or trigger directions
-                    console.log('Selected business:', business)
+                <CategoriesWidget 
+                  maxItems={6}
+                  onNavigateToDirectory={() => setActiveTab('empresas')}
+                  onCategorySelect={(categoryId) => {
+                    setSelectedCategory(categoryId)
+                    setActiveTab('empresas')
                   }}
                 />
                 <RecentDestinationsWidget 
@@ -233,7 +252,10 @@ function App() {
                     <Button 
                       className="w-full" 
                       variant="default"
-                      onClick={() => setActiveTab('cadastro-empresa')}
+                      onClick={() => {
+                        setSelectedCategory(undefined)
+                        setActiveTab('cadastro-empresa')
+                      }}
                     >
                       Cadastrar Empresa
                     </Button>
@@ -286,7 +308,7 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'empresas' && <CompanyDirectory onNavigate={setActiveTab} />}
+        {activeTab === 'empresas' && <CompanyDirectory onNavigate={setActiveTab} initialCategory={selectedCategory} />}
         {activeTab === 'cadastro-empresa' && <BusinessRegistration />}
         {activeTab === 'locais' && <LocationManager />}
         {activeTab === 'mural' && <CommunityFeed />}
