@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 import { 
   Shield, 
   MessageCircle, 
@@ -27,7 +28,11 @@ import {
   AlertTriangle,
   Users,
   TrendingUp,
-  Clock
+  Clock,
+  CheckSquare,
+  Square,
+  CheckCircle,
+  XCircle
 } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
 import { toast } from 'sonner'
@@ -237,11 +242,34 @@ function PostModeration({ posts, setPosts }: { posts: Post[], setPosts: any }) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
+  const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set())
+  const [bulkRejectionReason, setBulkRejectionReason] = useState('')
+  const [showBulkActions, setShowBulkActions] = useState(false)
 
   const filteredPosts = posts.filter(post => {
     if (statusFilter === 'all') return true
     return post.status === statusFilter
   })
+
+  const pendingPosts = filteredPosts.filter(post => post.status === 'pending')
+
+  const togglePostSelection = (postId: string) => {
+    const newSelected = new Set(selectedPosts)
+    if (newSelected.has(postId)) {
+      newSelected.delete(postId)
+    } else {
+      newSelected.add(postId)
+    }
+    setSelectedPosts(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedPosts.size === pendingPosts.length) {
+      setSelectedPosts(new Set())
+    } else {
+      setSelectedPosts(new Set(pendingPosts.map(p => p.id)))
+    }
+  }
 
   const moderatePost = (postId: string, status: 'approved' | 'rejected', reason?: string) => {
     setPosts((current: Post[]) => 
@@ -263,9 +291,39 @@ function PostModeration({ posts, setPosts }: { posts: Post[], setPosts: any }) {
     setRejectionReason('')
   }
 
+  const bulkModerate = (status: 'approved' | 'rejected', reason?: string) => {
+    const selectedPostIds = Array.from(selectedPosts)
+    
+    setPosts((current: Post[]) => 
+      current.map(post => 
+        selectedPostIds.includes(post.id)
+          ? { 
+              ...post, 
+              status, 
+              moderatedAt: new Date().toISOString(),
+              moderatedBy: 'admin',
+              rejectionReason: reason 
+            }
+          : post
+      )
+    )
+    
+    toast.success(`${selectedPostIds.length} postagem${selectedPostIds.length > 1 ? 's' : ''} ${status === 'approved' ? 'aprovada' : 'rejeitada'}${selectedPostIds.length > 1 ? 's' : ''} com sucesso`)
+    setSelectedPosts(new Set())
+    setBulkRejectionReason('')
+    setShowBulkActions(false)
+  }
+
   const deletePost = (postId: string) => {
     setPosts((current: Post[]) => current.filter(post => post.id !== postId))
     toast.success('Postagem excluída com sucesso')
+  }
+
+  const bulkDelete = () => {
+    const selectedPostIds = Array.from(selectedPosts)
+    setPosts((current: Post[]) => current.filter(post => !selectedPostIds.includes(post.id)))
+    toast.success(`${selectedPostIds.length} postagem${selectedPostIds.length > 1 ? 's' : ''} excluída${selectedPostIds.length > 1 ? 's' : ''} com sucesso`)
+    setSelectedPosts(new Set())
   }
 
   return (
@@ -275,27 +333,137 @@ function PostModeration({ posts, setPosts }: { posts: Post[], setPosts: any }) {
           <h2 className="text-2xl font-bold">Moderação de Postagens</h2>
           <p className="text-muted-foreground">
             {filteredPosts.length} postagem{filteredPosts.length !== 1 ? 's' : ''}
+            {selectedPosts.size > 0 && (
+              <span className="ml-2 text-primary font-medium">
+                • {selectedPosts.size} selecionada{selectedPosts.size > 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as postagens</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
-            <SelectItem value="approved">Aprovadas</SelectItem>
-            <SelectItem value="rejected">Rejeitadas</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as postagens</SelectItem>
+              <SelectItem value="pending">Pendentes</SelectItem>
+              <SelectItem value="approved">Aprovadas</SelectItem>
+              <SelectItem value="rejected">Rejeitadas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {statusFilter === 'pending' && pendingPosts.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedPosts.size === pendingPosts.length && pendingPosts.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    className="border-primary"
+                  />
+                  <span className="text-sm font-medium">
+                    Selecionar todas ({pendingPosts.length})
+                  </span>
+                </div>
+                
+                {selectedPosts.size > 0 && (
+                  <Badge variant="secondary" className="gap-1">
+                    <CheckSquare className="w-3 h-3" />
+                    {selectedPosts.size} selecionada{selectedPosts.size > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+
+              {selectedPosts.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => bulkModerate('approved')}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Aprovar Todas ({selectedPosts.size})
+                  </Button>
+                  
+                  <Dialog open={showBulkActions} onOpenChange={setShowBulkActions}>
+                    <DialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="gap-2">
+                        <XCircle className="w-4 h-4" />
+                        Rejeitar Todas ({selectedPosts.size})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Rejeitar {selectedPosts.size} Postagem{selectedPosts.size > 1 ? 's' : ''}</DialogTitle>
+                        <DialogDescription>
+                          Informe o motivo da rejeição para todas as postagens selecionadas
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="bulk-reason">Motivo da rejeição</Label>
+                          <Textarea
+                            id="bulk-reason"
+                            value={bulkRejectionReason}
+                            onChange={(e) => setBulkRejectionReason(e.target.value)}
+                            placeholder="Ex: Conteúdo inadequado, informações incorretas..."
+                            rows={3}
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" onClick={() => setShowBulkActions(false)}>
+                            Cancelar
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            onClick={() => bulkModerate('rejected', bulkRejectionReason)}
+                            disabled={!bulkRejectionReason.trim()}
+                          >
+                            Rejeitar Todas
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-2 text-destructive hover:text-destructive"
+                    onClick={bulkDelete}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir Todas ({selectedPosts.size})
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4">
         {filteredPosts.map(post => (
           <Card key={post.id} className="overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
+                {statusFilter === 'pending' && (
+                  <div className="pt-1">
+                    <Checkbox
+                      checked={selectedPosts.has(post.id)}
+                      onCheckedChange={() => togglePostSelection(post.id)}
+                      className="border-primary"
+                    />
+                  </div>
+                )}
+                
                 <Avatar className="w-10 h-10">
                   <AvatarImage src={post.authorAvatar} />
                   <AvatarFallback>
@@ -480,11 +648,34 @@ function CompanyModeration({ companies, setCompanies, categories }: {
 }) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [rejectionReason, setRejectionReason] = useState('')
+  const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set())
+  const [bulkRejectionReason, setBulkRejectionReason] = useState('')
+  const [showBulkActions, setShowBulkActions] = useState(false)
 
   const filteredCompanies = companies.filter(company => {
     if (statusFilter === 'all') return true
     return company.status === statusFilter
   })
+
+  const pendingCompanies = filteredCompanies.filter(company => company.status === 'pending')
+
+  const toggleCompanySelection = (companyId: string) => {
+    const newSelected = new Set(selectedCompanies)
+    if (newSelected.has(companyId)) {
+      newSelected.delete(companyId)
+    } else {
+      newSelected.add(companyId)
+    }
+    setSelectedCompanies(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedCompanies.size === pendingCompanies.length) {
+      setSelectedCompanies(new Set())
+    } else {
+      setSelectedCompanies(new Set(pendingCompanies.map(c => c.id)))
+    }
+  }
 
   const moderateCompany = (companyId: string, status: 'approved' | 'rejected', reason?: string) => {
     setCompanies((current: Company[]) => 
@@ -505,9 +696,39 @@ function CompanyModeration({ companies, setCompanies, categories }: {
     setRejectionReason('')
   }
 
+  const bulkModerate = (status: 'approved' | 'rejected', reason?: string) => {
+    const selectedCompanyIds = Array.from(selectedCompanies)
+    
+    setCompanies((current: Company[]) => 
+      current.map(company => 
+        selectedCompanyIds.includes(company.id)
+          ? { 
+              ...company, 
+              status, 
+              moderatedAt: new Date().toISOString(),
+              moderatedBy: 'admin',
+              rejectionReason: reason 
+            }
+          : company
+      )
+    )
+    
+    toast.success(`${selectedCompanyIds.length} empresa${selectedCompanyIds.length > 1 ? 's' : ''} ${status === 'approved' ? 'aprovada' : 'rejeitada'}${selectedCompanyIds.length > 1 ? 's' : ''} com sucesso`)
+    setSelectedCompanies(new Set())
+    setBulkRejectionReason('')
+    setShowBulkActions(false)
+  }
+
   const deleteCompany = (companyId: string) => {
     setCompanies((current: Company[]) => current.filter(company => company.id !== companyId))
     toast.success('Empresa excluída com sucesso')
+  }
+
+  const bulkDelete = () => {
+    const selectedCompanyIds = Array.from(selectedCompanies)
+    setCompanies((current: Company[]) => current.filter(company => !selectedCompanyIds.includes(company.id)))
+    toast.success(`${selectedCompanyIds.length} empresa${selectedCompanyIds.length > 1 ? 's' : ''} excluída${selectedCompanyIds.length > 1 ? 's' : ''} com sucesso`)
+    setSelectedCompanies(new Set())
   }
 
   const getCategoryName = (categoryId: string) => {
@@ -522,27 +743,137 @@ function CompanyModeration({ companies, setCompanies, categories }: {
           <h2 className="text-2xl font-bold">Moderação de Empresas</h2>
           <p className="text-muted-foreground">
             {filteredCompanies.length} empresa{filteredCompanies.length !== 1 ? 's' : ''}
+            {selectedCompanies.size > 0 && (
+              <span className="ml-2 text-primary font-medium">
+                • {selectedCompanies.size} selecionada{selectedCompanies.size > 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as empresas</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
-            <SelectItem value="approved">Aprovadas</SelectItem>
-            <SelectItem value="rejected">Rejeitadas</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as empresas</SelectItem>
+              <SelectItem value="pending">Pendentes</SelectItem>
+              <SelectItem value="approved">Aprovadas</SelectItem>
+              <SelectItem value="rejected">Rejeitadas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {statusFilter === 'pending' && pendingCompanies.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedCompanies.size === pendingCompanies.length && pendingCompanies.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    className="border-primary"
+                  />
+                  <span className="text-sm font-medium">
+                    Selecionar todas ({pendingCompanies.length})
+                  </span>
+                </div>
+                
+                {selectedCompanies.size > 0 && (
+                  <Badge variant="secondary" className="gap-1">
+                    <CheckSquare className="w-3 h-3" />
+                    {selectedCompanies.size} selecionada{selectedCompanies.size > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+
+              {selectedCompanies.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => bulkModerate('approved')}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Aprovar Todas ({selectedCompanies.size})
+                  </Button>
+                  
+                  <Dialog open={showBulkActions} onOpenChange={setShowBulkActions}>
+                    <DialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="gap-2">
+                        <XCircle className="w-4 h-4" />
+                        Rejeitar Todas ({selectedCompanies.size})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Rejeitar {selectedCompanies.size} Empresa{selectedCompanies.size > 1 ? 's' : ''}</DialogTitle>
+                        <DialogDescription>
+                          Informe o motivo da rejeição para todas as empresas selecionadas
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="bulk-reason">Motivo da rejeição</Label>
+                          <Textarea
+                            id="bulk-reason"
+                            value={bulkRejectionReason}
+                            onChange={(e) => setBulkRejectionReason(e.target.value)}
+                            placeholder="Ex: Dados incompletos, empresa não encontrada..."
+                            rows={3}
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" onClick={() => setShowBulkActions(false)}>
+                            Cancelar
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            onClick={() => bulkModerate('rejected', bulkRejectionReason)}
+                            disabled={!bulkRejectionReason.trim()}
+                          >
+                            Rejeitar Todas
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-2 text-destructive hover:text-destructive"
+                    onClick={bulkDelete}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir Todas ({selectedCompanies.size})
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4">
         {filteredCompanies.map(company => (
           <Card key={company.id} className="overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
+                {statusFilter === 'pending' && (
+                  <div className="pt-1">
+                    <Checkbox
+                      checked={selectedCompanies.has(company.id)}
+                      onCheckedChange={() => toggleCompanySelection(company.id)}
+                      className="border-primary"
+                    />
+                  </div>
+                )}
+                
                 {company.logoUrl ? (
                   <img 
                     src={company.logoUrl} 
