@@ -42,6 +42,7 @@ function App() {
   const navigation = [
     { id: 'home', label: 'Início', icon: Building },
     { id: 'empresas', label: 'Empresas', icon: Building },
+    { id: 'cadastro-empresa', label: 'Cadastrar', icon: Building },
     { id: 'locais', label: 'Meus Locais', icon: Heart },
     { id: 'mural', label: 'Mural', icon: MessageCircle },
     { id: 'problemas', label: 'Reportar', icon: MapPin },
@@ -182,9 +183,9 @@ function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FavoritesWidget 
                   maxItems={3}
-                  onLocationSelect={(location) => {
+                  onBusinessSelect={(business) => {
                     // Could navigate to map view or trigger directions
-                    console.log('Selected location:', location)
+                    console.log('Selected business:', business)
                   }}
                 />
                 <RecentDestinationsWidget 
@@ -285,7 +286,7 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'empresas' && <CompanyDirectory />}
+        {activeTab === 'empresas' && <CompanyDirectory onNavigate={setActiveTab} />}
         {activeTab === 'cadastro-empresa' && <BusinessRegistration />}
         {activeTab === 'locais' && <LocationManager />}
         {activeTab === 'mural' && <CommunityFeed />}

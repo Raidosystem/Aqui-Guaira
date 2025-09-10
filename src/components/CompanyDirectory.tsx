@@ -9,7 +9,7 @@ import { Building, Phone, MapPin, Clock, ExternalLink, Search, WhatsappLogo, Nav
 import { useKV } from '@github/spark/hooks'
 import { MapDisplay } from '@/components/MapDisplay'
 import { DirectionsButton } from '@/components/DirectionsButton'
-import { useLocationHistory } from '@/hooks/useLocationHistory'
+import { useBusinessFavorites } from '@/hooks/useBusinessFavorites'
 
 interface Company {
   id: string
@@ -33,7 +33,11 @@ interface Category {
   color: string
 }
 
-export function CompanyDirectory() {
+interface CompanyDirectoryProps {
+  onNavigate?: (tab: string) => void
+}
+
+export function CompanyDirectory({ onNavigate }: CompanyDirectoryProps = {}) {
   const [companies] = useKV<Company[]>('companies', [])
   const [categories] = useKV<Category[]>('categories', [])
   const [searchTerm, setSearchTerm] = useState('')
@@ -43,7 +47,7 @@ export function CompanyDirectory() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
 
-  const { addToFavorites, favoriteLocations } = useLocationHistory()
+  const { addToFavorites, isFavorite } = useBusinessFavorites()
 
   // Get user location for distance sorting
   useEffect(() => {
@@ -123,23 +127,17 @@ export function CompanyDirectory() {
     return filtered
   }, [approvedCompanies, searchTerm, selectedCategory, selectedNeighborhood, sortBy, userLocation])
 
-  const isFavorite = (company: Company) => {
-    if (!company.coordinates) return false
-    return favoriteLocations.some(fav => 
-      Math.abs(fav.lat - company.coordinates!.lat) < 0.0001 && 
-      Math.abs(fav.lng - company.coordinates!.lng) < 0.0001
-    )
-  }
-
   const handleAddToFavorites = (company: Company) => {
-    if (!company.coordinates) return
     addToFavorites({
-      lat: company.coordinates.lat,
-      lng: company.coordinates.lng,
+      id: company.id,
       name: company.name,
       address: company.address,
-      category: company.categories[0] || ''
-    }, 'frequent')
+      neighborhood: company.neighborhood,
+      phone: company.phone,
+      whatsapp: company.whatsapp,
+      categories: company.categories,
+      coordinates: company.coordinates
+    })
   }
 
   const getCategoryColor = (categoryId: string) => {
@@ -243,8 +241,11 @@ export function CompanyDirectory() {
           {filteredCompanies.length} empresa{filteredCompanies.length !== 1 ? 's' : ''} encontrada{filteredCompanies.length !== 1 ? 's' : ''}
         </p>
         
-        <Button variant="outline" asChild>
-          <a href="#cadastrar-empresa">Cadastrar minha empresa</a>
+        <Button 
+          variant="outline" 
+          onClick={() => onNavigate?.('cadastro-empresa')}
+        >
+          Cadastrar minha empresa
         </Button>
       </div>
 
@@ -263,7 +264,7 @@ export function CompanyDirectory() {
               getCategoryName={getCategoryName}
               userLocation={userLocation}
               distance={distance}
-              isFavorite={isFavorite(company)}
+              isFavorite={isFavorite(company.id)}
               onAddToFavorites={() => handleAddToFavorites(company)}
             />
           )
@@ -278,7 +279,7 @@ export function CompanyDirectory() {
             <p className="text-muted-foreground mb-4">
               Tente ajustar os filtros ou cadastre sua empresa
             </p>
-            <Button>Cadastrar empresa</Button>
+            <Button onClick={() => onNavigate?.('cadastro-empresa')}>Cadastrar empresa</Button>
           </CardContent>
         </Card>
       )}

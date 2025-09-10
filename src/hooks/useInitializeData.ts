@@ -1,5 +1,6 @@
 import { useKV } from '@github/spark/hooks'
 import { useEffect } from 'react'
+import { useBusinessFavorites } from '@/hooks/useBusinessFavorites'
 
 interface Post {
   id: string
@@ -42,6 +43,7 @@ export function useInitializeData() {
   const [posts, setPosts] = useKV<Post[]>('community-posts', [])
   const [companies, setCompanies] = useKV<Company[]>('companies', [])
   const [categories, setCategories] = useKV<Category[]>('categories', [])
+  const { addToFavorites, favorites } = useBusinessFavorites()
 
   useEffect(() => {
     // Initialize categories if empty
@@ -128,7 +130,7 @@ export function useInitializeData() {
           categories: ['farmacias'],
           hours: '24 horas',
           website: 'https://farmacia-popular.com.br',
-          status: 'pending',
+          status: 'approved',
           createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
           coordinates: { lat: -20.3180, lng: -48.3100 }
         },
@@ -161,6 +163,33 @@ export function useInitializeData() {
         },
         {
           id: '4',
+          name: 'Salão Beleza & Estilo',
+          description: 'Cortes, escova, manicure, pedicure e tratamentos estéticos. Agende pelo WhatsApp.',
+          phone: '(17) 3331-7777',
+          whatsapp: '17987654321',
+          address: 'Rua das Flores, 321',
+          neighborhood: 'Centro',
+          categories: ['saloes'],
+          hours: '09:00 às 18:00',
+          status: 'approved',
+          createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+          coordinates: { lat: -20.3175, lng: -48.3095 }
+        },
+        {
+          id: '5',
+          name: 'Supermercado Guaíra',
+          description: 'Supermercado completo com produtos frescos, padaria, açougue e hortifrúti.',
+          phone: '(17) 3331-6666',
+          address: 'Avenida Central, 100',
+          neighborhood: 'Centro',
+          categories: ['supermercados'],
+          hours: '07:00 às 22:00',
+          status: 'approved',
+          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+          coordinates: { lat: -20.3185, lng: -48.3105 }
+        },
+        {
+          id: '6',
           name: 'Empresa Suspeita LTDA',
           description: 'Esta empresa tem informações suspeitas e deve ser rejeitada.',
           phone: '(11) 0000-0000',
@@ -175,5 +204,57 @@ export function useInitializeData() {
       ]
       setCompanies(sampleCompanies)
     }
-  }, [categories.length, posts.length, companies.length, setCategories, setPosts, setCompanies])
+
+    // Initialize some sample favorite businesses if empty
+    if (favorites.length === 0 && companies.length > 0) {
+      // Add approved companies as favorites to show examples
+      const approvedCompanies = companies.filter(c => c.status === 'approved')
+      if (approvedCompanies.length > 0) {
+        // Add the restaurant as favorite (Restaurantes category)
+        const restaurant = approvedCompanies.find(c => c.categories.includes('restaurantes'))
+        if (restaurant) {
+          addToFavorites({
+            id: restaurant.id,
+            name: restaurant.name,
+            address: restaurant.address,
+            neighborhood: restaurant.neighborhood,
+            phone: restaurant.phone,
+            whatsapp: restaurant.whatsapp,
+            categories: restaurant.categories,
+            coordinates: restaurant.coordinates
+          })
+        }
+
+        // Add the pharmacy as favorite (Farmácias category)
+        const pharmacy = approvedCompanies.find(c => c.categories.includes('farmacias'))
+        if (pharmacy) {
+          addToFavorites({
+            id: pharmacy.id,
+            name: pharmacy.name,
+            address: pharmacy.address,
+            neighborhood: pharmacy.neighborhood,
+            phone: pharmacy.phone,
+            whatsapp: pharmacy.whatsapp,
+            categories: pharmacy.categories,
+            coordinates: pharmacy.coordinates
+          })
+        }
+
+        // Add the salon as favorite (Salões category)
+        const salon = approvedCompanies.find(c => c.categories.includes('saloes'))
+        if (salon) {
+          addToFavorites({
+            id: salon.id,
+            name: salon.name,
+            address: salon.address,
+            neighborhood: salon.neighborhood,
+            phone: salon.phone,
+            whatsapp: salon.whatsapp,
+            categories: salon.categories,
+            coordinates: salon.coordinates
+          })
+        }
+      }
+    }
+  }, [categories.length, posts.length, companies.length, favorites.length, setCategories, setPosts, setCompanies, addToFavorites, companies])
 }
