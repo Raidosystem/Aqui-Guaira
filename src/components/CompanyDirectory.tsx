@@ -17,13 +17,24 @@ interface Company {
   description: string
   phone: string
   whatsapp?: string
+  email?: string
   address: string
   neighborhood: string
   categories: string[]
   hours: string
   logoUrl?: string
+  logo?: string
+  images?: string[]
   website?: string
+  instagram?: string
+  facebook?: string
+  cep?: string
+  ownerId?: string
+  ownerEmail?: string
   status: 'approved' | 'pending' | 'rejected'
+  rejectionReason?: string
+  createdAt: string
+  updatedAt?: string
   coordinates?: { lat: number; lng: number }
 }
 
@@ -31,6 +42,7 @@ interface Category {
   id: string
   name: string
   color: string
+  icon: string
 }
 
 interface CompanyDirectoryProps {
@@ -313,9 +325,9 @@ function CompanyCard({
         <Card className="cursor-pointer hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-start gap-3">
-              {company.logoUrl ? (
+              {(company.logo || company.logoUrl) ? (
                 <img 
-                  src={company.logoUrl} 
+                  src={company.logo || company.logoUrl} 
                   alt={`Logo ${company.name}`}
                   className="w-12 h-12 rounded-lg object-cover"
                 />
@@ -402,9 +414,9 @@ function CompanyCard({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start gap-3 mb-4">
-            {company.logoUrl ? (
+            {(company.logo || company.logoUrl) ? (
               <img 
-                src={company.logoUrl} 
+                src={company.logo || company.logoUrl} 
                 alt={`Logo ${company.name}`}
                 className="w-16 h-16 rounded-lg object-cover"
               />
@@ -479,6 +491,57 @@ function CompanyCard({
                 Visitar site
               </a>
             </Button>
+          )}
+
+          {/* Image Gallery */}
+          {company.images && company.images.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Galeria</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {company.images.slice(0, 4).map((imageUrl, index) => (
+                  <img 
+                    key={index}
+                    src={imageUrl} 
+                    alt={`${company.name} - Imagem ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg"
+                  />
+                ))}
+              </div>
+              {company.images.length > 4 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  +{company.images.length - 4} imagens
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Contact Info */}
+          {(company.email || company.instagram || company.facebook) && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Mais contatos</h4>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                {company.email && (
+                  <div className="flex items-center gap-2">
+                    <span>📧</span>
+                    <a href={`mailto:${company.email}`} className="hover:text-primary">
+                      {company.email}
+                    </a>
+                  </div>
+                )}
+                {company.instagram && (
+                  <div className="flex items-center gap-2">
+                    <span>📸</span>
+                    <span>{company.instagram}</span>
+                  </div>
+                )}
+                {company.facebook && (
+                  <div className="flex items-center gap-2">
+                    <span>👥</span>
+                    <span>{company.facebook}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Location Map */}

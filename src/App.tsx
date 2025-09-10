@@ -14,6 +14,7 @@ import { ReportProblem } from '@/components/ReportProblem'
 import { AboutGuaira } from '@/components/AboutGuaira'
 import { AdminPanel } from '@/components/AdminPanel'
 import { BusinessRegistration } from '@/components/BusinessRegistration'
+import { BusinessManagement } from '@/components/BusinessManagement'
 import { LocationManager } from '@/components/LocationManager'
 import { CategoriesWidget } from '@/components/CategoriesWidget'
 import { RecentDestinationsWidget } from '@/components/RecentDestinationsWidget'
@@ -51,6 +52,7 @@ function App() {
     { id: 'home', label: 'Início', icon: Building },
     { id: 'empresas', label: 'Empresas', icon: Building },
     { id: 'cadastro-empresa', label: 'Cadastrar', icon: Building },
+    { id: 'gerenciar-empresa', label: 'Gerenciar', icon: Building },
     { id: 'locais', label: 'Meus Locais', icon: Heart },
     { id: 'mural', label: 'Mural', icon: MessageCircle },
     { id: 'problemas', label: 'Reportar', icon: MapPin },
@@ -249,16 +251,28 @@ function App() {
                         <span>Galeria de fotos</span>
                       </div>
                     </div>
-                    <Button 
-                      className="w-full" 
-                      variant="default"
-                      onClick={() => {
-                        setSelectedCategory(undefined)
-                        setActiveTab('cadastro-empresa')
-                      }}
-                    >
-                      Cadastrar Empresa
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1" 
+                        variant="default"
+                        onClick={() => {
+                          setSelectedCategory(undefined)
+                          setActiveTab('cadastro-empresa')
+                        }}
+                      >
+                        Cadastrar Empresa
+                      </Button>
+                      <Button 
+                        className="flex-1" 
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedCategory(undefined)
+                          setActiveTab('gerenciar-empresa')
+                        }}
+                      >
+                        Gerenciar
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -310,6 +324,7 @@ function App() {
 
         {activeTab === 'empresas' && <CompanyDirectory onNavigate={setActiveTab} initialCategory={selectedCategory} />}
         {activeTab === 'cadastro-empresa' && <BusinessRegistration />}
+        {activeTab === 'gerenciar-empresa' && <BusinessManagement />}
         {activeTab === 'locais' && <LocationManager />}
         {activeTab === 'mural' && <CommunityFeed />}
         {activeTab === 'problemas' && <ReportProblem />}
