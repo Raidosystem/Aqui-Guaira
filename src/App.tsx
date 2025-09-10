@@ -17,7 +17,7 @@ import { BusinessRegistration } from '@/components/BusinessRegistration'
 import { BusinessManagement } from '@/components/BusinessManagement'
 import { LocationManager } from '@/components/LocationManager'
 import { CategoriesWidget } from '@/components/CategoriesWidget'
-import { RecentDestinationsWidget } from '@/components/RecentDestinationsWidget'
+import { BusinessInsights } from '@/components/BusinessInsights'
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
@@ -53,6 +53,7 @@ function App() {
     { id: 'empresas', label: 'Empresas', icon: Building },
     { id: 'cadastro-empresa', label: 'Cadastrar', icon: Building },
     { id: 'gerenciar-empresa', label: 'Gerenciar', icon: Building },
+    { id: 'insights-empresa', label: 'Insights', icon: Building },
     { id: 'locais', label: 'Meus Locais', icon: Heart },
     { id: 'mural', label: 'Mural', icon: MessageCircle },
     { id: 'problemas', label: 'Reportar', icon: MapPin },
@@ -273,6 +274,19 @@ function App() {
                         Gerenciar
                       </Button>
                     </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button 
+                        className="flex-1" 
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCategory(undefined)
+                          setActiveTab('insights-empresa')
+                        }}
+                      >
+                        Ver Insights
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -325,6 +339,7 @@ function App() {
         {activeTab === 'empresas' && <CompanyDirectory onNavigate={setActiveTab} initialCategory={selectedCategory} />}
         {activeTab === 'cadastro-empresa' && <BusinessRegistration />}
         {activeTab === 'gerenciar-empresa' && <BusinessManagement />}
+        {activeTab === 'insights-empresa' && <BusinessInsights />}
         {activeTab === 'locais' && <LocationManager />}
         {activeTab === 'mural' && <CommunityFeed />}
         {activeTab === 'problemas' && <ReportProblem />}

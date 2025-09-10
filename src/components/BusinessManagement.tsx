@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useKV } from '@github/spark/hooks'
 import { toast } from 'sonner'
-import { Building, Phone, MapPin, Clock, Globe, Image, Save, Eye, AlertCircle, Upload, X, Check, Calendar } from '@phosphor-icons/react'
+import { PhotoManager } from '@/components/PhotoManager'
+import { LogoUploader } from '@/components/LogoUploader'
+import { Building, Phone, MapPin, Clock, Globe, Image, Save, Eye, AlertCircle, Upload, X, Check, Calendar, Camera, StarFill } from '@phosphor-icons/react'
 
 interface BusinessUpdate {
   id: string
@@ -47,8 +49,7 @@ export function BusinessManagement() {
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<BusinessUpdate | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [newImages, setNewImages] = useState<File[]>([])
-  const [newLogo, setNewLogo] = useState<File | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string>('')
 
   useEffect(() => {
     const checkUser = async () => {
@@ -91,54 +92,21 @@ export function BusinessManagement() {
         images: selectedBusiness.images || [],
         logo: selectedBusiness.logo
       })
+      setLogoUrl(selectedBusiness.logo || '')
     }
   }, [selectedBusiness, isEditing])
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'gallery' | 'logo') => {
-    const files = event.target.files
-    if (!files) return
-
-    if (type === 'logo') {
-      const file = files[0]
-      if (file && file.type.startsWith('image/')) {
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error('Logo deve ter no máximo 5MB')
-          return
-        }
-        setNewLogo(file)
-      }
-    } else {
-      const validFiles = Array.from(files).filter(file => {
-        if (!file.type.startsWith('image/')) {
-          toast.error(`${file.name} não é uma imagem válida`)
-          return false
-        }
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`${file.name} deve ter no máximo 10MB`)
-          return false
-        }
-        return true
-      })
-
-      if (newImages.length + validFiles.length > 10) {
-        toast.error('Máximo de 10 imagens permitidas')
-        return
-      }
-
-      setNewImages(prev => [...prev, ...validFiles])
+  const handleLogoChange = (logoUrl: string) => {
+    setLogoUrl(logoUrl)
+    if (formData) {
+      setFormData({ ...formData, logo: logoUrl })
     }
   }
 
-  const removeNewImage = (index: number) => {
-    setNewImages(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const removeExistingImage = (imageUrl: string) => {
-    if (!formData) return
-    setFormData({
-      ...formData,
-      images: formData.images.filter(img => img !== imageUrl)
-    })
+  const handleGalleryUpdate = (images: string[]) => {
+    if (formData) {
+      setFormData({ ...formData, images })
+    }
   }
 
   const updateBusinessHours = (day: string, hours: string) => {
@@ -169,20 +137,10 @@ export function BusinessManagement() {
 
     setIsLoading(true)
     try {
-      // Simulate image upload
-      const uploadedImages = newImages.map((_, index) => 
-        `https://images.unsplash.com/photo-${Date.now() + index}?w=400&h=300&fit=crop`
-      )
-      
-      const uploadedLogo = newLogo 
-        ? `https://images.unsplash.com/photo-${Date.now()}?w=200&h=200&fit=crop`
-        : formData.logo
-
       const updatedBusiness = {
         ...selectedBusiness,
         ...formData,
-        logo: uploadedLogo,
-        images: [...formData.images, ...uploadedImages],
+        logo: logoUrl || formData.logo,
         status: 'pending_approval', // Reset to pending when updated
         updatedAt: new Date().toISOString()
       }
@@ -197,8 +155,6 @@ export function BusinessManagement() {
 
       // Reset form state
       setIsEditing(false)
-      setNewImages([])
-      setNewLogo(null)
       setSelectedBusiness(updatedBusiness)
 
       toast.success('Informações atualizadas! Aguarde aprovação do administrador.')
@@ -213,8 +169,7 @@ export function BusinessManagement() {
   const handleCancel = () => {
     setIsEditing(false)
     setFormData(null)
-    setNewImages([])
-    setNewLogo(null)
+    setLogoUrl('')
   }
 
   const getStatusBadge = (status: string) => {
@@ -352,7 +307,7 @@ export function BusinessManagement() {
                   <TabsTrigger value="info">Informações</TabsTrigger>
                   <TabsTrigger value="contact">Contato</TabsTrigger>
                   <TabsTrigger value="hours">Horários</TabsTrigger>
-                  <TabsTrigger value="media">Mídia</TabsTrigger>
+                  <TabsTrigger value="media">Fotos</TabsTrigger>
                 </TabsList>
 
                 {/* Basic Information */}
@@ -646,170 +601,130 @@ export function BusinessManagement() {
                   </Card>
                 </TabsContent>
 
-                {/* Media Management */}
+                {/* Photo Management */}
                 <TabsContent value="media">
                   <div className="space-y-6">
-                    {/* Logo */}
+                    {/* Logo Section */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Logo da Empresa</CardTitle>
-                        <CardDescription>Imagem quadrada recomendada (200x200px mínimo)</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                          <Camera className="w-5 h-5" />
+                          Logo da Empresa
+                        </CardTitle>
+                        <CardDescription>
+                          Imagem quadrada recomendada (mínimo 200x200px)
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex items-center gap-4">
-                          {(selectedBusiness.logo || newLogo) && (
-                            <div className="w-20 h-20 bg-muted rounded-lg overflow-hidden">
-                              {newLogo ? (
-                                <img 
-                                  src={URL.createObjectURL(newLogo)} 
-                                  alt="Novo logo" 
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
+                        {isEditing ? (
+                          <LogoUploader
+                            currentLogo={logoUrl}
+                            onLogoChange={handleLogoChange}
+                            maxFileSize={5 * 1024 * 1024} // 5MB
+                          />
+                        ) : (
+                          <div className="flex items-center gap-4">
+                            {selectedBusiness.logo ? (
+                              <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted">
                                 <img 
                                   src={selectedBusiness.logo} 
-                                  alt="Logo atual" 
+                                  alt="Logo da empresa" 
                                   className="w-full h-full object-cover"
                                 />
-                              )}
+                              </div>
+                            ) : (
+                              <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center">
+                                <Camera className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium">
+                                {selectedBusiness.logo ? 'Logo configurado' : 'Nenhum logo'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {selectedBusiness.logo ? 'Clique em "Editar" para alterar' : 'Adicione um logo para sua empresa'}
+                              </p>
                             </div>
-                          )}
-                          
-                          {isEditing && (
-                            <div className="flex-1">
-                              <Label htmlFor="logo-upload" className="cursor-pointer">
-                                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
-                                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                                  <p className="text-sm text-muted-foreground">
-                                    Clique para escolher novo logo
-                                  </p>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Máximo 5MB - JPG, PNG
-                                  </p>
-                                </div>
-                              </Label>
-                              <Input
-                                id="logo-upload"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => handleImageUpload(e, 'logo')}
-                              />
-                            </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
-                    {/* Gallery */}
+                    {/* Gallery Section */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Galeria de Fotos</CardTitle>
-                        <CardDescription>Até 10 imagens para mostrar seus produtos e ambiente</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                          <Image className="w-5 h-5" />
+                          Galeria de Fotos
+                        </CardTitle>
+                        <CardDescription>
+                          Mostre seu ambiente, produtos e serviços (até 10 fotos)
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          {/* Existing Images */}
-                          {isEditing && formData && formData.images.length > 0 && (
-                            <div>
-                              <h4 className="font-medium mb-3">Imagens atuais</h4>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {formData.images.map((imageUrl, index) => (
-                                  <div key={index} className="relative group">
-                                    <img 
-                                      src={imageUrl} 
-                                      alt={`Imagem ${index + 1}`}
-                                      className="w-full h-24 object-cover rounded-lg"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => removeExistingImage(imageUrl)}
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* New Images Preview */}
-                          {newImages.length > 0 && (
-                            <div>
-                              <h4 className="font-medium mb-3">Novas imagens</h4>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {newImages.map((file, index) => (
-                                  <div key={index} className="relative group">
-                                    <img 
-                                      src={URL.createObjectURL(file)} 
-                                      alt={`Nova imagem ${index + 1}`}
-                                      className="w-full h-24 object-cover rounded-lg"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => removeNewImage(index)}
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Current Images Display (View Mode) */}
-                          {!isEditing && selectedBusiness.images && selectedBusiness.images.length > 0 && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                              {selectedBusiness.images.map((imageUrl: string, index: number) => (
-                                <img 
-                                  key={index}
-                                  src={imageUrl} 
-                                  alt={`Imagem ${index + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg"
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Upload Area */}
-                          {isEditing && (
-                            <div>
-                              <Label htmlFor="gallery-upload" className="cursor-pointer">
-                                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
-                                  <Image className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                                  <p className="text-lg font-medium mb-2">Adicionar fotos à galeria</p>
-                                  <p className="text-sm text-muted-foreground mb-1">
-                                    Clique para escolher ou arraste arquivos aqui
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Máximo 10MB por imagem - JPG, PNG
-                                  </p>
+                        {isEditing && formData ? (
+                          <PhotoManager
+                            photos={formData.images}
+                            onPhotosChange={handleGalleryUpdate}
+                            maxPhotos={10}
+                            maxFileSize={10 * 1024 * 1024} // 10MB
+                            showFeatured={true}
+                            showCaptions={true}
+                          />
+                        ) : (
+                          <div>
+                            {selectedBusiness.images && selectedBusiness.images.length > 0 ? (
+                              <div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                  {selectedBusiness.images.map((imageUrl: string, index: number) => (
+                                    <div key={index} className="relative group">
+                                      <img 
+                                        src={imageUrl} 
+                                        alt={`Foto ${index + 1}`}
+                                        className="w-full h-24 object-cover rounded-lg"
+                                      />
+                                      {/* Featured indicator */}
+                                      {index === 0 && (
+                                        <div className="absolute top-1 left-1">
+                                          <Badge variant="secondary" className="text-xs px-2 py-1">
+                                            <StarFill className="w-3 h-3 mr-1" />
+                                            Destaque
+                                          </Badge>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
-                              </Label>
-                              <Input
-                                id="gallery-upload"
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={(e) => handleImageUpload(e, 'gallery')}
-                              />
-                            </div>
-                          )}
-
-                          {!isEditing && (!selectedBusiness.images || selectedBusiness.images.length === 0) && (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <Image className="w-12 h-12 mx-auto mb-4" />
-                              <p>Nenhuma imagem cadastrada</p>
-                            </div>
-                          )}
-                        </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {selectedBusiness.images.length} foto{selectedBusiness.images.length !== 1 ? 's' : ''} na galeria
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Image className="w-12 h-12 mx-auto mb-4" />
+                                <p className="font-medium mb-2">Nenhuma foto na galeria</p>
+                                <p className="text-sm">Adicione fotos para atrair mais clientes</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
+
+                    {!isEditing && (
+                      <Card className="border-accent/30 bg-accent/5">
+                        <CardContent className="flex items-center gap-3 pt-6">
+                          <Camera className="w-5 h-5 text-accent" />
+                          <div>
+                            <p className="font-medium text-accent-foreground">Dica: Fotos de qualidade</p>
+                            <p className="text-sm text-accent-foreground/80">
+                              Empresas com fotos recebem até 3x mais visualizações. 
+                              Adicione imagens do seu ambiente, produtos e equipe.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
