@@ -300,76 +300,80 @@ export function useInitializeData() {
     }
 
     // Initialize business statistics
-    const businessStats = await spark.kv.get('business_stats')
-    if (!businessStats) {
-      const initialStats = {
-        '1': {
-          views: 125,
-          favorites: 8,
-          contacts: 15,
-          lastViewed: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          rating: 4.5,
-          reviewCount: 12
-        },
-        '2': {
-          views: 89,
-          favorites: 5,
-          contacts: 22,
-          lastViewed: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-          rating: 4.2,
-          reviewCount: 8
-        },
-        '3': {
-          views: 67,
-          favorites: 3,
-          contacts: 9,
-          lastViewed: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          rating: 4.0,
-          reviewCount: 5
-        },
-        '4': {
-          views: 156,
-          favorites: 12,
-          contacts: 28,
-          lastViewed: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
-          rating: 4.8,
-          reviewCount: 18
-        },
-        '5': {
-          views: 34,
-          favorites: 2,
-          contacts: 6,
-          lastViewed: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          rating: 3.9,
-          reviewCount: 4
-        },
-        '6': {
-          views: 12,
-          favorites: 0,
-          contacts: 2,
-          lastViewed: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
-          rating: 0,
-          reviewCount: 0
-        },
-        '7': {
-          views: 98,
-          favorites: 7,
-          contacts: 19,
-          lastViewed: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-          rating: 4.3,
-          reviewCount: 9
-        },
-        '8': {
-          views: 45,
-          favorites: 3,
-          contacts: 8,
-          lastViewed: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-          rating: 4.1,
-          reviewCount: 6
+    const initializeStats = async () => {
+      const businessStats = await spark.kv.get('business_stats')
+      if (!businessStats) {
+        const initialStats = {
+          '1': {
+            views: 125,
+            favorites: 8,
+            contacts: 15,
+            lastViewed: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+            rating: 4.5,
+            reviewCount: 12
+          },
+          '2': {
+            views: 89,
+            favorites: 5,
+            contacts: 22,
+            lastViewed: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
+            rating: 4.2,
+            reviewCount: 8
+          },
+          '3': {
+            views: 67,
+            favorites: 3,
+            contacts: 9,
+            lastViewed: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+            rating: 4.0,
+            reviewCount: 5
+          },
+          '4': {
+            views: 156,
+            favorites: 12,
+            contacts: 28,
+            lastViewed: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
+            rating: 4.8,
+            reviewCount: 18
+          },
+          '5': {
+            views: 34,
+            favorites: 2,
+            contacts: 6,
+            lastViewed: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+            rating: 3.9,
+            reviewCount: 4
+          },
+          '6': {
+            views: 12,
+            favorites: 0,
+            contacts: 2,
+            lastViewed: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
+            rating: 0,
+            reviewCount: 0
+          },
+          '7': {
+            views: 98,
+            favorites: 7,
+            contacts: 19,
+            lastViewed: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+            rating: 4.3,
+            reviewCount: 9
+          },
+          '8': {
+            views: 45,
+            favorites: 3,
+            contacts: 8,
+            lastViewed: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+            rating: 4.1,
+            reviewCount: 6
+          }
         }
+        await spark.kv.set('business_stats', initialStats)
       }
-      await spark.kv.set('business_stats', initialStats)
     }
+    
+    initializeStats()
 
     // Initialize some sample favorite businesses if empty
     if (favorites.length === 0 && companies.length > 0) {

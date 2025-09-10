@@ -18,6 +18,7 @@ import { BusinessManagement } from '@/components/BusinessManagement'
 import { LocationManager } from '@/components/LocationManager'
 import { CategoriesWidget } from '@/components/CategoriesWidget'
 import { BusinessInsights } from '@/components/BusinessInsights'
+import { RecentDestinationsWidget } from '@/components/RecentDestinationsWidget'
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
