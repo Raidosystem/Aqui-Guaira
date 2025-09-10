@@ -1,27 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Building, MapPin, MessageCircle, Phone, Clock, ExternalLink, Search, Menu, X } from '@phosphor-icons/react'
+import { Building, MapPin, MessageCircle, Phone, Clock, ExternalLink, Search, Menu, X, Shield } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
+import { useInitializeData } from '@/hooks/useInitializeData'
 import { HeroSection } from '@/components/HeroSection'
 import { CompanyDirectory } from '@/components/CompanyDirectory' 
 import { CommunityFeed } from '@/components/CommunityFeed'
 import { ReportProblem } from '@/components/ReportProblem'
 import { AboutGuaira } from '@/components/AboutGuaira'
+import { AdminPanel } from '@/components/AdminPanel'
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+
+  // Initialize sample data
+  useInitializeData()
+
+  // Check user status for admin access
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      try {
+        const currentUser = await spark.user()
+        setUser(currentUser)
+      } catch (error) {
+        console.error('Error checking user status:', error)
+      }
+    }
+    checkUserStatus()
+  }, [])
 
   const navigation = [
     { id: 'home', label: 'Início', icon: Building },
     { id: 'empresas', label: 'Empresas', icon: Building },
     { id: 'mural', label: 'Mural', icon: MessageCircle },
     { id: 'problemas', label: 'Reportar', icon: MapPin },
-    { id: 'sobre', label: 'Sobre Guaíra', icon: ExternalLink }
+    { id: 'sobre', label: 'Sobre Guaíra', icon: ExternalLink },
+    ...(user?.isOwner ? [{ id: 'admin', label: 'Admin', icon: Shield }] : [])
   ]
 
   return (
@@ -126,6 +146,7 @@ function App() {
         {activeTab === 'mural' && <CommunityFeed />}
         {activeTab === 'problemas' && <ReportProblem />}
         {activeTab === 'sobre' && <AboutGuaira />}
+        {activeTab === 'admin' && user?.isOwner && <AdminPanel />}
       </main>
 
       {/* Footer */}
