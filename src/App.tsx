@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Building, MapPin, MessageCircle, Phone, Clock, ExternalLink, Search, Menu, X, Shield } from '@phosphor-icons/react'
+import { Building, MapPin, MessageCircle, Phone, Clock, ExternalLink, Search, Menu, X, Shield, Heart } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
 import { useInitializeData } from '@/hooks/useInitializeData'
 import { HeroSection } from '@/components/HeroSection'
@@ -14,6 +14,9 @@ import { ReportProblem } from '@/components/ReportProblem'
 import { AboutGuaira } from '@/components/AboutGuaira'
 import { AdminPanel } from '@/components/AdminPanel'
 import { BusinessRegistration } from '@/components/BusinessRegistration'
+import { LocationManager } from '@/components/LocationManager'
+import { FavoritesWidget } from '@/components/FavoritesWidget'
+import { RecentDestinationsWidget } from '@/components/RecentDestinationsWidget'
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
@@ -39,6 +42,7 @@ function App() {
   const navigation = [
     { id: 'home', label: 'Início', icon: Building },
     { id: 'empresas', label: 'Empresas', icon: Building },
+    { id: 'locais', label: 'Meus Locais', icon: Heart },
     { id: 'mural', label: 'Mural', icon: MessageCircle },
     { id: 'problemas', label: 'Reportar', icon: MapPin },
     { id: 'sobre', label: 'Sobre Guaíra', icon: ExternalLink },
@@ -134,8 +138,63 @@ function App() {
                       <Search className="w-4 h-4" />
                     </Button>
                   </div>
+                  
+                  {/* Quick access to saved locations */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-muted-foreground">Acesso rápido:</span>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        onClick={() => setActiveTab('locais')}
+                        className="text-xs"
+                      >
+                        Ver todos
+                      </Button>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveTab('locais')}
+                        className="gap-2"
+                      >
+                        <Heart className="w-3 h-3" />
+                        Meus Favoritos
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveTab('locais')}
+                        className="gap-2"
+                      >
+                        <Clock className="w-3 h-3" />
+                        Recentes
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
+            </section>
+
+            {/* Quick Access to Saved Locations */}
+            <section className="container mx-auto px-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FavoritesWidget 
+                  maxItems={3}
+                  onLocationSelect={(location) => {
+                    // Could navigate to map view or trigger directions
+                    console.log('Selected location:', location)
+                  }}
+                />
+                <RecentDestinationsWidget 
+                  maxItems={3}
+                  onLocationSelect={(location) => {
+                    // Could navigate to map view or trigger directions
+                    console.log('Selected recent location:', location)
+                  }}
+                />
+              </div>
             </section>
 
             {/* Business Registration */}
@@ -228,6 +287,7 @@ function App() {
 
         {activeTab === 'empresas' && <CompanyDirectory />}
         {activeTab === 'cadastro-empresa' && <BusinessRegistration />}
+        {activeTab === 'locais' && <LocationManager />}
         {activeTab === 'mural' && <CommunityFeed />}
         {activeTab === 'problemas' && <ReportProblem />}
         {activeTab === 'sobre' && <AboutGuaira />}

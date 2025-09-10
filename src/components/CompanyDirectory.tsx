@@ -1,14 +1,15 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Building, Phone, MapPin, Clock, ExternalLink, Search, WhatsappLogo } from '@phosphor-icons/react'
+import { Building, Phone, MapPin, Clock, ExternalLink, Search, WhatsappLogo, Navigation, Heart } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
 import { MapDisplay } from '@/components/MapDisplay'
 import { DirectionsButton } from '@/components/DirectionsButton'
+import { useLocationHistory } from '@/hooks/useLocationHistory'
 
 interface Company {
   id: string
@@ -38,6 +39,53 @@ export function CompanyDirectory() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'name' | 'distance'>('name')
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+
+  const { addToFavorites, favoriteLocations } = useLocationHistory()
+
+  // Get user location for distance sorting
+  useEffect(() => {
+    const getUserLocation = async () => {
+      if (!navigator.geolocation) return
+      
+      setIsGettingLocation(true)
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+          )
+        })
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        })
+      } catch (error) {
+        console.error('Error getting location:', error)
+      } finally {
+        setIsGettingLocation(false)
+      }
+    }
+
+    if (sortBy === 'distance' && !userLocation) {
+      getUserLocation()
+    }
+  }, [sortBy, userLocation])
+
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371 // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return R * c
+  }
 
   const approvedCompanies = companies.filter(company => company.status === 'approved')
 
@@ -47,7 +95,7 @@ export function CompanyDirectory() {
   }, [approvedCompanies])
 
   const filteredCompanies = useMemo(() => {
-    return approvedCompanies.filter(company => {
+    let filtered = approvedCompanies.filter(company => {
       const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            company.description.toLowerCase().includes(searchTerm.toLowerCase())
       
@@ -59,7 +107,40 @@ export function CompanyDirectory() {
 
       return matchesSearch && matchesCategory && matchesNeighborhood
     })
-  }, [approvedCompanies, searchTerm, selectedCategory, selectedNeighborhood])
+
+    // Sort by distance or name
+    if (sortBy === 'distance' && userLocation) {
+      filtered = filtered.sort((a, b) => {
+        if (!a.coordinates || !b.coordinates) return 0
+        const distanceA = calculateDistance(userLocation.lat, userLocation.lng, a.coordinates.lat, a.coordinates.lng)
+        const distanceB = calculateDistance(userLocation.lat, userLocation.lng, b.coordinates.lat, b.coordinates.lng)
+        return distanceA - distanceB
+      })
+    } else {
+      filtered = filtered.sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    return filtered
+  }, [approvedCompanies, searchTerm, selectedCategory, selectedNeighborhood, sortBy, userLocation])
+
+  const isFavorite = (company: Company) => {
+    if (!company.coordinates) return false
+    return favoriteLocations.some(fav => 
+      Math.abs(fav.lat - company.coordinates!.lat) < 0.0001 && 
+      Math.abs(fav.lng - company.coordinates!.lng) < 0.0001
+    )
+  }
+
+  const handleAddToFavorites = (company: Company) => {
+    if (!company.coordinates) return
+    addToFavorites({
+      lat: company.coordinates.lat,
+      lng: company.coordinates.lng,
+      name: company.name,
+      address: company.address,
+      category: company.categories[0] || ''
+    }, 'frequent')
+  }
 
   const getCategoryColor = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId)
@@ -86,7 +167,7 @@ export function CompanyDirectory() {
           <CardTitle className="text-lg">Filtros de Busca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -124,7 +205,35 @@ export function CompanyDirectory() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'name' | 'distance')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Nome</SelectItem>
+                <SelectItem value="distance">
+                  <div className="flex items-center gap-2">
+                    <Navigation className="w-4 h-4" />
+                    Distância
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {isGettingLocation && sortBy === 'distance' && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg flex items-center gap-2 text-sm text-blue-700">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              Obtendo sua localização para ordenar por distância...
+            </div>
+          )}
+
+          {sortBy === 'distance' && !userLocation && !isGettingLocation && (
+            <div className="mt-4 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-700">
+              Para ordenar por distância, permita o acesso à sua localização ou ative os serviços de localização.
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -141,9 +250,24 @@ export function CompanyDirectory() {
 
       {/* Company Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCompanies.map(company => (
-          <CompanyCard key={company.id} company={company} getCategoryColor={getCategoryColor} getCategoryName={getCategoryName} />
-        ))}
+        {filteredCompanies.map(company => {
+          const distance = userLocation && company.coordinates 
+            ? calculateDistance(userLocation.lat, userLocation.lng, company.coordinates.lat, company.coordinates.lng)
+            : undefined
+
+          return (
+            <CompanyCard 
+              key={company.id} 
+              company={company} 
+              getCategoryColor={getCategoryColor} 
+              getCategoryName={getCategoryName}
+              userLocation={userLocation}
+              distance={distance}
+              isFavorite={isFavorite(company)}
+              onAddToFavorites={() => handleAddToFavorites(company)}
+            />
+          )
+        })}
       </div>
 
       {filteredCompanies.length === 0 && (
@@ -166,9 +290,21 @@ interface CompanyCardProps {
   company: Company
   getCategoryColor: (categoryId: string) => string
   getCategoryName: (categoryId: string) => string
+  userLocation?: { lat: number; lng: number } | null
+  distance?: number
+  isFavorite: boolean
+  onAddToFavorites: () => void
 }
 
-function CompanyCard({ company, getCategoryColor, getCategoryName }: CompanyCardProps) {
+function CompanyCard({ 
+  company, 
+  getCategoryColor, 
+  getCategoryName, 
+  userLocation, 
+  distance, 
+  isFavorite, 
+  onAddToFavorites 
+}: CompanyCardProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -188,11 +324,35 @@ function CompanyCard({ company, getCategoryColor, getCategoryName }: CompanyCard
               )}
               
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg truncate">{company.name}</CardTitle>
-                <CardDescription className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {company.neighborhood}
-                </CardDescription>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg truncate">{company.name}</CardTitle>
+                    <CardDescription className="flex items-center gap-2">
+                      <MapPin className="w-3 h-3" />
+                      {company.neighborhood}
+                      {distance !== undefined && (
+                        <>
+                          <span>•</span>
+                          <Navigation className="w-3 h-3" />
+                          <span>{distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}</span>
+                        </>
+                      )}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAddToFavorites()
+                    }}
+                    className="ml-2"
+                  >
+                    <Heart 
+                      className={`w-4 h-4 ${isFavorite ? 'text-red-500 fill-red-500' : 'text-muted-foreground'}`} 
+                    />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>

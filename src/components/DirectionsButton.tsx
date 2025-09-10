@@ -4,7 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { NavigationArrow, MapPin, Car, Walking, Clock, AlertTriangle } from '@phosphor-icons/react'
+import { NavigationArrow, MapPin, Car, Walking, Clock, AlertTriangle, Heart, Star } from '@phosphor-icons/react'
+import { useLocationHistory } from '@/hooks/useLocationHistory'
+import { toast } from 'sonner'
 
 interface DirectionsButtonProps {
   destination: {
@@ -31,6 +33,8 @@ export function DirectionsButton({ destination }: DirectionsButtonProps) {
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
+  
+  const { addToRecent, saveLocation, addToFavorites } = useLocationHistory()
 
   const getUserLocation = async () => {
     setIsGettingLocation(true)
@@ -126,6 +130,17 @@ export function DirectionsButton({ destination }: DirectionsButtonProps) {
     const origin = `${userLocation.lat},${userLocation.lng}`
     const dest = `${destination.lat},${destination.lng}`
     
+    // Add to recent destinations with route info
+    const routes = getRouteEstimates()
+    const routeInfo = routes.find(r => r.mode === mode)
+    if (routeInfo) {
+      addToRecent(destination, {
+        mode,
+        time: routeInfo.duration,
+        distance: routeInfo.distance
+      })
+    }
+    
     // Check if it's a mobile device
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     
@@ -143,6 +158,13 @@ export function DirectionsButton({ destination }: DirectionsButtonProps) {
   const openInWaze = () => {
     if (!userLocation) return
     
+    // Add to recent destinations
+    addToRecent(destination, {
+      mode: 'driving',
+      time: 'N/A',
+      distance: 'N/A'
+    })
+    
     const wazeUrl = `https://www.waze.com/ul?ll=${destination.lat}%2C${destination.lng}&navigate=yes&zoom=17`
     window.open(wazeUrl, '_blank')
   }
@@ -152,6 +174,16 @@ export function DirectionsButton({ destination }: DirectionsButtonProps) {
     if (!userLocation && !locationError) {
       getUserLocation()
     }
+  }
+
+  const handleSaveLocation = () => {
+    saveLocation(destination, [], 'Salvo via direções')
+    toast.success('Local salvo com sucesso!')
+  }
+
+  const handleAddToFavorites = () => {
+    addToFavorites(destination, 'other')
+    toast.success('Adicionado aos favoritos!')
   }
 
   const routes = getRouteEstimates()
@@ -254,32 +286,59 @@ export function DirectionsButton({ destination }: DirectionsButtonProps) {
           )}
 
           {userLocation && (
-            <div className="space-y-2 pt-4 border-t">
-              <h4 className="font-medium text-sm">Abrir em:</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => openInMaps('driving')}
-                  className="gap-2"
-                >
-                  <div className="w-4 h-4 bg-red-500 rounded-sm flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">M</span>
-                  </div>
-                  Google Maps
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={openInWaze}
-                  className="gap-2"
-                >
-                  <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">W</span>
-                  </div>
-                  Waze
-                </Button>
+            <div className="space-y-4">
+              <div className="space-y-2 pt-4 border-t">
+                <h4 className="font-medium text-sm">Abrir em:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => openInMaps('driving')}
+                    className="gap-2"
+                  >
+                    <div className="w-4 h-4 bg-red-500 rounded-sm flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">M</span>
+                    </div>
+                    Google Maps
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={openInWaze}
+                    className="gap-2"
+                  >
+                    <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">W</span>
+                    </div>
+                    Waze
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t">
+                <h4 className="font-medium text-sm">Salvar local:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSaveLocation}
+                    className="gap-2"
+                  >
+                    <Star className="w-4 h-4" />
+                    Salvar
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleAddToFavorites}
+                    className="gap-2"
+                  >
+                    <Heart className="w-4 h-4" />
+                    Favoritar
+                  </Button>
+                </div>
               </div>
             </div>
           )}
