@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Building, MapPin, MessageCircle, Phone, Clock, ExternalLink, Search, Menu, X } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
-import { HeroSection } from './components/HeroSection'
-import { CompanyDirectory } from './components/CompanyDirectory' 
-import { CommunityFeed } from './components/CommunityFeed'
-import { ReportProblem } from './components/ReportProblem'
-import { AboutGuaira } from './components/AboutGuaira'
+import { HeroSection } from '@/components/HeroSection'
+import { CompanyDirectory } from '@/components/CompanyDirectory' 
+import { CommunityFeed } from '@/components/CommunityFeed'
+import { ReportProblem } from '@/components/ReportProblem'
+import { AboutGuaira } from '@/components/AboutGuaira'
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
