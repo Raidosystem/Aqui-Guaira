@@ -10,6 +10,17 @@ import { Label } from '@/components/ui/label'
 import { MessageCircle, Heart, Calendar, MapPin, Plus, Image as ImageIcon, Video } from '@phosphor-icons/react'
 import { useKV } from '@github/spark/hooks'
 
+// Utility function for date formatting
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
+}
+
 interface Post {
   id: string
   author: string
@@ -34,16 +45,6 @@ export function CommunityFeed({ isPreview = false }: CommunityFeedProps) {
 
   const approvedPosts = posts.filter(post => post.status === 'approved' && !post.isIssue)
   const displayPosts = isPreview ? approvedPosts.slice(0, 6) : approvedPosts
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
-  }
 
   return (
     <section className="container mx-auto px-4 py-8">
