@@ -23,11 +23,16 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  // Adiciona fallback para SPA
+  // Middleware para fallback de rotas na Vercel
   preview: {
     port: 8080,
     strictPort: true,
     open: true,
     historyApiFallback: true,
+  },
+  esbuild: {
+    loader: "jsx",
+    include: /src\/.*\.jsx?$/,
+    exclude: [],
   },
 }));
