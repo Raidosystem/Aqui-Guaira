@@ -42,6 +42,7 @@ interface Estatisticas {
   total_empresas: number;
   posts_pendentes: number;
   posts_aprovados: number;
+  total_posts: number;
   total_usuarios: number;
   total_admins: number;
 }
@@ -83,15 +84,6 @@ interface Post {
   users?: { nome: string; email: string };
 }
 
-interface AdminLog {
-  id: string;
-  acao: string;
-  entidade_tipo: string;
-  data_acao: string;
-  detalhes: any;
-  users?: { nome: string; email: string };
-}
-
 export default function Admin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -100,7 +92,6 @@ export default function Admin() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [empresasFiltradas, setEmpresasFiltradas] = useState<Empresa[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [logs, setLogs] = useState<AdminLog[]>([]);
   
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(null);
   const [postSelecionado, setPostSelecionado] = useState<Post | null>(null);
@@ -190,8 +181,7 @@ export default function Admin() {
     await Promise.all([
       carregarEstatisticas(),
       carregarEmpresas(),
-      carregarPosts(),
-      carregarLogs()
+      carregarPosts()
     ]);
   };
 
@@ -234,21 +224,6 @@ export default function Admin() {
 
     if (!error && data) {
       setPosts(data);
-    }
-  };
-
-  const carregarLogs = async () => {
-    const { data, error } = await supabase
-      .from("admin_logs")
-      .select(`
-        *,
-        users!admin_id(nome, email)
-      `)
-      .order("data_acao", { ascending: false })
-      .limit(50);
-
-    if (!error && data) {
-      setLogs(data);
     }
   };
 
@@ -464,13 +439,13 @@ export default function Admin() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Posts Pendentes</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-600" />
+              <CardTitle className="text-sm font-medium">Posts Aprovados</CardTitle>
+              <FileText className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.posts_pendentes}</div>
+              <div className="text-2xl font-bold">{estatisticas.posts_aprovados}</div>
               <p className="text-xs text-muted-foreground">
-                Aguardando aprovação
+                Total: {estatisticas.total_posts}
               </p>
             </CardContent>
           </Card>
@@ -505,10 +480,6 @@ export default function Admin() {
                 {estatisticas.posts_pendentes}
               </Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="logs">
-            <Activity className="w-4 h-4 mr-2" />
-            Logs de Ações
           </TabsTrigger>
         </TabsList>
 
@@ -697,25 +668,30 @@ export default function Admin() {
         {/* Tab Posts */}
         <TabsContent value="posts" className="space-y-4">
           {posts.map((post) => (
-            <Card key={post.id}>
+            <Card key={post.id} className="overflow-hidden">
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <CardTitle className="text-lg">{post.titulo}</CardTitle>
-                      {post.aprovado ? (
+                      {post.motivo_rejeicao ? (
+                        <Badge variant="destructive">
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Rejeitado
+                        </Badge>
+                      ) : post.aprovado ? (
                         <Badge variant="default" className="bg-green-600">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           Aprovado
                         </Badge>
                       ) : (
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="bg-yellow-600 text-white">
                           <Clock className="w-3 h-3 mr-1" />
                           Pendente
                         </Badge>
                       )}
                     </div>
-                    <CardDescription>
+                    <CardDescription className="mb-1">
                       {post.empresas?.nome} • {formatarData(post.data_criacao)}
                     </CardDescription>
                     {post.users && (
@@ -724,12 +700,13 @@ export default function Admin() {
                       </p>
                     )}
                   </div>
-                  {!post.aprovado && (
+                  {!post.aprovado && !post.motivo_rejeicao && (
                     <div className="flex gap-2">
                       <Button
                         variant="default"
                         size="sm"
                         onClick={() => handleAprovarPost(post)}
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                         Aprovar
@@ -750,13 +727,19 @@ export default function Admin() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm mb-4">{post.conteudo}</p>
-                {post.imagem && (
-                  <img 
-                    src={post.imagem} 
-                    alt={post.titulo}
-                    className="w-full max-w-md rounded-lg"
-                  />
+                {post.imagem ? (
+                  <div className="space-y-4">
+                    <div className="relative rounded-lg overflow-hidden bg-muted">
+                      <img 
+                        src={post.imagem} 
+                        alt={post.titulo}
+                        className="w-full h-auto max-h-96 object-cover"
+                      />
+                    </div>
+                    <p className="text-sm leading-relaxed">{post.conteudo}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed">{post.conteudo}</p>
                 )}
                 {post.motivo_rejeicao && (
                   <Alert variant="destructive" className="mt-4">
@@ -765,6 +748,13 @@ export default function Admin() {
                       <strong>Motivo da rejeição:</strong> {post.motivo_rejeicao}
                     </AlertDescription>
                   </Alert>
+                )}
+                {post.aprovado && post.data_aprovacao && (
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      Aprovado em {formatarData(post.data_aprovacao)}
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -776,39 +766,6 @@ export default function Admin() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        {/* Tab Logs */}
-        <TabsContent value="logs" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Ações Administrativas</CardTitle>
-              <CardDescription>Últimas 50 ações realizadas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {logs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                    <Activity className="w-5 h-5 text-primary mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        {log.acao.replace(/_/g, " ").toUpperCase()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {log.users?.nome} • {formatarData(log.data_acao)}
-                      </p>
-                      {log.detalhes && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {JSON.stringify(log.detalhes)}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant="outline">{log.entidade_tipo}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 
