@@ -214,15 +214,16 @@ const Header = () => {
                       <div className="text-xs text-muted-foreground truncate">{user.email}</div>
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sair
-                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <a href="/mural/meus-posts" className="flex items-center">
+                      <a href="/mural/meus-posts" className="flex items-center cursor-pointer">
                         <ClipboardList className="h-4 w-4 mr-2" />
                         Meus Posts
                       </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sair
                     </DropdownMenuItem>
                   </>
                 ) : (
