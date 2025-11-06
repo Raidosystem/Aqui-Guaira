@@ -1,4 +1,4 @@
-import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Flag, Info, ChevronDown } from "lucide-react";
+import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Flag, Info, ChevronDown, User, LogOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { LoginDialog } from "@/components/LoginDialog";
+import { getUsuarioLogado, logout } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const Header = () => {
   const location = useLocation();
   const [active, setActive] = useState<string>("Início");
   const manualOverride = useRef(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [user, setUser] = useState(getUsuarioLogado());
 
   const mainNavItems = [
     { icon: Home, label: "Início", href: "/" },
@@ -83,6 +89,23 @@ const Header = () => {
     // Fallback
     setActive("Início");
   }, [location]);
+
+  const handleLogout = () => {
+    logout();
+    setUser(null);
+    toast.success('Logout realizado');
+    window.location.reload();
+  };
+
+  const handleLoginSuccess = () => {
+    setUser(getUsuarioLogado());
+  };
+
+  // Obter inicial do email
+  const getInitial = () => {
+    if (!user?.email) return 'U';
+    return user.email.charAt(0).toUpperCase();
+  };
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50 shadow-sm">
@@ -171,9 +194,49 @@ const Header = () => {
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* User Avatar */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center justify-center h-10 w-10 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                  {user ? (
+                    getInitial()
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-background border border-border">
+                {user ? (
+                  <>
+                    <div className="px-2 py-1.5 text-sm">
+                      <div className="font-medium">{user.nome || 'Usuário'}</div>
+                      <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sair
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem onClick={() => setShowLogin(true)} className="cursor-pointer">
+                    <User className="h-4 w-4 mr-2" />
+                    Entrar
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
         </div>
       </div>
+
+      {/* Dialog de Login */}
+      <LoginDialog
+        open={showLogin}
+        onOpenChange={setShowLogin}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </header>
   );
 };

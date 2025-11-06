@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -12,7 +13,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/sonner";
-import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X } from "lucide-react";
+import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { criarEmpresa, buscarCategorias, uploadImagens, supabase } from "@/lib/supabase";
 
 // Schema de cadastro
 const cadastroSchema = z.object({
@@ -29,6 +31,9 @@ const cadastroSchema = z.object({
   descricao: z.string().min(10, "Descreva com mais detalhes (mín. 10)"),
   logoFile: z.instanceof(File).optional(),
   bannerFile: z.instanceof(File).optional(),
+  cep: z.string().optional(),
+  instagram: z.string().optional(),
+  facebook: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -36,15 +41,24 @@ const loginSchema = z.object({
   celular: z.string().min(15, "Informe seu celular"),
 });
 
-const CATEGORIAS = ["Alimentação", "Serviços", "Saúde", "Educação", "Lazer", "Comércio", "Tecnologia"];
 const BAIRROS = ["Centro", "Jardim Paulista", "Bela Vista", "Vila Aparecida", "Vivendas", "Outros"];
 
 const SuaEmpresa = () => {
+  const navigate = useNavigate();
   const [modo, setModo] = useState<"login" | "cadastro">("cadastro");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [dragLogo, setDragLogo] = useState(false);
   const [dragBanner, setDragBanner] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [categorias, setCategorias] = useState<string[]>([]);
+
+  // Carregar categorias do Supabase
+  useEffect(() => {
+    buscarCategorias().then(cats => {
+      setCategorias(cats.map(c => c.nome));
+    });
+  }, []);
 
   const cadastroForm = useForm<z.infer<typeof cadastroSchema>>({
     resolver: zodResolver(cadastroSchema),
@@ -68,17 +82,174 @@ const SuaEmpresa = () => {
     defaultValues: { cnpj: "", celular: "" },
   });
 
-  const handleCadastro = (data: z.infer<typeof cadastroSchema>) => {
-    // Simulação de envio
-    toast("Cadastro enviado", { description: `${data.nomeFantasia} cadastrado com sucesso!`, duration: 2500 });
-    cadastroForm.reset();
-  setLogoPreview(null);
-  setBannerPreview(null);
+  const handleCadastro = async (data: z.infer<typeof cadastroSchema>) => {
+    if (!isValidCNPJ(data.cnpj)) {
+      toast("CNPJ inválido", { description: "Verifique o CNPJ digitado", duration: 2000 });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Upload de imagens (opcional - se buckets não existirem, usa placeholders)
+      const imagens: string[] = [];
+      let logoUrl: string | undefined;
+
+      // Tentar upload, mas não falhar se bucket não existir
+      if (data.bannerFile) {
+        try {
+          const [bannerUrl] = await uploadImagens('empresas-images', [data.bannerFile], 'banners');
+          if (bannerUrl) imagens.push(bannerUrl);
+        } catch (error) {
+          console.warn('Upload de banner falhou, continuando sem imagem', error);
+          // Usar placeholder
+          imagens.push('https://images.unsplash.com/photo-1497366216548-37526070297c?w=800');
+        }
+      }
+
+      if (data.logoFile) {
+        try {
+          const [url] = await uploadImagens('empresas-images', [data.logoFile], 'logos');
+          logoUrl = url;
+        } catch (error) {
+          console.warn('Upload de logo falhou, continuando sem logo', error);
+          // Usar placeholder
+          logoUrl = 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400';
+        }
+      }
+
+      // Buscar ID da categoria
+      const { data: categoriaData } = await supabase
+        .from('categorias')
+        .select('id')
+        .eq('nome', data.categoria)
+        .single();
+
+      // Criar slug
+      const slug = data.nomeFantasia
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      // Criar empresa no Supabase
+      const empresaData = {
+        cnpj: data.cnpj, // ← CNPJ adicionado
+        nome: data.nomeFantasia,
+        slug,
+        descricao: data.descricao,
+        categoria_id: categoriaData?.id,
+        endereco: data.endereco,
+        bairro: data.bairro,
+        cidade: 'Guaíra',
+        estado: 'SP',
+        cep: data.cep,
+        latitude: -20.3167, // Coordenadas padrão de Guaíra
+        longitude: -48.3167,
+        telefone: data.celular,
+        whatsapp: data.whatsapp,
+        email: data.email,
+        site: data.site || undefined,
+        instagram: data.instagram,
+        facebook: data.facebook,
+        imagens,
+        logo: logoUrl,
+        status: 'aprovado' as const, // ← Mudei para 'aprovado' para aparecer na listagem
+        verificado: false,
+        destaque: false,
+        responsavel_nome: data.razaoSocial,
+        responsavel_email: data.email,
+        responsavel_telefone: data.celular,
+      };
+
+      const resultado = await criarEmpresa(empresaData);
+
+      // Salvar credenciais no localStorage para login
+      localStorage.setItem('empresa_auth', JSON.stringify({
+        cnpj: data.cnpj,
+        celular: data.celular,
+        empresaId: resultado.id
+      }));
+
+      toast("Cadastro realizado!", {
+        description: `${data.nomeFantasia} cadastrado com sucesso! Aguarde aprovação.`,
+        duration: 3000
+      });
+
+      // Redirecionar para dashboard
+      setTimeout(() => navigate('/dashboard'), 1500);
+    } catch (error: any) {
+      console.error('Erro ao cadastrar:', error);
+      
+      // Mensagem de erro mais específica
+      let mensagem = "Tente novamente mais tarde";
+      
+      if (error?.message?.includes('row-level security') || error?.code === '42501') {
+        mensagem = "❌ Permissão negada. Execute o arquivo 'supabase/fix-rls.sql' no Supabase SQL Editor.";
+      } else if (error?.message?.includes('Bucket not found')) {
+        mensagem = "❌ Buckets de storage não configurados. Veja SETUP_RAPIDO.md";
+      } else if (error?.message?.includes('relation') && error?.message?.includes('does not exist')) {
+        mensagem = "❌ Tabela não existe. Execute o arquivo 'supabase/schema.sql' no Supabase SQL Editor primeiro.";
+      } else if (error?.code === '23505') {
+        mensagem = "❌ Esta empresa já está cadastrada (CNPJ duplicado).";
+      } else if (error?.message) {
+        mensagem = `❌ Erro: ${error.message}`;
+      }
+      
+      toast("Erro ao cadastrar", {
+        description: mensagem,
+        duration: 5000
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogin = (data: z.infer<typeof loginSchema>) => {
-    toast("Login", { description: `Autenticado: ${data.cnpj}`, duration: 1800 });
-    loginForm.reset();
+  const handleLogin = async (data: z.infer<typeof loginSchema>) => {
+    setLoading(true);
+    try {
+      // Buscar empresa pelo CNPJ e verificar celular (autenticação simples)
+      // Nota: Em produção, use Supabase Auth ou similar
+      const cnpjLimpo = data.cnpj.replace(/\D/g, '');
+      const celularLimpo = data.celular.replace(/\D/g, '');
+
+      const { data: empresa, error } = await supabase
+        .from('empresas')
+        .select('*')
+        .eq('responsavel_telefone', data.celular)
+        .single();
+
+      if (error || !empresa) {
+        toast("Login falhou", {
+          description: "CNPJ ou celular incorretos",
+          duration: 2000
+        });
+        return;
+      }
+
+      // Salvar sessão
+      localStorage.setItem('empresa_auth', JSON.stringify({
+        cnpj: data.cnpj,
+        celular: data.celular,
+        empresaId: empresa.id
+      }));
+
+      toast("Login realizado!", {
+        description: `Bem-vindo, ${empresa.nome}`,
+        duration: 2000
+      });
+
+      // Redirecionar para dashboard
+      setTimeout(() => navigate('/dashboard'), 1000);
+    } catch (error) {
+      console.error('Erro no login:', error);
+      toast("Erro ao fazer login", {
+        description: "Tente novamente",
+        duration: 2000
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helpers de formatação onChange
@@ -208,7 +379,7 @@ const SuaEmpresa = () => {
                         <Select value={cadastroForm.watch("categoria")} onValueChange={(v) => cadastroForm.setValue("categoria", v)}>
                           <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
                           <SelectContent>
-                            {CATEGORIAS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         {cadastroForm.formState.errors.categoria && <p className="text-xs text-destructive">{cadastroForm.formState.errors.categoria.message}</p>}
@@ -309,7 +480,10 @@ const SuaEmpresa = () => {
                   <div className="flex flex-wrap justify-end gap-3 pt-4">
                     {bannerPreview && <Badge variant="secondary">Banner ok</Badge>}
                     {logoPreview && <Badge variant="secondary">Logo ok</Badge>}
-                    <Button type="submit" variant="default" className="gap-2"><PlusCircle className="h-4 w-4" /> Enviar Cadastro</Button>
+                    <Button type="submit" variant="default" className="gap-2" disabled={loading}>
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                      {loading ? "Enviando..." : "Enviar Cadastro"}
+                    </Button>
                   </div>
                 </form>
               </CardContent>
@@ -335,7 +509,10 @@ const SuaEmpresa = () => {
                     {loginForm.formState.errors.celular && <p className="text-xs text-destructive">{loginForm.formState.errors.celular.message}</p>}
                   </div>
                   <div className="flex justify-end gap-3 pt-2">
-                    <Button type="submit" variant="default" className="gap-2"><Lock className="h-4 w-4" /> Entrar</Button>
+                    <Button type="submit" variant="default" className="gap-2" disabled={loading}>
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                      {loading ? "Entrando..." : "Entrar"}
+                    </Button>
                   </div>
                 </form>
                 <p className="text-xs text-muted-foreground">Caso tenha esquecido seus dados, envie uma nova solicitação de cadastro.</p>

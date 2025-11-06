@@ -9,6 +9,7 @@ import Mural from "./pages/Mural";
 import Empresas from "./pages/Empresas";
 import MeusLocais from "./pages/MeusLocais";
 import SuaEmpresa from "./pages/SuaEmpresa";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/empresas" element={<Empresas />} />
           <Route path="/meus-locais" element={<MeusLocais />} />
           <Route path="/sua-empresa" element={<SuaEmpresa />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

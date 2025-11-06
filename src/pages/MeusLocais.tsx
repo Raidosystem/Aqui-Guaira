@@ -6,61 +6,143 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { EMPRESAS, Empresa } from "@/lib/empresas";
 import { MapPin, Heart, Phone, Mail, Globe, Clipboard, Check } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import {
+  buscarFavoritosUsuario,
+  removerFavoritoUsuario,
+  adicionarFavoritoUsuario,
+  buscarLocaisTuristicos,
+  buscarEmpresasPorIds,
+  EmpresaCompleta,
+  LocalTuristico,
+  getUsuarioLogado
+} from "@/lib/supabase";
 
-// Redesign: removido cálculo de distância (geolocalização não usada aqui)
+// Página refatorada: agora consome favoritos do Supabase (empresa + local) vinculados ao usuário logado (user_id) ou identificador anônimo.
+
+type ItemFavorito = {
+  id: string;
+  tipo: 'empresa' | 'local';
+  nome: string;
+  descricao: string;
+  categoria?: string;
+  bairro?: string;
+  imagens: string[];
+  telefone?: string;
+  whatsapp?: string;
+  email?: string;
+  site?: string;
+  endereco?: string;
+};
 
 const MeusLocais = () => {
-  const [favoritos, setFavoritos] = useState<Set<string>>(() => {
-    const raw = localStorage.getItem("favoritos_empresas");
-    if (!raw) return new Set();
-    try { return new Set(JSON.parse(raw)); } catch { return new Set(); }
-  });
   const [busca, setBusca] = useState("");
-  // Sem userLocation neste contexto
-  const [copiado, setCopiado] = useState<string | null>(null);
-
-  // Removido bloco de requestLocation conforme redesign solicitado.
-
-  useEffect(() => {
-    localStorage.setItem("favoritos_empresas", JSON.stringify(Array.from(favoritos)));
-  }, [favoritos]);
-
   const [categoria, setCategoria] = useState<string>("todas");
   const [bairro, setBairro] = useState<string>("todos");
+  const [tipoFiltro, setTipoFiltro] = useState<'todos'|'empresas'|'locais'>('todos');
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [itens, setItens] = useState<ItemFavorito[]>([]);
+  const usuario = getUsuarioLogado();
 
-  const listaFavoritos = useMemo(() => {
-    const base = EMPRESAS.filter(e => favoritos.has(e.id));
-    const categorias = categoria === "todas" ? base : base.filter(e => e.categoria === categoria);
-    const bairros = bairro === "todos" ? categorias : categorias.filter(e => e.bairro === bairro);
-    const buscados = busca ? bairros.filter(e => e.nome.toLowerCase().includes(busca.toLowerCase())) : bairros;
-    return buscados.sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [favoritos, busca, categoria, bairro]);
+  const carregarFavoritos = async () => {
+    setLoading(true); setErro(null);
+    
+    // Só carrega favoritos se usuário estiver logado
+    if (!usuario) {
+      setLoading(false);
+      setItens([]);
+      return;
+    }
+    
+    try {
+      // Buscar todos favoritos (empresa + local)
+      const favs = await buscarFavoritosUsuario();
+      const empresaIds = favs.filter(f => f.tipo === 'empresa').map(f => f.item_id);
+      const localIds = favs.filter(f => f.tipo === 'local').map(f => f.item_id);
 
-  const categoriasDisponiveis = useMemo(() => Array.from(new Set(EMPRESAS.filter(e => favoritos.has(e.id)).map(e => e.categoria))), [favoritos]);
-  const bairrosDisponiveis = useMemo(() => Array.from(new Set(EMPRESAS.filter(e => favoritos.has(e.id)).map(e => e.bairro))), [favoritos]);
+      // Buscar detalhes das empresas
+      const empresas: EmpresaCompleta[] = empresaIds.length ? await buscarEmpresasPorIds(empresaIds) : [];
+      // Buscar todos locais ativos e filtrar pelos ids favoritados (não temos view filtrada por ids ainda)
+      const todosLocais: LocalTuristico[] = localIds.length ? await buscarLocaisTuristicos() : [];
+      const locais = localIds.length ? todosLocais.filter(l => localIds.includes(l.id)) : [];
 
-  const toggleFavorito = (id: string) => {
-    setFavoritos(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      toast(next.has(id) ? "Mantido nos favoritos" : "Removido", { duration: 1200 });
-      return next;
-    });
+      const normalizadosEmpresas: ItemFavorito[] = empresas.map(e => ({
+        id: e.id,
+        tipo: 'empresa',
+        nome: e.nome,
+        descricao: e.descricao,
+        categoria: e.categoria_nome,
+        bairro: e.bairro,
+        imagens: e.imagens?.length ? e.imagens : [e.logo || 'https://placehold.co/600x400?text=Empresa'],
+        telefone: e.telefone,
+        whatsapp: e.whatsapp,
+        email: e.email,
+        site: e.site,
+        endereco: e.endereco,
+      }));
+
+      const normalizadosLocais: ItemFavorito[] = locais.map(l => ({
+        id: l.id,
+        tipo: 'local',
+        nome: l.nome,
+        descricao: l.descricao,
+        categoria: l.categoria,
+        bairro: l.bairro,
+        imagens: l.imagens?.length ? l.imagens : ['https://placehold.co/600x400?text=Local'],
+        telefone: l.telefone,
+        site: l.site,
+        endereco: l.endereco,
+        email: undefined,
+        whatsapp: undefined,
+      }));
+
+      setItens([...normalizadosEmpresas, ...normalizadosLocais].sort((a,b) => a.nome.localeCompare(b.nome)));
+    } catch (e: any) {
+      console.error(e);
+      setErro('Falha ao carregar favoritos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { carregarFavoritos(); }, []);
+
+  const listaFiltrada = useMemo(() => {
+    let base = itens;
+    if (tipoFiltro === 'empresas') base = base.filter(i => i.tipo === 'empresa');
+    if (tipoFiltro === 'locais') base = base.filter(i => i.tipo === 'local');
+    if (categoria !== 'todas') base = base.filter(i => (i.categoria || '').toLowerCase() === categoria.toLowerCase());
+    if (bairro !== 'todos') base = base.filter(i => (i.bairro || '').toLowerCase() === bairro.toLowerCase());
+    if (busca) base = base.filter(i => i.nome.toLowerCase().includes(busca.toLowerCase()));
+    return base;
+  }, [itens, tipoFiltro, categoria, bairro, busca]);
+
+  const categoriasDisponiveis = useMemo(() => Array.from(new Set(itens.map(i => i.categoria).filter(Boolean))), [itens]);
+  const bairrosDisponiveis = useMemo(() => Array.from(new Set(itens.map(i => i.bairro).filter(Boolean))), [itens]);
+
+  const toggleFavorito = async (item: ItemFavorito) => {
+    try {
+      await removerFavoritoUsuario(item.tipo, item.id);
+      toast('Removido dos favoritos', { duration: 1200 });
+      setItens(prev => prev.filter(i => !(i.id === item.id && i.tipo === item.tipo)));
+    } catch {
+      toast('Erro ao remover favorito');
+    }
   };
 
   const copiar = (texto?: string) => {
     if (!texto) return;
     navigator.clipboard.writeText(texto).then(() => {
-      setCopiado(texto); toast("Copiado!", { description: texto, duration: 1200 }); setTimeout(() => setCopiado(null), 1200);
-    }).catch(() => toast("Falha ao copiar", { duration: 1500 }));
+      setCopiado(texto); toast('Copiado!', { description: texto, duration: 1200 }); setTimeout(() => setCopiado(null), 1200);
+    }).catch(() => toast('Falha ao copiar', { duration: 1500 }));
   };
 
-  const [selecionada, setSelecionada] = useState<Empresa | null>(null);
+  const [selecionada, setSelecionada] = useState<ItemFavorito | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
-  const abrir = (e: Empresa) => { setSelecionada(e); setModalAberto(true); };
+  const abrir = (e: ItemFavorito) => { setSelecionada(e); setModalAberto(true); };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -68,19 +150,31 @@ const MeusLocais = () => {
       <main className="flex-grow container mx-auto px-4 py-12 space-y-12">
         <div className="space-y-4">
           <h2 className="text-3xl font-bold gradient-text flex items-center gap-3"><Heart className="h-8 w-8 text-primary" /> Meus Locais</h2>
-          <p className="text-sm text-muted-foreground max-w-2xl">Empresas que você marcou como favoritas. Remova ou abra detalhes.</p>
+          <p className="text-sm text-muted-foreground max-w-2xl">Seus favoritos (empresas e locais turísticos). {usuario ? 'Vinculados à sua conta.' : 'Favoritos anônimos ligados ao navegador.'}</p>
         </div>
 
-        <Card className="glass-card border-2">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl">Filtros</CardTitle>
-            <CardDescription>Refine seus favoritos por nome, categoria e bairro.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-4 gap-4">
+        {usuario && (
+          <Card className="glass-card border-2">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Filtros</CardTitle>
+              <CardDescription>Refine seus favoritos por nome, categoria e bairro.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+            <div className="grid md:grid-cols-5 gap-4">
               <div className="space-y-2 md:col-span-2">
                 <label className="text-xs font-medium">Buscar (nome)</label>
                 <Input placeholder="Ex: Padaria" value={busca} onChange={e => setBusca(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Tipo</label>
+                <Select value={tipoFiltro} onValueChange={(v: any) => setTipoFiltro(v)}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="empresas">Empresas</SelectItem>
+                    <SelectItem value="locais">Locais</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Categoria</label>
@@ -88,7 +182,7 @@ const MeusLocais = () => {
                   <SelectTrigger className="w-full"><SelectValue placeholder="Categoria" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
-                    {categoriasDisponiveis.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categoriasDisponiveis.map(c => c && <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -98,7 +192,7 @@ const MeusLocais = () => {
                   <SelectTrigger className="w-full"><SelectValue placeholder="Bairro" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
-                    {bairrosDisponiveis.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    {bairrosDisponiveis.map(b => b && <SelectItem key={b} value={b}>{b}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -107,57 +201,76 @@ const MeusLocais = () => {
               {categoria !== "todas" && <Badge variant="secondary">Categoria: {categoria}</Badge>}
               {bairro !== "todos" && <Badge variant="secondary">Bairro: {bairro}</Badge>}
               {busca && <Badge variant="secondary">Busca: {busca}</Badge>}
+              {tipoFiltro !== 'todos' && <Badge variant="secondary">Tipo: {tipoFiltro}</Badge>}
               {(categoria !== "todas" || bairro !== "todos" || busca) && (
-                <Button variant="ghost" size="sm" onClick={() => { setCategoria("todas"); setBairro("todos"); setBusca(""); }}>Limpar filtros</Button>
+                <Button variant="ghost" size="sm" onClick={() => { setCategoria("todas"); setBairro("todos"); setBusca(""); setTipoFiltro('todos'); }}>Limpar filtros</Button>
               )}
             </div>
           </CardContent>
         </Card>
+        )}
 
         <Card className="glass-card border-2">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl">Favoritos ({listaFavoritos.length})</CardTitle>
-            <CardDescription>Empresas que você marcou. Remova ou abra detalhes.</CardDescription>
+            <CardTitle className="text-xl">Favoritos ({listaFiltrada.length})</CardTitle>
+            <CardDescription>Itens que você marcou. Você pode abrir detalhes ou remover.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
+            {!usuario && (
+              <div className="col-span-full text-center py-12 text-sm text-muted-foreground space-y-4">
+                <Heart className="h-12 w-12 mx-auto text-muted-foreground/40" />
+                <p className="text-base font-medium">Faça login para ver seus favoritos</p>
+                <p>Entre na sua conta para visualizar e gerenciar seus locais e empresas favoritos.</p>
+                <div className="flex gap-3 justify-center pt-4">
+                  <Button variant="default" size="sm" asChild>
+                    <a href="/" className="gap-2 flex items-center">Ir para o início</a>
+                  </Button>
+                </div>
+              </div>
+            )}
+            {usuario && loading && <p className="text-sm animate-pulse">Carregando favoritos...</p>}
+            {usuario && erro && <p className="text-sm text-destructive">{erro}</p>}
             <div className="grid md:grid-cols-2 gap-6">
-              {listaFavoritos.map(emp => (
-                <div key={emp.id} className="relative">
+              {usuario && !loading && listaFiltrada.map(item => (
+                <div key={item.id} className="relative">
                   <button
                     type="button"
-                    onClick={() => abrir(emp)}
+                    onClick={() => abrir(item as any)}
                     className="w-full text-left group relative rounded-xl overflow-hidden border border-border/60 bg-gradient-to-br from-background to-accent/30 shadow-sm hover:shadow-md transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <div className="h-40 w-full overflow-hidden">
-                      <img src={emp.imagens[0]} alt={emp.nome} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={item.imagens[0]} alt={item.nome} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
                     <div className="p-5 space-y-3">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">{emp.nome}<Badge variant="secondary">Favorito</Badge></h3>
-                        <Badge>{emp.categoria}</Badge>
+                        <h3 className="font-semibold text-lg flex items-center gap-2">{item.nome}<Badge variant="secondary">Favorito</Badge></h3>
+                        {item.categoria && <Badge>{item.categoria}</Badge>}
                       </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{emp.descricao}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{item.descricao}</p>
                       <div className="flex items-center text-xs mt-2">
-                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-primary" />{emp.bairro}</span>
+                        {item.bairro && <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-primary" />{item.bairro}</span>}
+                        <span className="ml-auto text-[10px] uppercase tracking-wide font-medium opacity-60">{item.tipo}</span>
                       </div>
                     </div>
                   </button>
                   <button
                     type="button"
                     aria-label="Remover dos favoritos"
-                    onClick={() => toggleFavorito(emp.id)}
+                    onClick={() => toggleFavorito(item)}
                     className="absolute top-2 right-2 bg-background/70 backdrop-blur-sm rounded-full p-2 shadow-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
                   >
                     <Heart className="h-4 w-4 fill-primary text-primary" />
                   </button>
                 </div>
               ))}
-              {listaFavoritos.length === 0 && (
+              {usuario && !loading && listaFiltrada.length === 0 && (
                 <div className="col-span-full text-center py-12 text-sm text-muted-foreground space-y-4">
-                  <p>Nenhuma empresa favoritada ainda.</p>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/empresas" className="gap-2 flex items-center"><Heart className="h-4 w-4" /> Explorar empresas</a>
-                  </Button>
+                  <p>Nenhum favorito encontrado.</p>
+                  <div className="flex gap-3 justify-center">
+                    <Button variant="outline" size="sm" asChild>
+                      <a href="/empresas" className="gap-2 flex items-center"><Heart className="h-4 w-4" /> Explorar empresas</a>
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -170,7 +283,7 @@ const MeusLocais = () => {
             <div
               role="dialog"
               aria-modal="true"
-              aria-label={`Detalhes da empresa ${selecionada.nome}`}
+              aria-label={`Detalhes do favorito ${selecionada.nome}`}
               className="relative w-full max-w-xl sm:max-w-2xl md:max-w-3xl rounded-lg sm:rounded-2xl border border-border/60 glass-card shadow-lg animate-in fade-in-0 zoom-in-95 max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
             >
               <div className="h-48 sm:h-56 md:h-64 w-full overflow-hidden relative shrink-0">
@@ -187,7 +300,8 @@ const MeusLocais = () => {
                 <div className="flex flex-col gap-1">
                   <h3 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
                     {selecionada.nome}
-                    <Badge className="whitespace-nowrap">{selecionada.categoria}</Badge>
+                    {selecionada.categoria && <Badge className="whitespace-nowrap">{selecionada.categoria}</Badge>}
+                    <Badge variant="outline" className="uppercase text-[10px] tracking-wide">{selecionada.tipo}</Badge>
                   </h3>
                   {selecionada.endereco && <p className="text-sm text-muted-foreground">{selecionada.endereco}</p>}
                 </div>
@@ -243,7 +357,7 @@ const MeusLocais = () => {
                   <div className="space-y-3">
                     <h4 className="text-xs uppercase tracking-wide font-semibold text-muted-foreground">Localização</h4>
                     <div className="text-sm flex flex-col gap-1">
-                      <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{selecionada.bairro}</span>
+                      {selecionada.bairro && <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{selecionada.bairro}</span>}
                       {selecionada.endereco && <span className="text-muted-foreground break-words">{selecionada.endereco}</span>}
                       {/* Distância removida no redesign */}
                     </div>
@@ -252,18 +366,17 @@ const MeusLocais = () => {
               </div>
               <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-t px-4 sm:px-6 py-3 flex flex-wrap gap-3 justify-between items-center">
                 <div className="flex items-center gap-2">
-                  {selecionada && favoritos.has(selecionada.id) && <Badge variant="secondary">Favorito</Badge>}
+                  {selecionada && <Badge variant="secondary">Favorito</Badge>}
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto justify-end">
                   {selecionada && (
                     <Button
-                      variant={favoritos.has(selecionada.id) ? "secondary" : "outline"}
+                      variant="secondary"
                       size="sm"
-                      onClick={() => toggleFavorito(selecionada.id)}
+                      onClick={() => { toggleFavorito(selecionada); setModalAberto(false);} }
                       className="gap-2 flex-1 sm:flex-none"
                     >
-                      <Heart className={"h-4 w-4 " + (favoritos.has(selecionada.id) ? "fill-primary text-primary" : "")} />
-                      {favoritos.has(selecionada.id) ? "Remover" : "Favoritar"}
+                      <Heart className="h-4 w-4 fill-primary text-primary" /> Remover
                     </Button>
                   )}
                   <Button variant="ghost" size="sm" onClick={() => setModalAberto(false)} className="flex-1 sm:flex-none">Fechar</Button>

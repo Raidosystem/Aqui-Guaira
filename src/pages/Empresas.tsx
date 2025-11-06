@@ -7,11 +7,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Building2, RefreshCcw, LocateFixed, Phone, Mail, Globe, Clipboard, ExternalLink, Heart, Check } from "lucide-react";
+import { MapPin, Building2, RefreshCcw, LocateFixed, Phone, Mail, Globe, Clipboard, ExternalLink, Heart, Check, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { LoginDialog } from "@/components/LoginDialog";
 
-import { EMPRESAS, Empresa } from "@/lib/empresas";
+import { 
+  buscarEmpresas, 
+  buscarCategorias, 
+  adicionarFavoritoUsuario, 
+  removerFavoritoUsuario, 
+  buscarFavoritosUsuario, 
+  incrementarVisualizacoesEmpresa, 
+  getUsuarioLogado,
+  type EmpresaCompleta 
+} from "@/lib/supabase";
 
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371; // km
@@ -34,19 +44,47 @@ const Empresas = () => {
   const [locError, setLocError] = useState<string | null>(null);
   const [maxDistance, setMaxDistance] = useState<number>(20); // km
   const [loadingLoc, setLoadingLoc] = useState(false);
-  const [favoritos, setFavoritos] = useState<Set<string>>(() => {
-    const raw = localStorage.getItem("favoritos_empresas");
-    if (!raw) return new Set();
-    try {
-      return new Set(JSON.parse(raw));
-    } catch {
-      return new Set();
-    }
-  });
   const [copiado, setCopiado] = useState<string | null>(null);
 
-  const categorias = useMemo(() => Array.from(new Set(EMPRESAS.map(e => e.categoria))), []);
-  const bairros = useMemo(() => Array.from(new Set(EMPRESAS.map(e => e.bairro))), []);
+  // Estados Supabase
+  const [empresas, setEmpresas] = useState<EmpresaCompleta[]>([]);
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [bairros, setBairros] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [favoritos, setFavoritos] = useState<Set<string>>(new Set());
+  const [showLogin, setShowLogin] = useState(false);
+  const [empresaPendente, setEmpresaPendente] = useState<string | null>(null);
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  const carregarDados = async () => {
+    setLoading(true);
+    try {
+      // Buscar empresas
+      const empresasData = await buscarEmpresas();
+      setEmpresas(empresasData as EmpresaCompleta[]);
+
+      // Extrair categorias únicas
+      const categoriasUnicas = Array.from(new Set(empresasData.map(e => e.categoria_nome).filter(Boolean)));
+      setCategorias(categoriasUnicas as string[]);
+
+      // Extrair bairros únicos
+      const bairrosUnicos = Array.from(new Set(empresasData.map(e => e.bairro)));
+      setBairros(bairrosUnicos);
+
+      // Buscar favoritos (se logado, busca do usuário)
+      const favoritosData = await buscarFavoritosUsuario('empresa');
+      setFavoritos(new Set(favoritosData.map(f => f.item_id)));
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      toast("Erro ao carregar empresas", { description: "Tente novamente mais tarde" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -68,24 +106,14 @@ const Empresas = () => {
     );
   };
 
-  useEffect(() => {
-    // Opcional: tentar automaticamente
-    requestLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("favoritos_empresas", JSON.stringify(Array.from(favoritos)));
-  }, [favoritos]);
-
   const empresasFiltradas = useMemo(() => {
-    return EMPRESAS.map(emp => {
-      const distancia = userLocation ? haversineKm(userLocation.lat, userLocation.lng, emp.lat, emp.lng) : null;
+    return empresas.map(emp => {
+      const distancia = userLocation ? haversineKm(userLocation.lat, userLocation.lng, emp.latitude, emp.longitude) : null;
       return { ...emp, distancia };
     })
       .filter(emp => {
         if (busca && !emp.nome.toLowerCase().includes(busca.toLowerCase())) return false;
-        if (categoria !== "todas" && emp.categoria !== categoria) return false;
+        if (categoria !== "todas" && emp.categoria_nome !== categoria) return false;
         if (bairro !== "todos" && emp.bairro !== bairro) return false;
         if (userLocation && emp.distancia !== null && emp.distancia > maxDistance) return false;
         return true;
@@ -96,7 +124,7 @@ const Empresas = () => {
         }
         return a.nome.localeCompare(b.nome);
       });
-  }, [busca, categoria, bairro, userLocation, maxDistance]);
+  }, [empresas, busca, categoria, bairro, userLocation, maxDistance]);
 
   // Paginação
   const [page, setPage] = useState(1);
@@ -114,11 +142,13 @@ const Empresas = () => {
 
   // Estado para modal de detalhes
   const [detalheAberto, setDetalheAberto] = useState(false);
-  const [selecionada, setSelecionada] = useState<Empresa | null>(null);
+  const [selecionada, setSelecionada] = useState<EmpresaCompleta | null>(null);
 
-  const abrirDetalhes = (emp: Empresa) => {
+  const abrirDetalhes = async (emp: EmpresaCompleta) => {
     setSelecionada(emp);
     setDetalheAberto(true);
+    // Incrementar visualizações
+    await incrementarVisualizacoesEmpresa(emp.id);
   };
 
   const copiar = (texto?: string) => {
@@ -132,13 +162,51 @@ const Empresas = () => {
     });
   };
 
-  const toggleFavorito = (id: string) => {
-    setFavoritos(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      toast(next.has(id) ? "Adicionado aos favoritos" : "Removido dos favoritos", { duration: 1200 });
-      return next;
-    });
+  const toggleFavorito = async (id: string) => {
+    const user = getUsuarioLogado();
+    
+    // Se não estiver logado, pedir login
+    if (!user) {
+      setEmpresaPendente(id);
+      setShowLogin(true);
+      return;
+    }
+
+    const jaFavoritado = favoritos.has(id);
+    
+    try {
+      if (jaFavoritado) {
+        await removerFavoritoUsuario('empresa', id);
+        setFavoritos(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        toast("💔 Removido dos favoritos", { duration: 1500 });
+      } else {
+        await adicionarFavoritoUsuario('empresa', id);
+        setFavoritos(prev => {
+          const next = new Set(prev);
+          next.add(id);
+          return next;
+        });
+        toast("❤️ Adicionado aos favoritos!", { duration: 1500 });
+      }
+    } catch (error) {
+      toast("Erro ao atualizar favorito", { description: "Tente novamente" });
+    }
+  };
+
+  const handleLoginSuccess = async () => {
+    // Recarregar favoritos após login
+    const favoritosData = await buscarFavoritosUsuario('empresa');
+    setFavoritos(new Set(favoritosData.map(f => f.item_id)));
+    
+    // Se tinha empresa pendente, favoritar automaticamente
+    if (empresaPendente) {
+      await toggleFavorito(empresaPendente);
+      setEmpresaPendente(null);
+    }
   };
 
   return (
@@ -150,9 +218,16 @@ const Empresas = () => {
           <p className="text-sm text-muted-foreground max-w-2xl">Explore empresas locais por categoria, bairro ou proximidade. Ative a localização para ordenar por distância em tempo real.</p>
         </div>
 
-        {/* Filtros */}
-        <Card className="glass-card border-2">
-          <CardHeader className="pb-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-3 text-muted-foreground">Carregando empresas...</span>
+          </div>
+        ) : (
+          <>
+            {/* Filtros */}
+            <Card className="glass-card border-2">
+              <CardHeader className="pb-4">
             <CardTitle className="text-xl">Filtros</CardTitle>
             <CardDescription>Refine a busca usando os campos abaixo.</CardDescription>
           </CardHeader>
@@ -410,8 +485,17 @@ const Empresas = () => {
             </div>
           </div>
         )}
+          </>
+        )}
       </main>
       <Footer />
+      
+      {/* Dialog de Login */}
+      <LoginDialog
+        open={showLogin}
+        onOpenChange={setShowLogin}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </div>
   );
 };
