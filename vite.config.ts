@@ -14,25 +14,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    rollupOptions: {
-      output: {
-        entryFileNames: "assets/[name].[hash].js",
-        chunkFileNames: "assets/[name].[hash].js",
-        assetFileNames: "assets/[name].[hash].[ext]",
-      },
-    },
-  },
-  // Middleware para fallback de rotas na Vercel
-  preview: {
-    port: 8080,
-    strictPort: true,
-    open: true,
-    historyApiFallback: true,
-  },
-  esbuild: {
-    loader: "jsx",
-    include: /src\/.*\.jsx?$/,
-    exclude: [],
-  },
 }));
