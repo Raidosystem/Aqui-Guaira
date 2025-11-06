@@ -14,4 +14,20 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: "assets/[name].[hash].js",
+        chunkFileNames: "assets/[name].[hash].js",
+        assetFileNames: "assets/[name].[hash].[ext]",
+      },
+    },
+  },
+  // Adiciona fallback para SPA
+  preview: {
+    port: 8080,
+    strictPort: true,
+    open: true,
+    historyApiFallback: true,
+  },
 }));
