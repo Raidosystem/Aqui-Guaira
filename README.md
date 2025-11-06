@@ -1,23 +1,58 @@
-# ✨ Welcome to Your Spark Template!
-You've just launched your brand-new Spark Template Codespace — everything’s fired up and ready for you to explore, build, and create with Spark!
+# Aqui Guaíra – Portal da Cidade
 
-This template is your blank canvas. It comes with a minimal setup to help you get started quickly with Spark development.
+Portal comunitário de Guaíra (SP) desenvolvido em React + TypeScript com Vite, Tailwind e componentes shadcn-ui.
 
-🚀 What's Inside?
-- A clean, minimal Spark environment
-- Pre-configured for local development
-- Ready to scale with your ideas
-  
-🧠 What Can You Do?
+## Funcionalidades
 
-Right now, this is just a starting point — the perfect place to begin building and testing your Spark applications.
+- Card informativo "Sobre Guaíra" com âncora.
+- Diretório de empresas com filtros (nome, categoria, bairro, distância) e favoritos persistidos.
+- Página "Meus Locais" listando somente favoritos com filtros simplificados.
+- Mural da cidade com postagem (drag & drop de imagens) e status pendente.
+- Página "Sua Empresa" para cadastro (CNPJ, dados completos, logo, banner) e login.
+- Modal detalhado de empresas com ações de copiar (WhatsApp, telefone, site, e‑mail) e toasts.
+- Paginação traduzida (Anterior / Próximo) e UI responsiva.
+- Upload avançado com preview e remoção para logo e banner.
 
-🧹 Just Exploring?
-No problem! If you were just checking things out and don’t need to keep this code:
+## Stack
 
-- Simply delete your Spark.
-- Everything will be cleaned up — no traces left behind.
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS + tailwindcss-animate
+- shadcn-ui (Radix + design system)
+- React Hook Form + Zod (validações)
+- Lucide Icons
+- TanStack Query (reservado para futuros dados dinâmicos)
 
-📄 License For Spark Template Resources 
+## Scripts
 
-The Spark Template files and resources from GitHub are licensed under the terms of the MIT license, Copyright GitHub, Inc.
+```sh
+npm i        # instala dependências
+npm run dev  # ambiente de desenvolvimento
+npm run build # build para produção
+npm run preview # pré-visualização do build
+```
+
+## Estrutura resumida
+
+```
+src/
+	pages/        # Páginas principais (Index, Mural, Empresas, MeusLocais, SuaEmpresa)
+	components/   # Componentes reutilizáveis e UI (shadcn)
+	lib/          # Utilitários e dados mock
+	hooks/        # Hooks personalizados
+public/
+	images/       # Imagens (logo.png, publi.png)
+```
+
+## Próximos passos sugeridos
+
+- Persistir cadastros reais de empresas (API / backend).
+- Autenticação real para login de empresas.
+- Moderação de Mural com painel administrativo.
+- Otimização de imagens (compressão, formatos modernos).
+- Internacionalização (pt-BR / en-US) se necessário.
+
+## Licença
+
+Uso interno / comunitário. Ajuste conforme necessidade.
+
