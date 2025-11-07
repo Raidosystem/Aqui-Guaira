@@ -130,7 +130,8 @@ const MapSearch = () => {
             : FALLBACK_CENTER;
           setCenter(initial);
 
-          const map = L.map(mapRef.current!, { zoomControl: true, attributionControl: false });
+          // remove zoom control (+/-)
+          const map = L.map(mapRef.current!, { zoomControl: false, attributionControl: false });
           leafletMapRef.current = map;
           map.setView([initial.lat, initial.lng], 13);
 
