@@ -7,17 +7,17 @@ const OfficialLinks = () => {
     {
       label: "IBGE Cidades",
       icon: Globe,
-      url: "https://cidades.ibge.gov.br/brasil/sp/guaira/panorama",
+      url: "https://www.ibge.gov.br/cidades-e-estados/sp/guaira.html",
     },
     {
       label: "Portal da Prefeitura",
       icon: Building2,
-      url: "#",
+      url: "https://www.guaira.sp.gov.br/",
     },
     {
       label: "Câmara Municipal",
       icon: Landmark,
-      url: "#",
+      url: "https://www.camaraguaira.com.br/",
     },
   ];
 

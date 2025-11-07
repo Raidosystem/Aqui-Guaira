@@ -1,4 +1,4 @@
-import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Flag, Info, ChevronDown, User, LogOut, Shield, ClipboardList } from "lucide-react";
+import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Flag, Info, ChevronDown, User, LogOut, Shield, ClipboardList, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { LoginDialog } from "@/components/LoginDialog";
 import { getUsuarioLogado, logout, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -18,6 +25,7 @@ const Header = () => {
   const [active, setActive] = useState<string>("Início");
   const manualOverride = useRef(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState(getUsuarioLogado());
 
   const mainNavItems = [
@@ -122,7 +130,110 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* Mobile Menu Button */}
+          <div className="lg:hidden flex items-center gap-2">
+            {/* User Avatar Mobile */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center justify-center h-9 w-9 rounded-full border-2 border-border bg-background hover:border-primary transition-colors">
+                  {user ? (
+                    <span className="font-semibold text-xs">{getInitial()}</span>
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-background border border-border">
+                {user ? (
+                  <>
+                    <div className="px-2 py-1.5 text-sm">
+                      <div className="font-medium">{user.nome || 'Usuário'}</div>
+                      <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <a href="/mural/meus-posts" className="flex items-center cursor-pointer">
+                        <ClipboardList className="h-4 w-4 mr-2" />
+                        Meus Posts
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sair
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem onClick={() => setShowLogin(true)} className="cursor-pointer">
+                    <User className="h-4 w-4 mr-2" />
+                    Entrar
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Hamburger Menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-2">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    Menu
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 flex flex-col gap-1">
+                  {mainNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = active === item.label;
+                    const isSuaEmpresa = item.label === "Sua Empresa";
+                    return (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                          isActive 
+                            ? isSuaEmpresa 
+                              ? 'bg-green-600 text-white' 
+                              : 'bg-primary text-primary-foreground'
+                            : isSuaEmpresa
+                              ? 'hover:bg-green-50 text-green-600 border border-green-200'
+                              : 'hover:bg-accent'
+                        }`}
+                      >
+                        <Icon className={`h-5 w-5 ${isSuaEmpresa && !isActive ? 'text-green-600' : ''}`} />
+                        <span className={`font-medium ${isSuaEmpresa ? 'font-semibold' : ''}`}>{item.label}</span>
+                      </a>
+                    );
+                  })}
+                  
+                  <div className="my-2 border-t border-border" />
+                  
+                  {moreNavItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span className="font-medium">{item.label}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-2">
             {mainNavItems.map((item) => {
               const Icon = item.icon;

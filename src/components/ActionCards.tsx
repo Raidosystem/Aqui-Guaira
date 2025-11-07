@@ -1,8 +1,11 @@
 import { Building2, Users, CheckCircle, MapPin, MessageCircle, ImageIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const ActionCards = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="grid md:grid-cols-2 gap-6">
       {/* Business Registration Card */}
@@ -39,8 +42,12 @@ const ActionCards = () => {
           </ul>
 
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1">Cadastrar Empresa</Button>
-            <Button variant="outline">Gerenciar</Button>
+            <Button className="flex-1" onClick={() => navigate('/sua-empresa')}>
+              Cadastrar Empresa
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/dashboard')}>
+              Gerenciar
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -78,7 +85,7 @@ const ActionCards = () => {
             </li>
           </ul>
 
-          <Button className="w-full bg-primary">
+          <Button className="w-full bg-primary" onClick={() => navigate('/mural')}>
             Ver Mural
           </Button>
         </CardContent>

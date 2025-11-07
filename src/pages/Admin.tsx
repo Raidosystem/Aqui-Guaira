@@ -51,7 +51,7 @@ interface Empresa {
   id: string;
   nome: string;
   descricao?: string;
-  categoria_id: number;
+  categoria_id: string;
   categorias?: { nome: string };
   ativa: boolean;
   data_cadastro: string;
@@ -67,6 +67,11 @@ interface Empresa {
   cidade?: string;
   logo?: string;
   imagens?: string[];
+}
+
+interface Categoria {
+  id: string;
+  nome: string;
 }
 
 interface Post {
@@ -92,6 +97,7 @@ export default function Admin() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [empresasFiltradas, setEmpresasFiltradas] = useState<Empresa[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(null);
   const [postSelecionado, setPostSelecionado] = useState<Post | null>(null);
@@ -130,7 +136,7 @@ export default function Admin() {
 
     // Filtro por categoria
     if (filtroCategoria !== "todas") {
-      filtered = filtered.filter(e => e.categoria_id.toString() === filtroCategoria);
+      filtered = filtered.filter(e => e.categoria_id === filtroCategoria);
     }
 
     setEmpresasFiltradas(filtered);
@@ -181,7 +187,8 @@ export default function Admin() {
     await Promise.all([
       carregarEstatisticas(),
       carregarEmpresas(),
-      carregarPosts()
+      carregarPosts(),
+      carregarCategorias()
     ]);
   };
 
@@ -224,6 +231,17 @@ export default function Admin() {
 
     if (!error && data) {
       setPosts(data);
+    }
+  };
+
+  const carregarCategorias = async () => {
+    const { data, error } = await supabase
+      .from("categorias")
+      .select("id, nome")
+      .order("nome");
+
+    if (!error && data) {
+      setCategorias(data);
     }
   };
 
@@ -527,11 +545,11 @@ export default function Admin() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todas">Todas</SelectItem>
-                      <SelectItem value="1">Restaurantes</SelectItem>
-                      <SelectItem value="2">Serviços</SelectItem>
-                      <SelectItem value="3">Comércio</SelectItem>
-                      <SelectItem value="4">Saúde</SelectItem>
-                      <SelectItem value="5">Educação</SelectItem>
+                      {categorias.map((categoria) => (
+                        <SelectItem key={categoria.id} value={categoria.id}>
+                          {categoria.nome}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

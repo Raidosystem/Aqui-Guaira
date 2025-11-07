@@ -66,9 +66,11 @@ const Empresas = () => {
     carregarDados();
   }, []);
 
-  // Verificar se há ID na URL para abrir detalhes automaticamente
+  // Verificar se há ID ou categoria na URL
   useEffect(() => {
     const empresaId = searchParams.get('id');
+    const categoriaId = searchParams.get('categoria');
+    
     if (empresaId && empresas.length > 0) {
       const empresa = empresas.find(e => e.id === empresaId);
       if (empresa) {
@@ -76,6 +78,14 @@ const Empresas = () => {
         // Limpar o parâmetro da URL
         setSearchParams({});
       }
+    } else if (categoriaId && empresas.length > 0) {
+      // Buscar a empresa que tem essa categoria para pegar o nome
+      const empresaComCategoria = empresas.find(e => e.categoria_id === categoriaId);
+      if (empresaComCategoria && empresaComCategoria.categoria_nome) {
+        setCategoria(empresaComCategoria.categoria_nome);
+      }
+      // Limpar o parâmetro da URL após aplicar o filtro
+      setSearchParams({});
     }
   }, [searchParams, empresas]);
 
@@ -409,22 +419,21 @@ const Empresas = () => {
 
         {/* Modal de detalhes */}
         {selecionada && detalheAberto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6">
             <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setDetalheAberto(false)} />
             <div
               role="dialog"
               aria-modal="true"
               aria-label={`Detalhes da empresa ${selecionada.nome}`}
-              className="relative w-full max-w-xl sm:max-w-2xl md:max-w-3xl rounded-lg sm:rounded-2xl border border-border/60 glass-card shadow-lg animate-in fade-in-0 zoom-in-95 max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
+              className="relative w-full h-full sm:h-auto max-w-full sm:max-w-2xl md:max-w-3xl sm:rounded-2xl border-0 sm:border border-border/60 glass-card shadow-lg animate-in fade-in-0 zoom-in-95 sm:max-h-[90vh] flex flex-col overflow-hidden"
             >
-              <div className="h-48 sm:h-56 md:h-64 w-full overflow-hidden relative shrink-0">
+              <div className="h-40 sm:h-56 md:h-64 w-full overflow-hidden relative shrink-0">
                 <img src={selecionada.imagens[0]} alt={selecionada.nome} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-background/10" />
                 <button
                   type="button"
                   aria-label="Fechar modal"
                   onClick={() => setDetalheAberto(false)}
-                  className="absolute top-3 right-3 bg-background/70 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+                  className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-background/90 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-lg"
                 >Fechar</button>
               </div>
               {/* Conteúdo scrollável mantendo barra inferior fixa */}

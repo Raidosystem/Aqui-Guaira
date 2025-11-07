@@ -1,17 +1,84 @@
-import { Search, Heart, Building2, MapPin, Star } from "lucide-react";
+import { Search, Heart, Building2, MapPin, Star, ChevronDown, Filter, X, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useRef } from "react";
-import { supabase, type EmpresaCompleta } from "@/lib/supabase";
+import { supabase, type EmpresaCompleta, getUsuarioLogado } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
+import { LoginDialog } from "@/components/LoginDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface Categoria {
+  id: string;
+  nome: string;
+  icone: string;
+  cor: string;
+}
 
 const SearchSection = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<EmpresaCompleta[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [loadingCategorias, setLoadingCategorias] = useState(false);
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const user = getUsuarioLogado();
+
+  // Carregar categorias que têm empresas
+  useEffect(() => {
+    const carregarCategorias = async () => {
+      setLoadingCategorias(true);
+      try {
+        // Buscar todas as empresas aprovadas para pegar categorias únicas
+        const { data: empresasData, error } = await supabase
+          .from('empresas')
+          .select(`
+            categoria_id,
+            categorias:categoria_id(id, nome, icone, cor)
+          `)
+          .eq('status', 'aprovado');
+
+        if (error) throw error;
+
+        // Extrair categorias únicas
+        const categoriasUnicas = new Map<string, Categoria>();
+        empresasData?.forEach(empresa => {
+          if (empresa.categorias && empresa.categoria_id) {
+            const cat = empresa.categorias as any;
+            if (!categoriasUnicas.has(cat.id)) {
+              categoriasUnicas.set(cat.id, {
+                id: cat.id,
+                nome: cat.nome,
+                icone: cat.icone,
+                cor: cat.cor
+              });
+            }
+          }
+        });
+
+        // Converter para array e ordenar por nome
+        const categoriasArray = Array.from(categoriasUnicas.values())
+          .sort((a, b) => a.nome.localeCompare(b.nome));
+
+        setCategorias(categoriasArray);
+      } catch (error) {
+        console.error('Erro ao carregar categorias:', error);
+      } finally {
+        setLoadingCategorias(false);
+      }
+    };
+
+    carregarCategorias();
+  }, []);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -36,7 +103,7 @@ const SearchSection = () => {
 
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("empresas")
           .select(`
             *,
@@ -47,7 +114,14 @@ const SearchSection = () => {
             )
           `)
           .eq("status", "aprovado")
-          .or(`nome.ilike.%${searchTerm}%,descricao.ilike.%${searchTerm}%,bairro.ilike.%${searchTerm}%`)
+          .or(`nome.ilike.%${searchTerm}%,descricao.ilike.%${searchTerm}%,bairro.ilike.%${searchTerm}%`);
+
+        // Aplicar filtro de categoria se selecionado
+        if (categoriaFiltro) {
+          query = query.eq('categoria_id', categoriaFiltro);
+        }
+
+        const { data, error } = await query
           .order("destaque", { ascending: false })
           .order("visualizacoes", { ascending: false })
           .limit(8);
@@ -76,12 +150,24 @@ const SearchSection = () => {
     }, 300);
 
     return () => clearTimeout(debounce);
-  }, [searchTerm]);
+  }, [searchTerm, categoriaFiltro]);
 
   const handleSelectEmpresa = (empresaId: string) => {
     setShowDropdown(false);
     setSearchTerm("");
     navigate(`/empresas?id=${empresaId}`);
+  };
+
+  const handleMeusFavoritos = () => {
+    if (!user) {
+      setShowLogin(true);
+      return;
+    }
+    navigate('/meus-locais');
+  };
+
+  const handleSelecionarCategoria = (categoriaId: string) => {
+    navigate(`/empresas?categoria=${categoriaId}`);
   };
 
   return (
@@ -98,10 +184,86 @@ const SearchSection = () => {
         <div className="max-w-3xl mx-auto mb-10" ref={dropdownRef}>
           <div className="relative flex items-center gap-3">
             <div className="relative flex-1">
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
+                {/* Filtro de Categoria */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className={`h-8 px-2 hover:bg-primary/10 ${categoriaFiltro ? 'text-primary' : 'text-muted-foreground'}`}
+                      disabled={loadingCategorias}
+                    >
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56 max-h-[400px] overflow-y-auto">
+                    <div className="p-2">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2 px-2">Filtrar por categoria</p>
+                      {categoriaFiltro && (
+                        <DropdownMenuItem
+                          onClick={() => setCategoriaFiltro(null)}
+                          className="cursor-pointer text-destructive mb-2"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Limpar filtro
+                        </DropdownMenuItem>
+                      )}
+                      {loadingCategorias ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Carregando...
+                        </div>
+                      ) : categorias.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Nenhuma categoria disponível
+                        </div>
+                      ) : (
+                        categorias.map((categoria) => (
+                          <DropdownMenuItem
+                            key={categoria.id}
+                            onClick={() => setCategoriaFiltro(categoria.id)}
+                            className={`cursor-pointer ${categoriaFiltro === categoria.id ? 'bg-primary/10' : ''}`}
+                          >
+                            <span className="font-medium">{categoria.nome}</span>
+                            {categoriaFiltro === categoria.id && (
+                              <Check className="h-4 w-4 ml-auto text-primary" />
+                            )}
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Badge do Filtro Selecionado */}
+                {categoriaFiltro && (
+                  <>
+                    <div className="h-5 w-px bg-border/60" />
+                    <Badge 
+                      variant="secondary"
+                      className="flex items-center gap-1 pr-0.5 py-0.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
+                    >
+                      <span className="text-xs font-semibold pl-1.5">
+                        {categorias.find(c => c.id === categoriaFiltro)?.nome}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCategoriaFiltro(null);
+                        }}
+                        className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  </>
+                )}
+              </div>
+
               <Input
                 type="text"
                 placeholder="Ex: farmácia, restaurante, mecânico..."
-                className="pl-6 pr-6 py-7 text-lg bg-background border-2 border-border focus:border-primary rounded-2xl shadow-lg"
+                className={`${categoriaFiltro ? 'pl-40' : 'pl-12'} pr-6 py-7 text-lg bg-background border-2 border-border focus:border-primary rounded-2xl shadow-lg transition-all`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
@@ -199,11 +361,8 @@ const SearchSection = () => {
         </div>
 
         {/* Quick Access */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <p className="text-base font-medium text-muted-foreground">Acesso rápido:</p>
-          <a href="/ver-todos" className="text-sm text-primary font-semibold hover:underline">
-            Ver todos
-          </a>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -211,20 +370,55 @@ const SearchSection = () => {
             variant="outline" 
             className="gap-2 border-2"
             size="default"
+            onClick={handleMeusFavoritos}
           >
             <Heart className="h-5 w-5" />
             Meus Favoritos
           </Button>
-          <Button 
-            variant="outline" 
-            className="gap-2 border-2"
-            size="default"
-          >
-            <Building2 className="h-5 w-5" />
-            Por Categoria
-          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="gap-2 border-2"
+                size="default"
+                disabled={loadingCategorias}
+              >
+                <Building2 className="h-5 w-5" />
+                Por Categoria
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56 max-h-[400px] overflow-y-auto">
+              {loadingCategorias ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Carregando...
+                </div>
+              ) : categorias.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Nenhuma categoria com empresas
+                </div>
+              ) : (
+                categorias.map((categoria) => (
+                  <DropdownMenuItem
+                    key={categoria.id}
+                    onClick={() => handleSelecionarCategoria(categoria.id)}
+                    className="cursor-pointer"
+                  >
+                    <span className="font-medium">{categoria.nome}</span>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Dialog de Login */}
+      <LoginDialog
+        open={showLogin}
+        onOpenChange={setShowLogin}
+      />
     </section>
   );
 };
