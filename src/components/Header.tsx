@@ -1,4 +1,4 @@
-import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Flag, Info, ChevronDown, User, LogOut, Shield, ClipboardList, Menu, X } from "lucide-react";
+import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Info, ChevronDown, User, LogOut, Shield, ClipboardList, Menu, X, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -37,8 +37,9 @@ const Header = () => {
     { icon: FileText, label: "Sua Empresa", href: "/sua-empresa" },
   ];
 
-  const moreNavItems = [
-    { icon: Flag, label: "Reportar", href: "/reportar" },
+  const ferramentasItems = [
+    { icon: Search, label: "Busca CEP", href: "https://busca-cep-raval.vercel.app/" },
+    { icon: FileText, label: "Gerador de Currículo", href: "https://cria-curriculo-raval.vercel.app/" },
   ];
 
   // Atualiza active baseado em pathname/hash
@@ -214,12 +215,14 @@ const Header = () => {
                   
                   <div className="my-2 border-t border-border" />
                   
-                  {moreNavItems.map((item) => {
+                  {ferramentasItems.map((item) => {
                     const Icon = item.icon;
                     return (
                       <a
                         key={item.label}
                         href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
                       >
@@ -283,20 +286,20 @@ const Header = () => {
               );
             })}
 
-            {/* Dropdown Menu */}
+            {/* Ferramentas */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 empresa-btn border border-green-500 text-green-600 hover:text-green-600 hover:bg-transparent focus-visible:text-green-600">
-                  <span className="text-sm font-semibold">Mais</span>
+                  <span className="text-sm font-semibold">Ferramentas</span>
                   <ChevronDown className="h-4 w-4 text-green-600" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 bg-background border border-border z-50">
-                {moreNavItems.map((item) => {
+                {ferramentasItems.map((item) => {
                   const Icon = item.icon;
                   return (
                     <DropdownMenuItem key={item.label} asChild>
-                      <a href={item.href} className="flex items-center gap-3 cursor-pointer">
+                      <a href={item.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 cursor-pointer">
                         <Icon className="h-4 w-4 text-primary" />
                         <span>{item.label}</span>
                       </a>

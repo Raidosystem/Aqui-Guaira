@@ -74,15 +74,15 @@ const CategoriesSection = () => {
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : empresas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <HelpCircle className="h-12 w-12 text-muted-foreground mb-4" />
-            <h4 className="font-semibold text-foreground mb-2">
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <HelpCircle className="h-12 w-12 text-muted-foreground mb-4" />
+          <h4 className="font-semibold text-foreground mb-2">
               Nenhuma empresa cadastrada ainda
-            </h4>
-            <p className="text-sm text-muted-foreground max-w-md">
+          </h4>
+          <p className="text-sm text-muted-foreground max-w-md">
               Empresas aprovadas aparecerão aqui
-            </p>
-          </div>
+          </p>
+        </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {empresas.map((empresa) => (

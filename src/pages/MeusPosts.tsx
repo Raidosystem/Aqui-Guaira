@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Clock, CheckCircle2, User2, ArrowLeft, XCircle } from "lucide-react";
+import { Loader2, Clock, CheckCircle2, User2, ArrowLeft, XCircle, MapPin } from "lucide-react";
 import { getUsuarioLogado, supabase } from "@/lib/supabase";
 
 interface Post {
@@ -21,6 +21,8 @@ interface Post {
   motivo_rejeicao?: string;
   empresa_id?: string;
   user_id: string;
+  bairro?: string;
+  logradouro?: string;
   empresas?: {
     nome: string;
     logo?: string;
@@ -191,6 +193,16 @@ const MeusPosts = () => {
                       <CardDescription className="text-xs">
                         {new Date(post.data_criacao).toLocaleDateString('pt-BR')}
                       </CardDescription>
+                      {(post.bairro || post.logradouro) && (
+                        <div className="mt-1">
+                          <Badge variant="secondary" className="gap-1">
+                            <MapPin className="w-3 h-3" />
+                            <span className="text-[10px]">
+                              {[post.logradouro, post.bairro].filter(Boolean).join(' • ')}
+                            </span>
+                          </Badge>
+                        </div>
+                      )}
                     </CardHeader>
                     <CardContent>
                       <p className="text-xs text-muted-foreground line-clamp-2">{post.conteudo}</p>
@@ -222,6 +234,16 @@ const MeusPosts = () => {
                         minute: '2-digit'
                       })}
                     </DialogDescription>
+                    {(postSelecionado.bairro || postSelecionado.logradouro) && (
+                      <div className="mt-2">
+                        <Badge variant="secondary" className="gap-1">
+                          <MapPin className="w-3 h-3" />
+                          <span className="text-xs">
+                            {[postSelecionado.logradouro, postSelecionado.bairro].filter(Boolean).join(' • ')}
+                          </span>
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                   {getStatusBadge(postSelecionado)}
                 </div>

@@ -13,26 +13,28 @@ const Footer = () => {
             <p className="text-xs text-muted-foreground">Não é o site oficial da Prefeitura.</p>
           </div>
 
-          {/* Useful Links */}
+          {/* Emergências */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-sm tracking-wide text-foreground/80 uppercase">Links Úteis</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  Prefeitura de Guaíra
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  Câmara Municipal
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  Emergências: 190/193
-                </a>
-              </li>
-            </ul>
+            <h3 className="font-semibold text-sm tracking-wide text-foreground/80 uppercase">Emergências</h3>
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="font-medium text-foreground">Guarda Civil Municipal</p>
+                <p className="text-muted-foreground">199</p>
+                <p className="text-muted-foreground">3331 2273</p>
+                <p className="text-muted-foreground">3331 6064</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Polícia Civil</p>
+                <p className="text-muted-foreground">3331 2360</p>
+                <p className="text-muted-foreground">3331 2500</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Polícia Militar</p>
+                <p className="text-muted-foreground">190</p>
+                <p className="text-muted-foreground">3331 3881</p>
+                <p className="text-muted-foreground">3332 4362</p>
+              </div>
+            </div>
           </div>
 
           {/* Portal */}
@@ -62,7 +64,16 @@ const Footer = () => {
           <p className="max-w-lg leading-relaxed">
             © {new Date().getFullYear()} Aqui Guaíra • Dados: IBGE • Turismo: Portal Municipal • Projeto colaborativo.
           </p>
-          <p className="opacity-70">Construído com React + Vite + Tailwind.</p>
+          <div className="flex items-center gap-2">
+            <span className="opacity-70">Construído com React + Vite + Tailwind.</span>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="opacity-70">Feito com</span>
+            <span className="text-[12px]">❤️</span>
+            <span className="px-2 py-0.5 rounded-full border border-border bg-background text-foreground font-semibold">
+              Grupo Raval
+            </span>
+          </div>
         </div>
       </div>
     </footer>

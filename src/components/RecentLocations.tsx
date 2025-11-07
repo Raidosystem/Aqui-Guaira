@@ -93,18 +93,18 @@ const RecentLocations = () => {
           </div>
         ) : (
           locations.map((location) => (
-            <div
+          <div
               key={location.id}
               className="flex items-start justify-between p-4 rounded-lg border border-border cursor-pointer hover:bg-accent transition-colors"
               onClick={() => handleClickLocal(location.id)}
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
+          >
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-semibold">{location.nome}</h4>
                   {location.categorias?.nome && (
-                    <Badge className="bg-primary text-primary-foreground">
+                <Badge className="bg-primary text-primary-foreground">
                       {location.categorias.nome}
-                    </Badge>
+                </Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">

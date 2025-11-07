@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ImagePlus, PlusCircle, Send, Loader2, X, Clock, CheckCircle2 } from "lucide-react";
+import { ImagePlus, PlusCircle, Send, Loader2, X, Clock, CheckCircle2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
 import { getUsuarioLogado, supabase, uploadImagens } from "@/lib/supabase";
@@ -24,6 +24,8 @@ interface Post {
   data_aprovacao?: string;
   empresa_id?: string;
   user_id: string;
+  bairro?: string;
+  logradouro?: string;
   empresas?: {
     nome: string;
     logo?: string;
@@ -48,6 +50,8 @@ const Mural = () => {
   const [conteudo, setConteudo] = useState("");
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [imagemPreview, setImagemPreview] = useState<string>("");
+  const [bairro, setBairro] = useState("");
+  const [logradouro, setLogradouro] = useState("");
 
   // Carregar posts ao montar
   useEffect(() => {
@@ -114,6 +118,8 @@ const Mural = () => {
     setConteudo("");
     setImagemFile(null);
     setImagemPreview("");
+    setBairro("");
+    setLogradouro("");
   };
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +168,8 @@ const Mural = () => {
         imagem: imagemUrl || null,
         user_id: user.id,
         aprovado: false, // Aguarda aprovação do admin
+        bairro: bairro.trim() || null,
+        logradouro: logradouro.trim() || null,
       };
 
       const { error } = await supabase
@@ -248,6 +256,28 @@ const Mural = () => {
 
                 {user && (
                   <>
+                    {/* Endereço */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bairro">Bairro</Label>
+                        <Input
+                          id="bairro"
+                          placeholder="Ex: Jardim Paulista"
+                          value={bairro}
+                          onChange={(e) => setBairro(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="logradouro">Rua / Avenida</Label>
+                        <Input
+                          id="logradouro"
+                          placeholder="Ex: Av. Principal, 123"
+                          value={logradouro}
+                          onChange={(e) => setLogradouro(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
                     {/* Título */}
                     <div className="space-y-2">
                       <Label htmlFor="titulo">Título *</Label>
@@ -354,6 +384,16 @@ const Mural = () => {
                         <CardDescription className="mt-1">
                           Enviado em {new Date(post.data_criacao).toLocaleDateString('pt-BR')}
                         </CardDescription>
+                        {(post.bairro || post.logradouro) && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary" className="gap-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="text-xs">
+                                {[post.logradouro, post.bairro].filter(Boolean).join(' • ')}
+                              </span>
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                       <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                         <Clock className="w-3 h-3 mr-1" />
@@ -444,6 +484,16 @@ const Mural = () => {
                     </div>
                   )}
                 </CardContent>
+                {(post.bairro || post.logradouro) && (
+                  <div className="px-6 pb-4">
+                    <Badge variant="secondary" className="gap-1">
+                      <MapPin className="w-3 h-3" />
+                      <span className="text-xs">
+                        {[post.logradouro, post.bairro].filter(Boolean).join(' • ')}
+                      </span>
+                    </Badge>
+                  </div>
+                )}
               </Card>
             ))
           )}

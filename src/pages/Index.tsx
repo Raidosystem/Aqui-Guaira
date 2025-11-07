@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SearchSection from "@/components/SearchSection";
+import MapSearch from "@/components/MapSearch";
 import CategoriesSection from "@/components/CategoriesSection";
 import RecentLocations from "@/components/RecentLocations";
 import ActionCards from "@/components/ActionCards";
@@ -32,6 +33,7 @@ const Index = () => {
       <main className="flex-grow">
         <HeroSection />
         <SearchSection />
+        <MapSearch />
       
       <div className="container mx-auto px-4 py-16 space-y-12">
         {/* Categories and Recent Locations */}

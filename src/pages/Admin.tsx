@@ -85,6 +85,8 @@ interface Post {
   motivo_rejeicao?: string;
   empresa_id: string;
   user_id: string;
+  bairro?: string;
+  logradouro?: string;
   empresas?: { nome: string };
   users?: { nome: string; email: string };
 }
@@ -716,6 +718,16 @@ export default function Admin() {
                       <p className="text-sm text-muted-foreground">
                         Por: {post.users.nome} ({post.users.email})
                       </p>
+                    )}
+                    {(post.bairro || post.logradouro) && (
+                      <div className="mt-2">
+                        <Badge variant="secondary" className="gap-1">
+                          <MapPin className="w-3 h-3" />
+                          <span className="text-xs">
+                            {[post.logradouro, post.bairro].filter(Boolean).join(' • ')}
+                          </span>
+                        </Badge>
+                      </div>
                     )}
                   </div>
                   {!post.aprovado && !post.motivo_rejeicao && (
