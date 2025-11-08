@@ -143,20 +143,38 @@ const MapSearch = () => {
           markersLayerRef.current = L.layerGroup().addTo(map);
           circleRef.current = L.circle([initial.lat, initial.lng], {
             radius: radiusMeters,
-            color: '#2563eb',
-            weight: 1,
-            fillColor: '#60a5fa',
+            color: '#16a34a',
+            weight: 2,
+            fillColor: '#4ade80',
             fillOpacity: 0.15,
           }).addTo(map);
 
-          // marcador do usuário no centro
+          // marcador do usuário no centro (arrastável)
           const userIcon = L.divIcon({
             className: 'user-center-marker',
-            html: '<div style="width:16px;height:16px;border-radius:9999px;background:#2563eb;border:2px solid white;box-shadow:0 0 0 3px rgba(37,99,235,0.25);"></div>',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
+            html: '<div style="width:20px;height:20px;border-radius:9999px;background:#16a34a;border:3px solid white;box-shadow:0 0 0 3px rgba(22,163,74,0.3);cursor:move;"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
           });
-          personMarkerRef.current = L.marker([initial.lat, initial.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+          personMarkerRef.current = L.marker([initial.lat, initial.lng], { 
+            icon: userIcon, 
+            zIndexOffset: 1000,
+            draggable: true 
+          }).addTo(map);
+
+          // Atualizar centro ao arrastar o marcador
+          personMarkerRef.current.on('dragend', function() {
+            const newPos = personMarkerRef.current.getLatLng();
+            setCenter({ lat: newPos.lat, lng: newPos.lng });
+          });
+
+          // Permitir clicar no mapa para mover o marcador
+          map.on('click', function(e: any) {
+            const newPos = { lat: e.latlng.lat, lng: e.latlng.lng };
+            setCenter(newPos);
+            personMarkerRef.current.setLatLng([newPos.lat, newPos.lng]);
+            map.setView([newPos.lat, newPos.lng], map.getZoom());
+          });
 
           setLoadingMap(false);
         };
@@ -209,12 +227,21 @@ const MapSearch = () => {
     });
 
     filtered.forEach((e) => {
-      const m = L.marker([e.latitude!, e.longitude!]);
+      // Ícone verde para empresas
+      const empresaIcon = L.divIcon({
+        className: 'empresa-marker',
+        html: '<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="#16a34a" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg></div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
+      
+      const m = L.marker([e.latitude!, e.longitude!], { icon: empresaIcon });
       m.bindPopup(
         `<div style="min-width:180px">` +
         `<strong>${e.nome}</strong><br/>` +
         `${e.categoria_nome ? e.categoria_nome + ' • ' : ''}${e.bairro ?? ''}<br/>` +
-        `<a href="/empresas?id=${e.id}">Ver detalhes</a>` +
+        `<a href="/empresas?id=${e.id}" style="color:#16a34a;font-weight:600;">Ver detalhes</a>` +
         `</div>`
       );
       markersLayerRef.current.addLayer(m);
@@ -251,9 +278,12 @@ const MapSearch = () => {
             <MapPin className="h-5 w-5" />
             Buscar por raio no mapa
           </CardTitle>
-          <CardDescription>
-            Selecione sua localização e um raio para encontrar empresas próximas
-          </CardDescription>
+          <div className="mt-3">
+            <Badge variant="outline" className="bg-green-50 border-green-500 text-green-700 px-3 py-2 text-sm font-medium">
+              <Crosshair className="h-4 w-4 mr-2" />
+              Clique no mapa ou arraste a bolinha verde para escolher sua localização e ajustar o raio de busca
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

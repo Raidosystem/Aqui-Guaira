@@ -144,7 +144,7 @@ const Header = () => {
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-background border border-border">
+              <DropdownMenuContent align="end" className="w-56 bg-background border border-border z-[1001]">
                 {user ? (
                   <>
                     <div className="px-2 py-1.5 text-sm">
@@ -294,7 +294,7 @@ const Header = () => {
                   <ChevronDown className="h-4 w-4 text-green-600" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-background border border-border z-50">
+              <DropdownMenuContent className="w-56 bg-background border border-border z-[1001]">
                 {ferramentasItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -320,7 +320,7 @@ const Header = () => {
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-background border border-border">
+              <DropdownMenuContent align="end" className="w-56 bg-background border border-border z-[1001]">
                 {user ? (
                   <>
                     <div className="px-2 py-1.5 text-sm">
