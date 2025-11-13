@@ -25,20 +25,34 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
+      console.log("🔐 Tentando login admin:", { email });
+      
       const { data, error } = await supabase
         .rpc("verificar_admin_login", {
           admin_email: email,
           admin_senha: senha
         });
 
+      console.log("📊 Resposta do login:", { data, error });
+
       if (error) {
-        console.error("Erro ao verificar login:", error);
+        console.error("❌ Erro ao verificar login:", error);
         toast.error("Erro ao fazer login");
         setLoading(false);
         return;
       }
 
-      if (!data || data.length === 0 || !data[0].sucesso) {
+      if (!data || data.length === 0) {
+        console.log("⚠️ Nenhum admin encontrado com este email");
+        toast.error("Email ou senha incorretos");
+        setLoading(false);
+        return;
+      }
+
+      console.log("✅ Admin encontrado:", data[0]);
+
+      if (!data[0].sucesso) {
+        console.log("🔒 Senha incorreta");
         toast.error("Email ou senha incorretos");
         setLoading(false);
         return;

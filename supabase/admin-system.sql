@@ -2,6 +2,9 @@
 -- SISTEMA DE ADMINISTRAÇÃO COMPLETO
 -- ============================================
 
+-- 0. Habilitar extensão pgcrypto (necessária para crypt)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1. Criar tabela de admins com senha própria
 CREATE TABLE IF NOT EXISTS admins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -9,8 +12,7 @@ CREATE TABLE IF NOT EXISTS admins (
   senha_hash TEXT NOT NULL,
   nome TEXT NOT NULL,
   ativo BOOLEAN DEFAULT TRUE,
-  data_criacao TIMESTAMP DEFAULT NOW(),
-  ultimo_acesso TIMESTAMP
+  data_criacao TIMESTAMP DEFAULT NOW()
 );
 
 -- 2. Adicionar colunas de status nas empresas
@@ -204,12 +206,6 @@ BEGIN
     (a.senha_hash = crypt(admin_senha, a.senha_hash)) as sucesso
   FROM admins a
   WHERE a.email = admin_email AND a.ativo = TRUE;
-  
-  -- Atualizar último acesso se login bem sucedido
-  UPDATE admins 
-  SET ultimo_acesso = NOW()
-  WHERE admins.email = admin_email 
-    AND admins.senha_hash = crypt(admin_senha, admins.senha_hash);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
