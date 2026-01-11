@@ -14,6 +14,12 @@ import SuaEmpresa from "./pages/SuaEmpresa";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
+import FarmaciaPlantao from "./pages/FarmaciaPlantao";
+import SaudeNaPratica from "./pages/SaudeNaPratica";
+import ServicosPorBairro from "./pages/ServicosPorBairro";
+import AchadosPerdidos from "./pages/AchadosPerdidos";
+import PetsPerdidos from "./pages/PetsPerdidos";
+import PainelCidade from "./pages/PainelCidade";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +40,12 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<Admin />} />
+          <Route path="/farmacia-plantao" element={<FarmaciaPlantao />} />
+          <Route path="/saude-na-pratica" element={<SaudeNaPratica />} />
+          <Route path="/servicos-por-bairro" element={<ServicosPorBairro />} />
+          <Route path="/achados-perdidos" element={<AchadosPerdidos />} />
+          <Route path="/pets-perdidos" element={<PetsPerdidos />} />
+          <Route path="/painel-cidade" element={<PainelCidade />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

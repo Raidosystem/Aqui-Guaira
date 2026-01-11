@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ImagePlus, PlusCircle, Send, Loader2, X, Clock, CheckCircle2, MapPin } from "lucide-react";
+import { ImagePlus, PlusCircle, Send, Loader2, X, Clock, CheckCircle2, MapPin, ArrowLeft, Home } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
 import { getUsuarioLogado, supabase, uploadImagens } from "@/lib/supabase";
@@ -203,6 +203,26 @@ const Mural = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="container mx-auto px-4 py-12 pb-32 space-y-10 flex-grow">
+        {/* Botões de Navegação */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.history.back()}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/'}
+            className="gap-2"
+          >
+            <Home className="w-4 h-4" />
+            Página Inicial
+          </Button>
+        </div>
+        
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold gradient-text">Mural da Cidade</h2>

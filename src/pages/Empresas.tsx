@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Building2, RefreshCcw, LocateFixed, Phone, Mail, Globe, Clipboard, ExternalLink, Heart, Check, Loader2 } from "lucide-react";
+import { MapPin, Building2, RefreshCcw, LocateFixed, Phone, Mail, Globe, Clipboard, ExternalLink, Heart, Check, Loader2, ArrowLeft, Home } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { LoginDialog } from "@/components/LoginDialog";
@@ -157,7 +157,7 @@ const Empresas = () => {
 
   // Paginação
   const [page, setPage] = useState(1);
-  const pageSize = 4;
+  const pageSize = 10; // Aumentado de 4 para 10
   const totalPages = Math.max(1, Math.ceil(empresasFiltradas.length / pageSize));
 
   useEffect(() => {
@@ -238,6 +238,26 @@ const Empresas = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-12 space-y-12">
+        {/* Botões de Navegação */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.history.back()}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/'}
+            className="gap-2"
+          >
+            <Home className="w-4 h-4" />
+            Página Inicial
+          </Button>
+        </div>
+        
         <div className="space-y-4">
           <h2 className="text-3xl font-bold gradient-text flex items-center gap-3"><Building2 className="h-8 w-8 text-primary" /> Empresas</h2>
           <p className="text-sm text-muted-foreground max-w-2xl">Explore empresas locais por categoria, bairro ou proximidade. Ative a localização para ordenar por distância em tempo real.</p>
@@ -319,23 +339,37 @@ const Empresas = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-6">
             {paginated.map(emp => (
               <div key={emp.id} className="relative">
                 <button
                   type="button"
                   onClick={() => abrirDetalhes(emp)}
-                  className="w-full text-left group relative rounded-xl overflow-hidden border border-border/60 bg-gradient-to-br from-background to-accent/30 shadow-sm hover:shadow-md transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="w-full text-left group relative rounded-xl overflow-hidden border border-border/60 bg-gradient-to-br from-background to-accent/30 shadow-sm hover:shadow-xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:scale-[1.02]"
                 >
-                  <div className="h-40 w-full overflow-hidden">
-                    <img src={emp.imagens[0]} alt={emp.nome} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {/* Imagem de Capa */}
+                  <div className="h-48 w-full overflow-hidden relative bg-gradient-to-br from-primary/5 to-accent/10">
+                    {emp.imagens && emp.imagens.length > 0 ? (
+                      <img 
+                        src={emp.imagens[0]} 
+                        alt={emp.nome} 
+                        className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <Building2 className="h-20 w-20 text-primary/20" />
+                      </div>
+                    )}
+                    {/* Overlay gradiente */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                   </div>
+                  
                   <div className="p-5 space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         {/* Logo */}
                         {emp.logo ? (
-                          <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-border bg-background">
+                          <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 border-primary/20 bg-background shadow-md -mt-8 relative z-10">
                             <img 
                               src={emp.logo} 
                               alt={`Logo ${emp.nome}`}
@@ -343,8 +377,8 @@ const Empresas = () => {
                             />
                           </div>
                         ) : (
-                          <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-muted flex items-center justify-center border border-border">
-                            <Building2 className="h-7 w-7 text-muted-foreground" />
+                          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-primary/10 to-accent/20 flex items-center justify-center border-2 border-primary/20 shadow-md -mt-8 relative z-10">
+                            <Building2 className="h-8 w-8 text-primary" />
                           </div>
                         )}
                         

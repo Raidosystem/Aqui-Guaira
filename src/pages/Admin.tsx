@@ -54,6 +54,7 @@ interface Empresa {
   categoria_id: string;
   categorias?: { nome: string };
   ativa: boolean;
+  status?: string; // 'pendente', 'aprovado', 'rejeitado'
   data_cadastro: string;
   motivo_bloqueio?: string;
   telefone?: string;
@@ -113,6 +114,8 @@ export default function Admin() {
   const [filtroNome, setFiltroNome] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todas");
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
+  const [showRejeitarEmpresaDialog, setShowRejeitarEmpresaDialog] = useState(false);
+  const [motivoRejeicaoEmpresa, setMotivoRejeicaoEmpresa] = useState("");
 
   useEffect(() => {
     verificarAdmin();
@@ -131,9 +134,11 @@ export default function Admin() {
 
     // Filtro por status
     if (filtroStatus === "ativas") {
-      filtered = filtered.filter(e => e.ativa);
+      filtered = filtered.filter(e => e.ativa && e.status === 'aprovado');
     } else if (filtroStatus === "bloqueadas") {
       filtered = filtered.filter(e => !e.ativa);
+    } else if (filtroStatus === "pendentes") {
+      filtered = filtered.filter(e => e.status === 'pendente');
     }
 
     // Filtro por categoria
@@ -314,6 +319,70 @@ export default function Admin() {
     });
 
     toast.success("Empresa desbloqueada com sucesso");
+    await carregarDados();
+  };
+
+  const handleAprovarEmpresa = async (empresa: Empresa) => {
+    if (!adminData) return;
+
+    // Aprovar empresa: status='aprovado' e ativa=true
+    const { error: updateError } = await supabase
+      .from("empresas")
+      .update({
+        status: 'aprovado',
+        ativa: true,
+        verificado: true
+      })
+      .eq("id", empresa.id);
+
+    if (updateError) {
+      toast.error("Erro ao aprovar empresa");
+      console.error(updateError);
+      return;
+    }
+
+    // Registrar log
+    await supabase.from("admin_logs").insert({
+      admin_id: adminData.id,
+      acao: "aprovar_empresa",
+      entidade_tipo: "empresa",
+      entidade_id: empresa.id,
+      detalhes: `Empresa "${empresa.nome}" aprovada`
+    });
+
+    toast.success(`✅ ${empresa.nome} aprovada com sucesso!`);
+    await carregarDados();
+  };
+
+  const handleRejeitarEmpresa = async (empresa: Empresa, motivo: string) => {
+    if (!adminData) return;
+
+    // Rejeitar empresa
+    const { error: updateError } = await supabase
+      .from("empresas")
+      .update({
+        status: 'rejeitado',
+        ativa: false,
+        motivo_bloqueio: motivo
+      })
+      .eq("id", empresa.id);
+
+    if (updateError) {
+      toast.error("Erro ao rejeitar empresa");
+      console.error(updateError);
+      return;
+    }
+
+    // Registrar log
+    await supabase.from("admin_logs").insert({
+      admin_id: adminData.id,
+      acao: "rejeitar_empresa",
+      entidade_tipo: "empresa",
+      entidade_id: empresa.id,
+      detalhes: `Empresa "${empresa.nome}" rejeitada. Motivo: ${motivo}`
+    });
+
+    toast.success("Empresa rejeitada");
     await carregarDados();
   };
 
@@ -533,8 +602,9 @@ export default function Admin() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todas">Todas</SelectItem>
-                      <SelectItem value="ativas">Ativas</SelectItem>
-                      <SelectItem value="bloqueadas">Bloqueadas</SelectItem>
+                      <SelectItem value="pendentes">⏳ Pendentes</SelectItem>
+                      <SelectItem value="ativas">✅ Ativas</SelectItem>
+                      <SelectItem value="bloqueadas">🚫 Bloqueadas</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -584,15 +654,28 @@ export default function Admin() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <CardTitle>{empresa.nome}</CardTitle>
-                      {empresa.ativa ? (
+                      {empresa.status === 'pendente' && (
+                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Pendente
+                        </Badge>
+                      )}
+                      {empresa.status === 'aprovado' && empresa.ativa && (
                         <Badge variant="default" className="bg-green-600">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           Ativa
                         </Badge>
-                      ) : (
+                      )}
+                      {empresa.status === 'aprovado' && !empresa.ativa && (
                         <Badge variant="destructive">
                           <Ban className="w-3 h-3 mr-1" />
                           Bloqueada
+                        </Badge>
+                      )}
+                      {empresa.status === 'rejeitado' && (
+                        <Badge variant="destructive">
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Rejeitada
                         </Badge>
                       )}
                     </div>
@@ -625,7 +708,7 @@ export default function Admin() {
                   </div>
 
                   {/* Botões de Ação */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -638,7 +721,34 @@ export default function Admin() {
                       Detalhes
                     </Button>
                     
-                    {empresa.ativa ? (
+                    {/* Botões para empresas PENDENTES */}
+                    {empresa.status === 'pendente' && (
+                      <>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => handleAprovarEmpresa(empresa)}
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setEmpresaSelecionada(empresa);
+                            setShowRejeitarEmpresaDialog(true);
+                          }}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Rejeitar
+                        </Button>
+                      </>
+                    )}
+                    
+                    {/* Botões para empresas ATIVAS/APROVADAS */}
+                    {empresa.status === 'aprovado' && empresa.ativa && (
                       <Button
                         variant="destructive"
                         size="sm"
@@ -650,7 +760,10 @@ export default function Admin() {
                         <Ban className="w-4 h-4 mr-2" />
                         Bloquear
                       </Button>
-                    ) : (
+                    )}
+                    
+                    {/* Botões para empresas BLOQUEADAS */}
+                    {empresa.status === 'aprovado' && !empresa.ativa && (
                       <Button
                         variant="default"
                         size="sm"
@@ -825,6 +938,46 @@ export default function Admin() {
             </Button>
             <Button variant="destructive" onClick={handleBloquearEmpresa}>
               Bloquear Empresa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Rejeição Empresa */}
+      <Dialog open={showRejeitarEmpresaDialog} onOpenChange={setShowRejeitarEmpresaDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeitar Empresa</DialogTitle>
+            <DialogDescription>
+              Informe o motivo da rejeição de "{empresaSelecionada?.nome}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Motivo da Rejeição</Label>
+              <Textarea
+                value={motivoRejeicaoEmpresa}
+                onChange={(e) => setMotivoRejeicaoEmpresa(e.target.value)}
+                placeholder="Ex: CNPJ inválido, informações incompletas, duplicada..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejeitarEmpresaDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (empresaSelecionada && motivoRejeicaoEmpresa.trim()) {
+                  handleRejeitarEmpresa(empresaSelecionada, motivoRejeicaoEmpresa);
+                  setShowRejeitarEmpresaDialog(false);
+                  setMotivoRejeicaoEmpresa("");
+                }
+              }}
+            >
+              Rejeitar Empresa
             </Button>
           </DialogFooter>
         </DialogContent>

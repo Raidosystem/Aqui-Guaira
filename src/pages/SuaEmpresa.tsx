@@ -13,7 +13,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/sonner";
-import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2, Home } from "lucide-react";
 import { criarEmpresa, buscarCategorias, uploadImagens, supabase } from "@/lib/supabase";
 
 // Schema de cadastro
@@ -304,6 +304,26 @@ const SuaEmpresa = () => {
         {/* Fundo decorativo */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
         <div className="container mx-auto px-4 py-12 relative space-y-10">
+          {/* Botões de Navegação */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate(-1)}
+              className="gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="gap-2"
+            >
+              <Home className="w-4 h-4" />
+              Página Inicial
+            </Button>
+          </div>
+          
           <div className="flex flex-col gap-4 max-w-3xl">
             <h2 className="text-3xl font-bold gradient-text flex items-center gap-3"><Building2 className="h-8 w-8 text-primary" /> Sua Empresa</h2>
             <p className="text-sm text-muted-foreground max-w-xl">Cadastre seu negócio no diretório local ou acesse para ajustar suas informações. Todos os campos principais são obrigatórios para garantir qualidade dos dados exibidos.</p>
