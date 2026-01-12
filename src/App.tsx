@@ -14,6 +14,7 @@ import SuaEmpresa from "./pages/SuaEmpresa";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
+import Marketplace from "./pages/Marketplace";
 import FarmaciaPlantao from "./pages/FarmaciaPlantao";
 import SaudeNaPratica from "./pages/SaudeNaPratica";
 import ServicosPorBairro from "./pages/ServicosPorBairro";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<Admin />} />
+          <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/farmacia-plantao" element={<FarmaciaPlantao />} />
           <Route path="/saude-na-pratica" element={<SaudeNaPratica />} />
           <Route path="/servicos-por-bairro" element={<ServicosPorBairro />} />

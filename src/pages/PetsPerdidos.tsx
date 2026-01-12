@@ -102,6 +102,7 @@ export default function PetsPerdidos() {
   const [caracteristicasEspeciais, setCaracteristicasEspeciais] = useState("");
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [imagemPreview, setImagemPreview] = useState<string>("");
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     carregarUsuario();
@@ -187,7 +188,7 @@ export default function PetsPerdidos() {
       let imagemUrl = null;
 
       if (imagemFile) {
-        const urls = await uploadImagens([imagemFile], 'pets');
+        const urls = imagemFile ? await uploadImagens('posts-images', [imagemFile], 'pets') : [];
         imagemUrl = urls[0];
       }
 
@@ -338,7 +339,7 @@ export default function PetsPerdidos() {
 
               {!user ? (
                 <div className="py-8 text-center">
-                  <LoginDialog />
+                  <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">

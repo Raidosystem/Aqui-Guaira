@@ -80,8 +80,7 @@ const Empresas = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [empresaPendente, setEmpresaPendente] = useState<string | null>(null);
 
-  // Estado para modal de detalhes
-  const [detalheAberto, setDetalheAberto] = useState(false);
+  // Estado para página de detalhes
   const [selecionada, setSelecionada] = useState<EmpresaCompleta | null>(null);
 
   // Carregar dados iniciais
@@ -89,7 +88,7 @@ const Empresas = () => {
     carregarDados();
   }, []);
 
-  // Verificar se há ID ou categoria na URL
+  // Verificar se há ID na URL para mostrar detalhes
   useEffect(() => {
     const empresaId = searchParams.get('id');
     const categoriaId = searchParams.get('categoria');
@@ -98,11 +97,15 @@ const Empresas = () => {
     if (empresaId && empresas.length > 0) {
       const empresa = empresas.find(e => e.id === empresaId);
       if (empresa) {
-        abrirDetalhes(empresa);
-        // Limpar o parâmetro da URL
-        setSearchParams({});
+        setSelecionada(empresa);
+        incrementarVisualizacoesEmpresa(empresaId);
       }
-    } else if (categoriaId && empresas.length > 0) {
+    } else {
+      // Se não tem ID na URL, limpar selecionada
+      setSelecionada(null);
+    }
+    
+    if (categoriaId && empresas.length > 0) {
       // Buscar a empresa que tem essa categoria para pegar o nome
       const empresaComCategoria = empresas.find(e => e.categoria_id === categoriaId);
       if (empresaComCategoria && empresaComCategoria.categoria_nome) {
@@ -236,7 +239,7 @@ const Empresas = () => {
 
   // Paginação
   const [page, setPage] = useState(1);
-  const pageSize = 10; // Aumentado de 4 para 10
+  const pageSize = 12;
   const totalPages = Math.max(1, Math.ceil(empresasFiltradas.length / pageSize));
 
   useEffect(() => {
@@ -248,11 +251,8 @@ const Empresas = () => {
     return empresasFiltradas.slice(start, start + pageSize);
   }, [empresasFiltradas, page]);
 
-  const abrirDetalhes = async (emp: EmpresaCompleta) => {
-    setSelecionada(emp);
-    setDetalheAberto(true);
-    // Incrementar visualizações
-    await incrementarVisualizacoesEmpresa(emp.id);
+  const abrirDetalhes = (emp: EmpresaCompleta) => {
+    navigate(`/empresas?id=${emp.id}`);
   };
 
   const copiar = (texto?: string) => {
@@ -421,8 +421,9 @@ const Empresas = () => {
         </Card>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* 🏢 CARDS DE EMPRESAS - SEÇÃO PRINCIPAL (CLICÁVEIS PARA MODAL)      */}
+        {/* 🏢 CARDS DE EMPRESAS - SEÇÃO PRINCIPAL (CLICÁVEIS PARA PÁGINA)    */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
+        {!selecionada && (
         <Card className="glass-card border-2">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl">Empresas ({empresasFiltradas.length})</CardTitle>
@@ -431,10 +432,10 @@ const Empresas = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {paginated.map(emp => (
               <div key={emp.id} className="relative">
-                {/* Card clicável - Abre modal com detalhes completos */}
+                {/* Card clicável - Abre página com detalhes completos */}
                 <button
                   type="button"
                   onClick={() => abrirDetalhes(emp)}
@@ -586,33 +587,34 @@ const Empresas = () => {
             )}
           </CardContent>
         </Card>
+        )}
 
-        {/* Modal de detalhes */}
-        {selecionada && detalheAberto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6">
-            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setDetalheAberto(false)} />
+        {/* Página de detalhes */}
+        {selecionada ? (
+          <div className="w-full max-w-5xl mx-auto">
+            <div className="mb-4">
+              <Button 
+                onClick={() => navigate('/empresas')} 
+                className="gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-lg"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Voltar para lista
+              </Button>
+            </div>
             <div
-              role="dialog"
-              aria-modal="true"
-              aria-label={`Detalhes da empresa ${selecionada.nome}`}
-              className="relative w-full h-full sm:h-auto max-w-full sm:max-w-2xl md:max-w-3xl sm:rounded-2xl border-0 sm:border border-border/60 glass-card shadow-lg animate-in fade-in-0 zoom-in-95 sm:max-h-[90vh] flex flex-col overflow-hidden"
+              className="w-full border-2 border-border/60 rounded-3xl glass-card shadow-2xl overflow-hidden"
             >
-              <div className="h-40 sm:h-56 md:h-64 w-full overflow-hidden relative shrink-0">
+              <div className="h-64 md:h-80 w-full overflow-hidden relative">
                 <img src={selecionada.imagens[0]} alt={selecionada.nome} className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  aria-label="Fechar modal"
-                  onClick={() => setDetalheAberto(false)}
-                  className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-background/90 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-lg"
-                >Fechar</button>
+                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent"></div>
               </div>
-              {/* Conteúdo scrollável mantendo barra inferior fixa */}
-              <div className="flex-grow overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6">
+              {/* Conteúdo scrollável */}
+              <div className="px-6 py-8 space-y-8">
                 {/* Header com Logo e Nome */}
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-5 -mt-16 relative z-10">
                   {/* Logo */}
                   {selecionada.logo ? (
-                    <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 border-primary/20 bg-background shadow-md">
+                    <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-4 border-background shadow-2xl bg-background">
                       <img 
                         src={selecionada.logo} 
                         alt={`Logo ${selecionada.nome}`}
@@ -620,62 +622,62 @@ const Empresas = () => {
                       />
                     </div>
                   ) : (
-                    <div className="flex-shrink-0 w-20 h-20 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center border-2 border-primary/20 shadow-md">
-                      <Building2 className="h-10 w-10 text-primary/60" />
+                    <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 flex items-center justify-center border-4 border-background shadow-2xl">
+                      <Building2 className="h-12 w-12 text-orange-500" />
                     </div>
                   )}
                   
                   {/* Nome e Categoria */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    <h3 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col gap-2 flex-1 min-w-0 pt-8">
+                    <h3 className="text-2xl sm:text-3xl font-bold flex flex-wrap items-center gap-3">
                       <span className="break-words">{selecionada.nome}</span>
-                      <Badge className="whitespace-nowrap">{selecionada.categoria}</Badge>
+                      <Badge className="whitespace-nowrap text-sm px-3 py-1">{selecionada.categoria}</Badge>
                     </h3>
                   </div>
                 </div>
 
                 {/* Cards de Localização e Bio - Compacto */}
-                <div className="grid md:grid-cols-2 gap-3">
+                <div className="grid md:grid-cols-2 gap-4">
                   {/* Card de Localização */}
-                  <Card className="border">
-                    <CardHeader className="pb-2 pt-3 px-4">
-                      <CardTitle className="text-sm flex items-center gap-2 font-semibold">
-                        <MapPin className="h-4 w-4 text-primary" />
-                        Localização
+                  <Card className="border-2 border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-transparent">
+                    <CardHeader className="pb-3 pt-4 px-5">
+                      <CardTitle className="text-base flex items-center gap-2 font-semibold text-orange-600">
+                        <MapPin className="h-5 w-5 text-orange-500" />
+                        Endereço
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="px-4 pb-3 pt-0 space-y-1.5">
+                    <CardContent className="px-5 pb-4 pt-0 space-y-2">
                       {selecionada.endereco && (
                         <div className="flex items-start gap-2">
-                          <span className="text-xs text-muted-foreground min-w-[60px] font-medium">Endereço:</span>
-                          <span className="text-xs flex-1">{selecionada.endereco}</span>
+                          <span className="text-sm text-muted-foreground min-w-[70px] font-medium">Endereço:</span>
+                          <span className="text-sm flex-1">{selecionada.endereco}</span>
                         </div>
                       )}
                       {selecionada.bairro && (
                         <div className="flex items-start gap-2">
-                          <span className="text-xs text-muted-foreground min-w-[60px] font-medium">Bairro:</span>
-                          <span className="text-xs flex-1">{selecionada.bairro}</span>
+                          <span className="text-sm text-muted-foreground min-w-[70px] font-medium">Bairro:</span>
+                          <span className="text-sm flex-1">{selecionada.bairro}</span>
                         </div>
                       )}
                       {selecionada.cidade && selecionada.estado && (
                         <div className="flex items-start gap-2">
-                          <span className="text-xs text-muted-foreground min-w-[60px] font-medium">Cidade:</span>
-                          <span className="text-xs flex-1">{selecionada.cidade} - {selecionada.estado}</span>
+                          <span className="text-sm text-muted-foreground min-w-[70px] font-medium">Cidade:</span>
+                          <span className="text-sm flex-1">{selecionada.cidade} - {selecionada.estado}</span>
                         </div>
                       )}
                     </CardContent>
                   </Card>
 
                   {/* Card de Bio/Descrição */}
-                  <Card className="border">
-                    <CardHeader className="pb-2 pt-3 px-4">
-                      <CardTitle className="text-sm flex items-center gap-2 font-semibold">
-                        <Building2 className="h-4 w-4 text-primary" />
+                  <Card className="border-2 border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-transparent">
+                    <CardHeader className="pb-3 pt-4 px-5">
+                      <CardTitle className="text-base flex items-center gap-2 font-semibold text-orange-600">
+                        <Building2 className="h-5 w-5 text-orange-500" />
                         Sobre
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="px-4 pb-3 pt-0">
-                      <p className="text-xs leading-relaxed text-foreground/80">{selecionada.descricao}</p>
+                    <CardContent className="px-5 pb-4 pt-0">
+                      <p className="text-sm leading-relaxed text-foreground/90">{selecionada.descricao}</p>
                       {selecionada.subcategorias && selecionada.subcategorias.length > 0 && (
                         <div className="mt-3 pt-3 border-t">
                           <p className="text-xs font-medium text-muted-foreground mb-2">Especialidades:</p>
@@ -694,58 +696,61 @@ const Empresas = () => {
 
                 {/* Informações de Contato */}
                 <div className="grid sm:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="text-xs uppercase tracking-wide font-semibold text-muted-foreground">Contato</h4>
-                    <ul className="space-y-2 text-sm">
+                  <div className="space-y-4">
+                    <h4 className="text-sm uppercase tracking-wide font-bold text-orange-600 flex items-center gap-2">
+                      <Phone className="h-5 w-5" />
+                      Contato
+                    </h4>
+                    <ul className="space-y-3 text-sm">
                       {selecionada.telefone && (
-                        <li className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" />{selecionada.telefone}</span>
-                          <button onClick={() => copiar(selecionada.telefone)} className="p-1 rounded hover:bg-accent" aria-label="Copiar telefone">
+                        <li className="flex items-center justify-between gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
+                          <span className="flex items-center gap-2 font-medium"><Phone className="h-4 w-4 text-orange-500" />{selecionada.telefone}</span>
+                          <button onClick={() => copiar(selecionada.telefone)} className="p-2 rounded-lg hover:bg-background transition-colors" aria-label="Copiar telefone">
                             {copiado === selecionada.telefone ? <Check className="h-4 w-4 text-green-500 animate-in zoom-in-75" /> : <Clipboard className="h-4 w-4" />}
                           </button>
                         </li>
                       )}
                       {selecionada.whatsapp && (
-                        <li className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" />WhatsApp: {selecionada.whatsapp}</span>
+                        <li className="flex items-center justify-between gap-3 p-3 rounded-lg bg-green-500/10 hover:bg-green-500/20 transition-colors border border-green-500/20">
+                          <span className="flex items-center gap-2 font-medium"><Phone className="h-4 w-4 text-green-600" />WhatsApp: {selecionada.whatsapp}</span>
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" asChild>
+                            <Button variant="outline" size="sm" asChild className="bg-green-500 hover:bg-green-600 text-white border-0">
                               <a href={`https://wa.me/${selecionada.whatsapp.replace(/[^\d]/g,'')}`} target="_blank" rel="noopener noreferrer">Abrir</a>
                             </Button>
-                            <button onClick={() => copiar(selecionada.whatsapp)} className="p-1 rounded hover:bg-accent" aria-label="Copiar WhatsApp">
+                            <button onClick={() => copiar(selecionada.whatsapp)} className="p-2 rounded-lg hover:bg-background transition-colors" aria-label="Copiar WhatsApp">
                               {copiado === selecionada.whatsapp ? <Check className="h-4 w-4 text-green-500 animate-in zoom-in-75" /> : <Clipboard className="h-4 w-4" />}
                             </button>
                           </div>
                         </li>
                       )}
                       {selecionada.email && (
-                        <li className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" />{selecionada.email}</span>
-                          <button onClick={() => copiar(selecionada.email)} className="p-1 rounded hover:bg-accent" aria-label="Copiar email">
+                        <li className="flex items-center justify-between gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
+                          <span className="flex items-center gap-2 font-medium"><Mail className="h-4 w-4 text-orange-500" />{selecionada.email}</span>
+                          <button onClick={() => copiar(selecionada.email)} className="p-2 rounded-lg hover:bg-background transition-colors" aria-label="Copiar email">
                             {copiado === selecionada.email ? <Check className="h-4 w-4 text-green-500 animate-in zoom-in-75" /> : <Clipboard className="h-4 w-4" />}
                           </button>
                         </li>
                       )}
                       {selecionada.site && (
-                        <li className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />{selecionada.site}</span>
+                        <li className="flex items-center justify-between gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
+                          <span className="flex items-center gap-2 font-medium"><Globe className="h-4 w-4 text-orange-500" />{selecionada.site}</span>
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" asChild>
+                            <Button variant="outline" size="sm" asChild className="bg-orange-500 hover:bg-orange-600 text-white border-0">
                               <a href={selecionada.site} target="_blank" rel="noopener noreferrer">Abrir</a>
                             </Button>
-                            <button onClick={() => copiar(selecionada.site)} className="p-1 rounded hover:bg-accent" aria-label="Copiar site">
+                            <button onClick={() => copiar(selecionada.site)} className="p-2 rounded-lg hover:bg-background transition-colors" aria-label="Copiar site">
                               {copiado === selecionada.site ? <Check className="h-4 w-4 text-green-500 animate-in zoom-in-75" /> : <Clipboard className="h-4 w-4" />}
                             </button>
                           </div>
                         </li>
                       )}
                       {selecionada.instagram && (
-                        <li className="flex items-center justify-between gap-3">
+                        <li className="flex items-center justify-between gap-3 p-3 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 transition-colors border border-pink-500/20">
                           <span className="flex items-center gap-2 font-medium">
-                            <svg className="h-4 w-4 text-pink-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                            <svg className="h-5 w-5 text-pink-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                             Instagram
                           </span>
-                          <Button variant="outline" size="sm" asChild className="gap-2">
+                          <Button size="sm" asChild className="gap-2 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white border-0">
                             <a href={selecionada.instagram.startsWith('http') ? selecionada.instagram : `https://instagram.com/${selecionada.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
                               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                               Abrir
@@ -754,12 +759,12 @@ const Empresas = () => {
                         </li>
                       )}
                       {selecionada.facebook && (
-                        <li className="flex items-center justify-between gap-3">
+                        <li className="flex items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors border border-blue-500/20">
                           <span className="flex items-center gap-2 font-medium">
-                            <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                            <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                             Facebook
                           </span>
-                          <Button variant="outline" size="sm" asChild className="gap-2">
+                          <Button size="sm" asChild className="gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0">
                             <a href={selecionada.facebook.startsWith('http') ? selecionada.facebook : `https://facebook.com/${selecionada.facebook.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
                               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                               Abrir
@@ -769,21 +774,39 @@ const Empresas = () => {
                       )}
                     </ul>
                   </div>
-                  <div className="space-y-3">
-                    <h4 className="text-xs uppercase tracking-wide font-semibold text-muted-foreground">Localização</h4>
-                    <div className="text-sm flex flex-col gap-1">
-                      <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{selecionada.bairro}</span>
-                      {selecionada.endereco && <span className="text-muted-foreground break-words">{selecionada.endereco}</span>}
+                  <div className="space-y-4">
+                    <h4 className="text-sm uppercase tracking-wide font-bold text-orange-600 flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Localização
+                    </h4>
+                    <div className="text-sm flex flex-col gap-3">
+                      <div className="p-3 rounded-lg bg-accent/50">
+                        <span className="flex items-center gap-2 font-medium"><MapPin className="h-4 w-4 text-orange-500" />{selecionada.bairro}</span>
+                        {selecionada.endereco && <span className="text-muted-foreground break-words ml-6">{selecionada.endereco}</span>}
+                        {userLocation && (
+                          <span className="text-xs mt-2 block ml-6 text-orange-600 font-medium">Distância: {haversineKm(userLocation.lat, userLocation.lng, selecionada.lat, selecionada.lng).toFixed(2)} km</span>
+                        )}
+                      </div>
                       {selecionada.link_google_maps && (
-                        <Button variant="outline" size="sm" asChild className="mt-2 w-full">
-                          <a href={selecionada.link_google_maps} target="_blank" rel="noopener noreferrer">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            Abrir no Google Maps
-                          </a>
-                        </Button>
-                      )}
-                      {userLocation && (
-                        <span className="text-xs mt-1">Distância estimada: {haversineKm(userLocation.lat, userLocation.lng, selecionada.lat, selecionada.lng).toFixed(2)} km</span>
+                        <>
+                          <div className="w-full h-64 rounded-lg overflow-hidden border-2 border-orange-500/20">
+                            <iframe
+                              src={`https://www.google.com/maps?q=-20.3219334,-48.3115341&hl=pt-BR&z=17&output=embed`}
+                              width="100%"
+                              height="100%"
+                              style={{ border: 0 }}
+                              allowFullScreen
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                            ></iframe>
+                          </div>
+                          <Button variant="outline" size="sm" asChild className="w-full bg-orange-500 hover:bg-orange-600 text-white border-0">
+                            <a href={selecionada.link_google_maps} target="_blank" rel="noopener noreferrer">
+                              <MapPin className="h-4 w-4 mr-2" />
+                              Abrir no Google Maps
+                            </a>
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -806,12 +829,11 @@ const Empresas = () => {
                       {favoritos.has(selecionada.id) ? "Remover" : "Favoritar"}
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" onClick={() => setDetalheAberto(false)} className="flex-1 sm:flex-none">Fechar</Button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        ) : null}
           </>
         )}
       </main>

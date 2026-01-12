@@ -73,6 +73,7 @@ export default function AchadosPerdidos() {
   const [nomeContato, setNomeContato] = useState("");
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [imagemPreview, setImagemPreview] = useState<string>("");
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     carregarUsuario();
@@ -153,7 +154,7 @@ export default function AchadosPerdidos() {
 
       // Upload da imagem se houver
       if (imagemFile) {
-        const urls = await uploadImagens([imagemFile], 'achados-perdidos');
+        const urls = imagemFile ? await uploadImagens('posts-images', [imagemFile], 'achados-perdidos') : [];
         imagemUrl = urls[0];
       }
 
@@ -282,7 +283,7 @@ export default function AchadosPerdidos() {
 
               {!user ? (
                 <div className="py-8 text-center">
-                  <LoginDialog />
+                  <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">

@@ -1,4 +1,4 @@
-import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Info, ChevronDown, User, LogOut, Shield, ClipboardList, Menu, X, Search } from "lucide-react";
+import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Info, ChevronDown, User, LogOut, Shield, ClipboardList, Menu, X, Search, ShoppingBag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -215,6 +215,17 @@ const Header = () => {
                   
                   <div className="my-2 border-t border-border" />
                   
+                  <a
+                    href="/marketplace"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-colors shadow-md"
+                  >
+                    <ShoppingBag className="h-5 w-5" />
+                    <span className="font-semibold">Marketplace</span>
+                  </a>
+                  
+                  <div className="my-2 border-t border-border" />
+                  
                   {ferramentasItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -308,6 +319,19 @@ const Header = () => {
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Marketplace Button */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 hover:text-white border-0 shadow-md"
+              asChild
+            >
+              <a href="/marketplace">
+                <ShoppingBag className="h-4 w-4" />
+                <span className="text-sm font-semibold">Marketplace</span>
+              </a>
+            </Button>
 
             {/* User Avatar */}
             <DropdownMenu>
