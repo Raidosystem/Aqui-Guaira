@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { supabase, uploadImagem, buscarCategorias, type Empresa } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
+import categoriasData from "@/data/categorias-empresas.json";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ const Dashboard = () => {
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [subcategoriasSelecionadas, setSubcategoriasSelecionadas] = useState<string[]>([]);
 
   // Dados editáveis
   const [nome, setNome] = useState("");
@@ -48,6 +50,7 @@ const Dashboard = () => {
   const [site, setSite] = useState("");
   const [instagram, setInstagram] = useState("");
   const [facebook, setFacebook] = useState("");
+  const [linkGoogleMaps, setLinkGoogleMaps] = useState("");
 
   useEffect(() => {
     verificarAutenticacao();
@@ -84,6 +87,10 @@ const Dashboard = () => {
       setEmpresa(data);
       setNome(data.nome);
       setDescricao(data.descricao);
+      setSubcategoriasSelecionadas(data.subcategorias || []);
+      
+      // Debug: verificar subcategorias carregadas
+      console.log('📦 Subcategorias carregadas do banco:', data.subcategorias);
       
       // Buscar nome da categoria
       if (data.categoria_id) {
@@ -101,6 +108,7 @@ const Dashboard = () => {
       setSite(data.site || "");
       setInstagram(data.instagram || "");
       setFacebook(data.facebook || "");
+      setLinkGoogleMaps(data.link_google_maps || "");
     } catch (error) {
       console.error('Erro ao carregar empresa:', error);
       toast("Erro ao carregar dados", { description: "Tente novamente" });
@@ -139,14 +147,19 @@ const Dashboard = () => {
           nome,
           descricao,
           categoria_id: categoriaId,
+          subcategorias: subcategoriasSelecionadas,
           telefone,
           whatsapp,
           email,
           site: site || null,
           instagram: instagram || null,
           facebook: facebook || null,
+          link_google_maps: linkGoogleMaps || null,
         })
         .eq('id', empresa.id);
+
+      // Debug: verificar o que está sendo salvo
+      console.log('💾 Salvando subcategorias:', subcategoriasSelecionadas);
 
       if (error) throw error;
 
@@ -192,15 +205,23 @@ const Dashboard = () => {
   };
 
   const handleUploadLogo = async (file: File) => {
-    if (!empresa) return;
+    console.log('📸 handleUploadLogo chamado', { file, empresa });
+    
+    if (!empresa) {
+      console.error('❌ Empresa não encontrada');
+      return;
+    }
 
     try {
+      console.log('⬆️ Iniciando upload da logo...');
       toast("Fazendo upload da logo...", { duration: 1000 });
       
       const url = await uploadImagem('empresas-images', file, `logo-${empresa.id}`);
+      console.log('✅ URL retornada:', url);
       
       if (!url) throw new Error('Falha no upload');
 
+      console.log('💾 Atualizando database...');
       const { error } = await supabase
         .from('empresas')
         .update({ logo: url })
@@ -208,10 +229,11 @@ const Dashboard = () => {
 
       if (error) throw error;
 
+      console.log('✅ Logo salva com sucesso!');
       toast.success("Logo atualizada com sucesso!");
       setEmpresa({ ...empresa, logo: url });
     } catch (error) {
-      console.error('Erro no upload da logo:', error);
+      console.error('❌ Erro no upload da logo:', error);
       toast.error("Erro ao enviar logo");
     }
   };
@@ -376,60 +398,86 @@ const Dashboard = () => {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Categoria</Label>
                   {editando ? (
-                    <Select value={categoria} onValueChange={setCategoria}>
+                    <Select value={categoria} onValueChange={(v) => {
+                      setCategoria(v);
+                      setSubcategoriasSelecionadas([]);
+                    }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma categoria" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
+                      <SelectContent className="max-h-[300px]">
+                        {categoriasData.categorias.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.nome}>
+                            {cat.icone} {cat.nome}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <Select value={categoria} onValueChange={async (novaCategoria) => {
-                        setCategoria(novaCategoria);
-                        // Salvar automaticamente
-                        try {
-                          // Buscar ID da categoria
-                          const { data: catData } = await supabase
-                            .from('categorias')
-                            .select('id')
-                            .eq('nome', novaCategoria)
-                            .single();
+                    <p className="text-sm text-muted-foreground">{categoria || 'Não definida'}</p>
+                  )}
+                </div>
 
-                          if (catData) {
-                            await supabase
-                              .from('empresas')
-                              .update({ categoria_id: catData.id })
-                              .eq('id', empresa.id);
+                {/* Subcategorias */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Subcategorias (até 3)</Label>
+                  {editando && categoria ? (
+                    <div className="space-y-3">
+                      <div className="grid md:grid-cols-2 gap-3 p-4 border rounded-lg bg-muted/30 max-h-[400px] overflow-y-auto">
+                        {categoriasData.categorias
+                          .find(c => c.nome === categoria)
+                          ?.subcategorias.map((sub) => {
+                            const isSelected = subcategoriasSelecionadas.includes(sub);
+                            const canAdd = subcategoriasSelecionadas.length < 3;
                             
-                            toast.success("Categoria atualizada!");
-                            
-                            // Atualizar empresa local
-                            setEmpresa({ ...empresa, categoria_id: catData.id });
-                          }
-                        } catch (error) {
-                          toast.error("Erro ao atualizar categoria");
-                          console.error(error);
-                        }
-                      }}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione uma categoria">
-                            {categoria || "Não informada"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categorias.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            return (
+                              <div
+                                key={sub}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSubcategoriasSelecionadas(subcategoriasSelecionadas.filter(s => s !== sub));
+                                  } else if (canAdd) {
+                                    setSubcategoriasSelecionadas([...subcategoriasSelecionadas, sub]);
+                                  }
+                                }}
+                                className={`p-3 rounded-md border-2 cursor-pointer transition-all text-sm ${
+                                  isSelected 
+                                    ? 'border-primary bg-primary/10 text-primary font-medium' 
+                                    : canAdd 
+                                      ? 'border-border hover:border-primary/50 hover:bg-accent/50' 
+                                      : 'border-border/50 opacity-50 cursor-not-allowed'
+                                }`}
+                              >
+                                {sub}
+                                {isSelected && <span className="ml-2 text-primary">✓</span>}
+                              </div>
+                            );
+                          })}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">
+                          {subcategoriasSelecionadas.length} de 3 selecionadas
+                        </Badge>
+                        {subcategoriasSelecionadas.map(sub => (
+                          <Badge key={sub} variant="default" className="gap-1">
+                            {sub}
+                            <X 
+                              className="h-3 w-3 cursor-pointer" 
+                              onClick={() => setSubcategoriasSelecionadas(subcategoriasSelecionadas.filter(s => s !== sub))}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {subcategoriasSelecionadas.length > 0 ? (
+                        subcategoriasSelecionadas.map(sub => (
+                          <Badge key={sub} variant="secondary">{sub}</Badge>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhuma subcategoria selecionada</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -499,11 +547,24 @@ const Dashboard = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Facebook</label>
                     {editando ? (
-                      <Input value={facebook} onChange={(e) => setFacebook(e.target.value)} />
+                      <Input value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="@pagina" />
                     ) : (
                       <p className="text-sm text-muted-foreground">{facebook || "Não informado"}</p>
                     )}
                   </div>
+                </div>
+
+                {/* Google Maps */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    Link Google Maps
+                  </label>
+                  {editando ? (
+                    <Input value={linkGoogleMaps} onChange={(e) => setLinkGoogleMaps(e.target.value)} placeholder="https://maps.google.com/..." />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{linkGoogleMaps || "Não informado"}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -535,7 +596,12 @@ const Dashboard = () => {
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => e.target.files?.[0] && handleUploadLogo(e.target.files[0])}
+                        onChange={(e) => {
+                          console.log('📁 Input onChange:', e.target.files);
+                          if (e.target.files?.[0]) {
+                            handleUploadLogo(e.target.files[0]);
+                          }
+                        }}
                         className="hidden"
                         id="upload-logo"
                       />
@@ -558,7 +624,12 @@ const Dashboard = () => {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => e.target.files?.[0] && handleUploadLogo(e.target.files[0])}
+                      onChange={(e) => {
+                        console.log('📁 Input onChange (sem logo):', e.target.files);
+                        if (e.target.files?.[0]) {
+                          handleUploadLogo(e.target.files[0]);
+                        }
+                      }}
                       className="hidden"
                       id="upload-logo"
                     />

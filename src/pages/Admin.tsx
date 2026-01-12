@@ -55,6 +55,7 @@ interface Empresa {
   categorias?: { nome: string };
   ativa: boolean;
   status?: string; // 'pendente', 'aprovado', 'rejeitado'
+  destaque?: boolean;
   data_cadastro: string;
   motivo_bloqueio?: string;
   telefone?: string;
@@ -383,6 +384,38 @@ export default function Admin() {
     });
 
     toast.success("Empresa rejeitada");
+    await carregarDados();
+  };
+
+  const handleToggleDestaque = async (empresa: Empresa) => {
+    if (!adminData) return;
+
+    const novoDestaque = !empresa.destaque;
+
+    // Alternar destaque
+    const { error: updateError } = await supabase
+      .from("empresas")
+      .update({
+        destaque: novoDestaque
+      })
+      .eq("id", empresa.id);
+
+    if (updateError) {
+      toast.error("Erro ao atualizar destaque");
+      console.error(updateError);
+      return;
+    }
+
+    // Registrar log
+    await supabase.from("admin_logs").insert({
+      admin_id: adminData.id,
+      acao: novoDestaque ? "destacar_empresa" : "remover_destaque_empresa",
+      entidade_tipo: "empresa",
+      entidade_id: empresa.id,
+      detalhes: `Empresa "${empresa.nome}" ${novoDestaque ? 'adicionada ao' : 'removida do'} destaque`
+    });
+
+    toast.success(novoDestaque ? "⭐ Empresa destacada!" : "Destaque removido");
     await carregarDados();
   };
 
@@ -749,17 +782,28 @@ export default function Admin() {
                     
                     {/* Botões para empresas ATIVAS/APROVADAS */}
                     {empresa.status === 'aprovado' && empresa.ativa && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setEmpresaSelecionada(empresa);
-                          setShowBloqueioDialog(true);
-                        }}
-                      >
-                        <Ban className="w-4 h-4 mr-2" />
-                        Bloquear
-                      </Button>
+                      <>
+                        <Button
+                          variant={empresa.destaque ? "secondary" : "default"}
+                          size="sm"
+                          className={empresa.destaque ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
+                          onClick={() => handleToggleDestaque(empresa)}
+                        >
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          {empresa.destaque ? "⭐ Destacada" : "Destacar"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setEmpresaSelecionada(empresa);
+                            setShowBloqueioDialog(true);
+                          }}
+                        >
+                          <Ban className="w-4 h-4 mr-2" />
+                          Bloquear
+                        </Button>
+                      </>
                     )}
                     
                     {/* Botões para empresas BLOQUEADAS */}

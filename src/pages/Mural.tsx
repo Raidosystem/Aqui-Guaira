@@ -206,17 +206,15 @@ const Mural = () => {
         {/* Botões de Navegação */}
         <div className="flex gap-2">
           <Button
-            variant="outline"
-            onClick={() => window.history.back()}
-            className="gap-2"
+            onClick={() => navigate(-1)}
+            className="gap-2 bg-orange-500 hover:bg-orange-600 text-white"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
           <Button
-            variant="outline"
-            onClick={() => window.location.href = '/'}
-            className="gap-2"
+            onClick={() => navigate('/')}
+            className="gap-2 bg-green-500 hover:bg-green-600 text-white"
           >
             <Home className="w-4 h-4" />
             Página Inicial

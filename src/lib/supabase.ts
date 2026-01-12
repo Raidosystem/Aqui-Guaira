@@ -49,6 +49,7 @@ export interface Empresa {
   slug: string
   descricao: string
   categoria_id?: string
+  subcategorias?: string[] // ← Subcategorias adicionadas
   endereco?: string
   bairro: string
   cidade: string
@@ -62,6 +63,7 @@ export interface Empresa {
   site?: string
   instagram?: string
   facebook?: string
+  link_google_maps?: string
   horarios?: Array<{ dia: string; abertura: string; fechamento: string }>
   imagens: string[]
   logo?: string

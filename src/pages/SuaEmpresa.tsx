@@ -15,6 +15,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/sonner";
 import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2, Home } from "lucide-react";
 import { criarEmpresa, buscarCategorias, uploadImagens, supabase } from "@/lib/supabase";
+import { BAIRROS_GUAIRA } from "@/data/bairros";
+import categoriasData from "@/data/categorias-empresas.json";
 
 // Schema de cadastro
 const cadastroSchema = z.object({
@@ -24,6 +26,7 @@ const cadastroSchema = z.object({
   celular: z.string().min(15, "Celular incompleto"),
   email: z.string().email("Email inválido"),
   categoria: z.string().min(1, "Selecione uma categoria"),
+  subcategorias: z.array(z.string()).min(1, "Selecione ao menos 1 subcategoria").max(3, "Máximo 3 subcategorias"),
   bairro: z.string().min(1, "Informe o bairro"),
   endereco: z.string().min(5, "Endereço muito curto"),
   whatsapp: z.string().min(15, "WhatsApp incompleto"),
@@ -34,14 +37,13 @@ const cadastroSchema = z.object({
   cep: z.string().optional(),
   instagram: z.string().optional(),
   facebook: z.string().optional(),
+  link_google_maps: z.string().url("URL inválida").optional().or(z.literal("")),
 });
 
 const loginSchema = z.object({
   cnpj: z.string().min(18, "Informe seu CNPJ"),
   celular: z.string().min(15, "Informe seu celular"),
 });
-
-const BAIRROS = ["Centro", "Jardim Paulista", "Bela Vista", "Vila Aparecida", "Vivendas", "Outros"];
 
 const SuaEmpresa = () => {
   const navigate = useNavigate();
@@ -52,6 +54,8 @@ const SuaEmpresa = () => {
   const [dragBanner, setDragBanner] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("");
+  const [subcategoriasSelecionadas, setSubcategoriasSelecionadas] = useState<string[]>([]);
 
   // Carregar categorias do Supabase
   useEffect(() => {
@@ -69,6 +73,7 @@ const SuaEmpresa = () => {
       celular: "",
       email: "",
       categoria: "",
+      subcategorias: [],
       bairro: "",
       endereco: "",
       whatsapp: "",
@@ -139,6 +144,7 @@ const SuaEmpresa = () => {
         slug,
         descricao: data.descricao,
         categoria_id: categoriaData?.id,
+        subcategorias: data.subcategorias, // ← Subcategorias adicionadas
         endereco: data.endereco,
         bairro: data.bairro,
         cidade: 'Guaíra',
@@ -152,6 +158,7 @@ const SuaEmpresa = () => {
         site: data.site || undefined,
         instagram: data.instagram,
         facebook: data.facebook,
+        link_google_maps: data.link_google_maps || undefined,
         imagens,
         logo: logoUrl,
         status: 'aprovado' as const, // ← Mudei para 'aprovado' para aparecer na listagem
@@ -272,19 +279,33 @@ const SuaEmpresa = () => {
   };
 
   const onLogoSelect = (file?: File) => {
+    console.log('📸 onLogoSelect chamado:', file);
     if (!file) return;
     cadastroForm.setValue("logoFile", file);
-    fileToDataUrl(file, (url) => setLogoPreview(url));
+    fileToDataUrl(file, (url) => {
+      console.log('✅ Logo preview gerado:', url?.substring(0, 50) + '...');
+      setLogoPreview(url);
+    });
   };
 
   const onBannerSelect = (file?: File) => {
+    console.log('🖼️ onBannerSelect chamado:', file);
     if (!file) return;
     cadastroForm.setValue("bannerFile", file);
-    fileToDataUrl(file, (url) => setBannerPreview(url));
+    fileToDataUrl(file, (url) => {
+      console.log('✅ Banner preview gerado:', url?.substring(0, 50) + '...');
+      setBannerPreview(url);
+    });
   };
 
-  const handleLogoInput = (e: React.ChangeEvent<HTMLInputElement>) => onLogoSelect(e.target.files?.[0]);
-  const handleBannerInput = (e: React.ChangeEvent<HTMLInputElement>) => onBannerSelect(e.target.files?.[0]);
+  const handleLogoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📁 handleLogoInput:', e.target.files);
+    onLogoSelect(e.target.files?.[0]);
+  };
+  const handleBannerInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📁 handleBannerInput:', e.target.files);
+    onBannerSelect(e.target.files?.[0]);
+  };
 
   const handleDropGeneric = (e: React.DragEvent<HTMLDivElement>, type: "logo" | "banner") => {
     e.preventDefault();
@@ -305,19 +326,17 @@ const SuaEmpresa = () => {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
         <div className="container mx-auto px-4 py-12 relative space-y-10">
           {/* Botões de Navegação */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-6">
             <Button
-              variant="outline"
               onClick={() => navigate(-1)}
-              className="gap-2"
+              className="gap-2 bg-orange-500 hover:bg-orange-600 text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </Button>
             <Button
-              variant="outline"
               onClick={() => navigate('/')}
-              className="gap-2"
+              className="gap-2 bg-green-500 hover:bg-green-600 text-white"
             >
               <Home className="w-4 h-4" />
               Página Inicial
@@ -387,38 +406,119 @@ const SuaEmpresa = () => {
                         <Input {...cadastroForm.register("site")} placeholder="https://" />
                         {cadastroForm.formState.errors.site && <p className="text-xs text-destructive">{cadastroForm.formState.errors.site.message}</p>}
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Link Google Maps</label>
+                        <Input {...cadastroForm.register("link_google_maps")} placeholder="https://maps.google.com/..." />
+                        {cadastroForm.formState.errors.link_google_maps && <p className="text-xs text-destructive">{cadastroForm.formState.errors.link_google_maps.message}</p>}
+                      </div>
                     </div>
                   </div>
 
                   {/* Localização */}
                   <div className="space-y-6">
                     <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Localização</h3>
-                    <div className="grid md:grid-cols-3 gap-6">
-                      <div className="space-y-2 md:col-span-1">
-                        <label className="text-xs font-medium">Categoria *</label>
-                        <Select value={cadastroForm.watch("categoria")} onValueChange={(v) => cadastroForm.setValue("categoria", v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                          <SelectContent>
-                            {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Categoria Principal *</label>
+                        <Select 
+                          value={categoriaSelecionada} 
+                          onValueChange={(v) => {
+                            setCategoriaSelecionada(v);
+                            cadastroForm.setValue("categoria", v);
+                            setSubcategoriasSelecionadas([]);
+                            cadastroForm.setValue("subcategorias", []);
+                          }}
+                        >
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {categoriasData.categorias.map(c => (
+                              <SelectItem key={c.id} value={c.nome}>
+                                {c.icone} {c.nome}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         {cadastroForm.formState.errors.categoria && <p className="text-xs text-destructive">{cadastroForm.formState.errors.categoria.message}</p>}
                       </div>
-                      <div className="space-y-2 md:col-span-1">
+                      <div className="space-y-2">
                         <label className="text-xs font-medium">Bairro *</label>
                         <Select value={cadastroForm.watch("bairro")} onValueChange={(v) => cadastroForm.setValue("bairro", v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                          <SelectContent>
-                            {BAIRROS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Selecione o bairro" /></SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {BAIRROS_GUAIRA.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         {cadastroForm.formState.errors.bairro && <p className="text-xs text-destructive">{cadastroForm.formState.errors.bairro.message}</p>}
                       </div>
-                      <div className="space-y-2 md:col-span-1">
-                        <label className="text-xs font-medium">Endereço *</label>
-                        <Input {...cadastroForm.register("endereco")} placeholder="Rua / nº / complemento" />
-                        {cadastroForm.formState.errors.endereco && <p className="text-xs text-destructive">{cadastroForm.formState.errors.endereco.message}</p>}
+                    </div>
+
+                    {/* Subcategorias */}
+                    {categoriaSelecionada && (
+                      <div className="space-y-3">
+                        <label className="text-xs font-medium">Subcategorias * (escolha de 1 a 3)</label>
+                        <div className="grid md:grid-cols-2 gap-3 p-4 border rounded-lg bg-muted/30">
+                          {categoriasData.categorias
+                            .find(c => c.nome === categoriaSelecionada)
+                            ?.subcategorias.map((sub) => {
+                              const isSelected = subcategoriasSelecionadas.includes(sub);
+                              const canAdd = subcategoriasSelecionadas.length < 3;
+                              
+                              return (
+                                <div
+                                  key={sub}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      const novas = subcategoriasSelecionadas.filter(s => s !== sub);
+                                      setSubcategoriasSelecionadas(novas);
+                                      cadastroForm.setValue("subcategorias", novas);
+                                    } else if (canAdd) {
+                                      const novas = [...subcategoriasSelecionadas, sub];
+                                      setSubcategoriasSelecionadas(novas);
+                                      cadastroForm.setValue("subcategorias", novas);
+                                    }
+                                  }}
+                                  className={`p-3 rounded-md border-2 cursor-pointer transition-all text-sm ${
+                                    isSelected 
+                                      ? 'border-primary bg-primary/10 text-primary font-medium' 
+                                      : canAdd 
+                                        ? 'border-border hover:border-primary/50 hover:bg-accent/50' 
+                                        : 'border-border/50 opacity-50 cursor-not-allowed'
+                                  }`}
+                                >
+                                  {sub}
+                                  {isSelected && <span className="ml-2 text-primary">✓</span>}
+                                </div>
+                              );
+                            })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">
+                            {subcategoriasSelecionadas.length} de 3 selecionadas
+                          </Badge>
+                          {subcategoriasSelecionadas.map(sub => (
+                            <Badge key={sub} variant="default" className="gap-1">
+                              {sub}
+                              <X 
+                                className="h-3 w-3 cursor-pointer" 
+                                onClick={() => {
+                                  const novas = subcategoriasSelecionadas.filter(s => s !== sub);
+                                  setSubcategoriasSelecionadas(novas);
+                                  cadastroForm.setValue("subcategorias", novas);
+                                }}
+                              />
+                            </Badge>
+                          ))}
+                        </div>
+                        {cadastroForm.formState.errors.subcategorias && (
+                          <p className="text-xs text-destructive">{cadastroForm.formState.errors.subcategorias.message}</p>
+                        )}
                       </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Endereço Completo *</label>
+                      <Input {...cadastroForm.register("endereco")} placeholder="Rua / nº / complemento" />
+                      {cadastroForm.formState.errors.endereco && <p className="text-xs text-destructive">{cadastroForm.formState.errors.endereco.message}</p>}
                     </div>
                   </div>
 

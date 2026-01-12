@@ -170,7 +170,7 @@ const FarmaciaPlantao = () => {
             <Button
               variant="ghost"
               onClick={() => window.history.back()}
-              className="text-white hover:bg-white/20 gap-2"
+              className="text-white bg-orange-500 hover:bg-orange-600 gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar
@@ -178,7 +178,7 @@ const FarmaciaPlantao = () => {
             <Button
               variant="ghost"
               onClick={() => window.location.href = '/'}
-              className="text-white hover:bg-white/20 gap-2"
+              className="text-white bg-green-500 hover:bg-green-600 gap-2"
             >
               <Home className="w-4 h-4" />
               Página Inicial

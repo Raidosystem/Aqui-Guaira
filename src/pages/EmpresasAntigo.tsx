@@ -1,25 +1,5 @@
-/*
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                                                                               ║
-║                   🏢 SEÇÃO EMPRESAS - PÁGINA COMPLETA                         ║
-║                                                                               ║
-║  Esta é a PÁGINA PRINCIPAL de empresas (rota: /empresas)                     ║
-║  Funcionalidades:                                                             ║
-║  - Cards de empresas (grid 2 colunas) - CLICÁVEIS para abrir modal          ║
-║  - Filtros: busca, categoria, bairro, distância                              ║
-║  - Geolocalização e ordenação por distância                                  ║
-║  - Paginação (12 empresas por página)                                        ║
-║  - Modal completo com detalhes da empresa                                     ║
-║  - Sistema de favoritos                                                       ║
-║  - Botões de navegação: Voltar e Página Inicial                              ║
-║                                                                               ║
-║  ⚠️  NÃO CONFUNDIR COM: src/components/SearchSection.tsx (busca homepage)    ║
-║                                                                               ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
-*/
-
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -33,7 +13,6 @@ import { toast } from "@/components/ui/sonner";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { LoginDialog } from "@/components/LoginDialog";
 import categoriasData from '@/data/categorias-empresas.json';
-import { BAIRROS_GUAIRA } from '@/data/bairros';
 
 import { 
   buscarEmpresas, 
@@ -60,7 +39,6 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 };
 
 const Empresas = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<string>("todas");
@@ -93,7 +71,6 @@ const Empresas = () => {
   useEffect(() => {
     const empresaId = searchParams.get('id');
     const categoriaId = searchParams.get('categoria');
-    const searchTerm = searchParams.get('search');
     
     if (empresaId && empresas.length > 0) {
       const empresa = empresas.find(e => e.id === empresaId);
@@ -110,11 +87,6 @@ const Empresas = () => {
       }
       // Limpar o parâmetro da URL após aplicar o filtro
       setSearchParams({});
-    } else if (searchTerm && empresas.length > 0) {
-      // Se veio um termo de busca pela URL, aplicar no filtro
-      setBusca(searchTerm);
-      // Limpar o parâmetro da URL após aplicar o filtro
-      setSearchParams({});
     }
   }, [searchParams, empresas]);
 
@@ -124,24 +96,14 @@ const Empresas = () => {
       // Buscar empresas
       const empresasData = await buscarEmpresas();
       setEmpresas(empresasData as EmpresaCompleta[]);
-      
-      // Debug: verificar subcategorias das empresas carregadas
-      console.log('🏢 Empresas carregadas:', empresasData.length);
-      const comSubcategorias = empresasData.filter(e => e.subcategorias && e.subcategorias.length > 0);
-      console.log('📋 Empresas COM subcategorias:', comSubcategorias.length);
-      comSubcategorias.forEach(e => {
-        console.log(`  - ${e.nome}: ${e.subcategorias?.length || 0} subcategorias`, e.subcategorias);
-      });
 
-      // Buscar categorias do Supabase (não extrair das empresas)
-      const categoriasData = await buscarCategorias();
-      const categoriasNomes = categoriasData.map(c => c.nome);
-      setCategorias(categoriasNomes);
+      // Extrair categorias únicas
+      const categoriasUnicas = Array.from(new Set(empresasData.map(e => e.categoria_nome).filter(Boolean)));
+      setCategorias(categoriasUnicas as string[]);
 
-      // Usar lista fixa de bairros + bairros das empresas
-      const bairrosEmpresas = Array.from(new Set(empresasData.map(e => e.bairro).filter(Boolean)));
-      const todosBairros = Array.from(new Set([...BAIRROS_GUAIRA, ...bairrosEmpresas])).sort();
-      setBairros(todosBairros);
+      // Extrair bairros únicos
+      const bairrosUnicos = Array.from(new Set(empresasData.map(e => e.bairro)));
+      setBairros(bairrosUnicos);
 
       // Buscar favoritos (se logado, busca do usuário)
       const favoritosData = await buscarFavoritosUsuario('empresa');
@@ -175,48 +137,13 @@ const Empresas = () => {
   };
 
   const empresasFiltradas = useMemo(() => {
-    const resultado = empresas.map(emp => {
+    return empresas.map(emp => {
       const distancia = userLocation ? haversineKm(userLocation.lat, userLocation.lng, emp.latitude, emp.longitude) : null;
       return { ...emp, distancia };
     })
       .filter(emp => {
-        if (busca) {
-          const buscaLower = busca.toLowerCase().trim();
-          
-          // Debug: log para ver dados da empresa
-          if (emp.nome.toLowerCase().includes('all') || emp.nome.toLowerCase().includes('import')) {
-            console.log('🔍 Empresa encontrada:', {
-              nome: emp.nome,
-              categoria: emp.categoria_nome || emp.categoria,
-              subcategorias: emp.subcategorias,
-              busca: buscaLower
-            });
-          }
-          
-          // Busca simples por inclusão
-          const nomeMatch = emp.nome.toLowerCase().includes(buscaLower);
-          const descricaoMatch = emp.descricao?.toLowerCase().includes(buscaLower);
-          const categoriaMatch = (emp.categoria_nome || emp.categoria)?.toLowerCase().includes(buscaLower);
-          
-          // Busca em subcategorias (mais flexível)
-          const subcategoriasMatch = emp.subcategorias?.some(sub => 
-            sub.toLowerCase().includes(buscaLower)
-          ) || false;
-          
-          // Busca por palavras individuais (para queries complexas como "Lojas de celulares")
-          const palavras = buscaLower.split(/\s+/).filter(p => p.length > 2);
-          const palavrasMatch = palavras.length > 0 && palavras.every(palavra => {
-            return emp.nome.toLowerCase().includes(palavra) ||
-                   emp.descricao?.toLowerCase().includes(palavra) ||
-                   (emp.categoria_nome || emp.categoria)?.toLowerCase().includes(palavra) ||
-                   emp.subcategorias?.some(sub => sub.toLowerCase().includes(palavra));
-          });
-          
-          if (!nomeMatch && !descricaoMatch && !categoriaMatch && !subcategoriasMatch && !palavrasMatch) return false;
-        }
-        // Filtro por categoria: usar categoria_nome (da view) ou categoria (fallback)
-        const empresaCategoria = emp.categoria_nome || emp.categoria;
-        if (categoria !== "todas" && empresaCategoria !== categoria) return false;
+        if (busca && !emp.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+        if (categoria !== "todas" && emp.categoria_nome !== categoria) return false;
         if (bairro !== "todos" && emp.bairro !== bairro) return false;
         if (userLocation && emp.distancia !== null && emp.distancia > maxDistance) return false;
         return true;
@@ -227,11 +154,6 @@ const Empresas = () => {
         }
         return a.nome.localeCompare(b.nome);
       });
-    
-    // Debug final
-    console.log('📊 Total empresas:', empresas.length, '| Filtradas:', resultado.length, '| Busca:', busca);
-    
-    return resultado;
   }, [empresas, busca, categoria, bairro, userLocation, maxDistance]);
 
   // Paginação
@@ -359,6 +281,28 @@ const Empresas = () => {
             <CardDescription>Refine a busca usando os campos abaixo.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Acesso Rápido por Categoria */}
+            <div className="space-y-3 pb-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">Acesso rápido:</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                {categoriasData.categorias.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setCategoria(cat.nome)}
+                    className={`bg-gradient-to-br ${cat.cor} hover:opacity-90 text-white font-semibold p-3 rounded-lg shadow-md hover:shadow-lg transition-all hover:scale-105 text-center ${
+                      categoria === cat.nome ? 'ring-4 ring-blue-400' : ''
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">{cat.icone}</div>
+                    <div className="text-xs leading-tight line-clamp-2">{cat.nome}</div>
+                    <Badge className="mt-1 bg-white/30 text-white border-0 text-[10px]">
+                      {cat.subcategorias.length}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium">Busca (nome)</label>
@@ -368,17 +312,9 @@ const Empresas = () => {
                 <label className="text-xs font-medium">Categoria</label>
                 <Select value={categoria} onValueChange={setCategoria}>
                   <SelectTrigger className="w-full"><SelectValue placeholder="Categoria" /></SelectTrigger>
-                  <SelectContent className="max-h-[400px]">
+                  <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
-                    {/* Categorias do Supabase (20 categorias principais) */}
-                    {categorias.map(cat => {
-                      const catData = categoriasData.categorias.find(c => c.nome === cat);
-                      return (
-                        <SelectItem key={cat} value={cat}>
-                          {catData ? `${catData.icone} ` : ''}{cat}
-                        </SelectItem>
-                      );
-                    })}
+                    {categorias.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -420,9 +356,7 @@ const Empresas = () => {
           </CardContent>
         </Card>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* 🏢 CARDS DE EMPRESAS - SEÇÃO PRINCIPAL (CLICÁVEIS PARA MODAL)      */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* Lista */}
         <Card className="glass-card border-2">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl">Empresas ({empresasFiltradas.length})</CardTitle>
@@ -434,7 +368,6 @@ const Empresas = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {paginated.map(emp => (
               <div key={emp.id} className="relative">
-                {/* Card clicável - Abre modal com detalhes completos */}
                 <button
                   type="button"
                   onClick={() => abrirDetalhes(emp)}
@@ -486,20 +419,6 @@ const Empresas = () => {
                       <Badge className="flex-shrink-0">{emp.categoria}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{emp.descricao}</p>
-                    {emp.subcategorias && emp.subcategorias.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {emp.subcategorias.slice(0, 2).map((sub, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-[10px] px-2 py-0">
-                            {sub}
-                          </Badge>
-                        ))}
-                        {emp.subcategorias.length > 2 && (
-                          <Badge variant="outline" className="text-[10px] px-2 py-0">
-                            +{emp.subcategorias.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
                     <div className="flex items-center justify-between text-xs mt-2">
                       <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-primary" />{emp.bairro}</span>
                       {emp.distancia !== null && userLocation ? (
@@ -521,36 +440,7 @@ const Empresas = () => {
               </div>
             ))}
             {empresasFiltradas.length === 0 && (
-              <div className="col-span-full text-center py-16 px-4">
-                <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Nenhuma empresa encontrada
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {busca && `Não há empresas cadastradas que correspondam a "${busca}".`}
-                  {!busca && categoria !== "todas" && `Não há empresas na categoria "${categoria}".`}
-                  {!busca && categoria === "todas" && bairro !== "todos" && `Não há empresas no bairro "${bairro}".`}
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setBusca("");
-                      setCategoria("todas");
-                      setBairro("todos");
-                    }}
-                  >
-                    Limpar filtros
-                  </Button>
-                  <Button
-                    onClick={() => navigate('/sua-empresa')}
-                    className="gap-2"
-                  >
-                    <Building2 className="h-4 w-4" />
-                    Cadastrar empresa
-                  </Button>
-                </div>
-              </div>
+              <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Nenhuma empresa encontrada com esses filtros.</div>
             )}
             </div>
             {empresasFiltradas.length > pageSize && (
@@ -676,18 +566,6 @@ const Empresas = () => {
                     </CardHeader>
                     <CardContent className="px-4 pb-3 pt-0">
                       <p className="text-xs leading-relaxed text-foreground/80">{selecionada.descricao}</p>
-                      {selecionada.subcategorias && selecionada.subcategorias.length > 0 && (
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-xs font-medium text-muted-foreground mb-2">Especialidades:</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {selecionada.subcategorias.map((sub, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {sub}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -739,34 +617,6 @@ const Empresas = () => {
                           </div>
                         </li>
                       )}
-                      {selecionada.instagram && (
-                        <li className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-2 font-medium">
-                            <svg className="h-4 w-4 text-pink-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                            Instagram
-                          </span>
-                          <Button variant="outline" size="sm" asChild className="gap-2">
-                            <a href={selecionada.instagram.startsWith('http') ? selecionada.instagram : `https://instagram.com/${selecionada.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
-                              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                              Abrir
-                            </a>
-                          </Button>
-                        </li>
-                      )}
-                      {selecionada.facebook && (
-                        <li className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-2 font-medium">
-                            <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                            Facebook
-                          </span>
-                          <Button variant="outline" size="sm" asChild className="gap-2">
-                            <a href={selecionada.facebook.startsWith('http') ? selecionada.facebook : `https://facebook.com/${selecionada.facebook.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
-                              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                              Abrir
-                            </a>
-                          </Button>
-                        </li>
-                      )}
                     </ul>
                   </div>
                   <div className="space-y-3">
@@ -774,14 +624,6 @@ const Empresas = () => {
                     <div className="text-sm flex flex-col gap-1">
                       <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{selecionada.bairro}</span>
                       {selecionada.endereco && <span className="text-muted-foreground break-words">{selecionada.endereco}</span>}
-                      {selecionada.link_google_maps && (
-                        <Button variant="outline" size="sm" asChild className="mt-2 w-full">
-                          <a href={selecionada.link_google_maps} target="_blank" rel="noopener noreferrer">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            Abrir no Google Maps
-                          </a>
-                        </Button>
-                      )}
                       {userLocation && (
                         <span className="text-xs mt-1">Distância estimada: {haversineKm(userLocation.lat, userLocation.lng, selecionada.lat, selecionada.lng).toFixed(2)} km</span>
                       )}
