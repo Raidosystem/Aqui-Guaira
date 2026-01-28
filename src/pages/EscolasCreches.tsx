@@ -96,10 +96,10 @@ const EscolasCreches = () => {
   };
 
   const todasUnidades: { unidade: Unidade; categoria: string }[] = [];
-  // escolasData.unidades_ativas.governamental.municipal.forEach(unidade => todasUnidades.push({ unidade, categoria: 'municipal' }));
-  // escolasData.unidades_ativas.governamental.estadual.forEach(unidade => todasUnidades.push({ unidade, categoria: 'estadual' }));
-  // escolasData.unidades_ativas.governamental.estadual_tecnica.forEach(unidade => todasUnidades.push({ unidade, categoria: 'estadual_tecnica' }));
-  // escolasData.unidades_ativas.particular.forEach(unidade => todasUnidades.push({ unidade, categoria: 'particular' }));
+  escolasData.unidades_ativas.governamental.municipal.forEach(unidade => todasUnidades.push({ unidade, categoria: 'municipal' }));
+  escolasData.unidades_ativas.governamental.estadual.forEach(unidade => todasUnidades.push({ unidade, categoria: 'estadual' }));
+  escolasData.unidades_ativas.governamental.estadual_tecnica.forEach(unidade => todasUnidades.push({ unidade, categoria: 'estadual' }));
+  escolasData.unidades_ativas.particular.forEach(unidade => todasUnidades.push({ unidade, categoria: 'particular' }));
 
   const unidadesFiltradas = todasUnidades.filter(({ unidade, categoria }) => {
     const passaTipo = filtroTipo === 'todas' || unidade.tipo === filtroTipo;
@@ -157,21 +157,34 @@ const EscolasCreches = () => {
                 </p>
               </div>
 
-              {/* Estatísticas Rápidas */}
+              {/* Estatísticas Rápidas - Cards Clicáveis */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
                 {[
-                  { label: "Unidades", value: totalUnidades, color: "bg-blue-100", textColor: "text-blue-600", icon: School },
-                  { label: "Municipais", value: totalMunicipal, color: "bg-green-100", textColor: "text-green-600", icon: Baby },
-                  { label: "Estaduais", value: totalEstadual, color: "bg-purple-100", textColor: "text-purple-600", icon: BookOpen },
-                  { label: "Particulares", value: totalParticular, color: "bg-orange-100", textColor: "text-orange-600", icon: Users }
+                  { label: "Todas", value: totalUnidades, color: "bg-blue-100", textColor: "text-blue-600", icon: School, categoria: 'todas' },
+                  { label: "Municipais", value: totalMunicipal, color: "bg-green-100", textColor: "text-green-600", icon: Baby, categoria: 'municipal' },
+                  { label: "Estaduais", value: totalEstadual, color: "bg-purple-100", textColor: "text-purple-600", icon: BookOpen, categoria: 'estadual' },
+                  { label: "Particulares", value: totalParticular, color: "bg-orange-100", textColor: "text-orange-600", icon: Users, categoria: 'particular' }
                 ].map((stat, i) => (
-                  <div key={i} className="bg-card p-4 rounded-[2rem] border border-border/50 shadow-sm transition-all hover:shadow-md hover:scale-105">
+                  <button
+                    key={i}
+                    onClick={() => setFiltroCategoria(stat.categoria)}
+                    className={`bg-card p-4 rounded-[2rem] border shadow-sm transition-all hover:shadow-xl hover:scale-105 cursor-pointer ${
+                      filtroCategoria === stat.categoria 
+                        ? 'border-primary ring-2 ring-primary ring-offset-2' 
+                        : 'border-border/50'
+                    }`}
+                  >
                     <div className={`w-10 h-10 ${stat.color} ${stat.textColor} rounded-xl flex items-center justify-center mx-auto mb-2`}>
                       <stat.icon className="w-5 h-5" />
                     </div>
                     <p className="text-2xl font-black text-foreground">{stat.value}</p>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
-                  </div>
+                    {filtroCategoria === stat.categoria && (
+                      <div className="mt-2">
+                        <Star className="w-4 h-4 text-primary mx-auto animate-pulse" />
+                      </div>
+                    )}
+                  </button>
                 ))}
               </div>
             </div>

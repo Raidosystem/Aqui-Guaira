@@ -1,24 +1,26 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, MapPin, Clock, AlertCircle, Building2, Stethoscope, Ambulance, ArrowLeft, Home, HeartPulse, Activity, Zap, Navigation, ExternalLink, ShieldCheck, Sparkles, Calendar, MessageSquare } from "lucide-react";
+import { Phone, MapPin, Clock, AlertCircle, Building2, Stethoscope, Ambulance, ArrowLeft, Home, HeartPulse, Activity, Zap, Navigation, ExternalLink, ShieldCheck, Sparkles, Calendar, MessageSquare, Users, Star, Pill, Hospital, Siren } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import saudeData from "@/data/saude-guaira.json";
 
 interface UnidadeSaude {
   nome: string;
-  tipo: "hospital" | "upa" | "ubs" | "especializado";
+  tipo: string;
+  categoria: string;
   endereco: string;
   bairro: string;
-  telefone?: string;
-  whatsapp?: string;
+  telefones: string[];
+  whatsapp: string[];
   horario: string;
   servicos: string[];
-  emergencia?: boolean;
 }
-
-const unidadesSaude: UnidadeSaude[] = [];
 
 const emergencias = [
   { nome: "SAMU", telefone: "192", descricao: "Serviço Móvel de Urgência", color: "bg-red-600" },
@@ -29,26 +31,48 @@ const emergencias = [
 
 export default function SaudeNaPratica() {
   const navigate = useNavigate();
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
+  const [busca, setBusca] = useState("");
 
-  const getTipoLabel = (tipo: string) => {
-    const labels = {
-      hospital: "Hospital",
-      upa: "UPA 24h",
-      ubs: "Unidade Básica",
-      especializado: "Especializado"
-    };
-    return labels[tipo as keyof typeof labels];
+  const unidades = saudeData.unidades as UnidadeSaude[];
+
+  const getIconeCategoria = (categoria: string) => {
+    switch (categoria) {
+      case 'emergencia': return Ambulance;
+      case 'atencao_basica': return Building2;
+      case 'especialidades': return Stethoscope;
+      case 'apoio': return Activity;
+      case 'assistencia_social': return Users;
+      default: return Hospital;
+    }
   };
 
-  const getTipoColor = (tipo: string) => {
-    const colors = {
-      hospital: "bg-red-600",
-      upa: "bg-orange-600",
-      ubs: "bg-blue-600",
-      especializado: "bg-purple-600"
-    };
-    return colors[tipo as keyof typeof colors];
+  const getCorCategoria = (categoria: string) => {
+    switch (categoria) {
+      case 'emergencia': return 'bg-red-500';
+      case 'atencao_basica': return 'bg-blue-500';
+      case 'especialidades': return 'bg-purple-500';
+      case 'apoio': return 'bg-green-500';
+      case 'assistencia_social': return 'bg-orange-500';
+      default: return 'bg-gray-500';
+    }
   };
+
+  const unidadesFiltradas = unidades.filter(unidade => {
+    const passaCategoria = filtroCategoria === 'todas' || unidade.categoria === filtroCategoria;
+    const passaBusca = busca === "" || 
+      unidade.nome.toLowerCase().includes(busca.toLowerCase()) || 
+      unidade.bairro.toLowerCase().includes(busca.toLowerCase()) ||
+      unidade.tipo.toLowerCase().includes(busca.toLowerCase());
+    return passaCategoria && passaBusca;
+  });
+
+  const totalUnidades = unidades.length;
+  const totalEmergencia = unidades.filter(u => u.categoria === 'emergencia').length;
+  const totalAtencaoBasica = unidades.filter(u => u.categoria === 'atencao_basica').length;
+  const totalEspecialidades = unidades.filter(u => u.categoria === 'especialidades').length;
+  const totalApoio = unidades.filter(u => u.categoria === 'apoio').length;
+  const totalAssistenciaSocial = unidades.filter(u => u.categoria === 'assistencia_social').length;
 
   const handleLigar = (telefone: string) => {
     window.location.href = `tel:${telefone.replace(/\D/g, '')}`;
@@ -107,21 +131,71 @@ export default function SaudeNaPratica() {
               <p className="text-lg md:text-xl text-muted-foreground font-medium max-w-2xl mx-auto">
                 Guia completo de unidades de saúde, hospitais e serviços de emergência do município de Guaíra-SP.
               </p>
+
+              {/* Cards Clicáveis - Estatísticas */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 max-w-6xl mx-auto mt-8">
+                {[
+                  { label: "Todas", value: totalUnidades, color: "bg-cyan-100", textColor: "text-cyan-600", icon: Hospital, categoria: 'todas' },
+                  { label: "Emergência", value: totalEmergencia, color: "bg-red-100", textColor: "text-red-600", icon: Siren, categoria: 'emergencia' },
+                  { label: "UBS/USF", value: totalAtencaoBasica, color: "bg-blue-100", textColor: "text-blue-600", icon: Building2, categoria: 'atencao_basica' },
+                  { label: "Especialidades", value: totalEspecialidades, color: "bg-purple-100", textColor: "text-purple-600", icon: Stethoscope, categoria: 'especialidades' },
+                  { label: "Apoio", value: totalApoio, color: "bg-green-100", textColor: "text-green-600", icon: Activity, categoria: 'apoio' },
+                  { label: "CRAS", value: totalAssistenciaSocial, color: "bg-orange-100", textColor: "text-orange-600", icon: Users, categoria: 'assistencia_social' }
+                ].map((stat, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setFiltroCategoria(stat.categoria)}
+                    className={`bg-card p-4 rounded-[2rem] border shadow-sm transition-all hover:shadow-xl hover:scale-105 cursor-pointer ${
+                      filtroCategoria === stat.categoria 
+                        ? 'border-primary ring-2 ring-primary ring-offset-2' 
+                        : 'border-border/50'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 ${stat.color} ${stat.textColor} rounded-xl flex items-center justify-center mx-auto mb-2`}>
+                      <stat.icon className="w-5 h-5" />
+                    </div>
+                    <p className="text-2xl font-black text-foreground">{stat.value}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
+                    {filtroCategoria === stat.categoria && (
+                      <div className="mt-2">
+                        <Star className="w-4 h-4 text-primary mx-auto animate-pulse" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Emergências Section */}
+        {/* Filtro de Busca */}
         <section className="container mx-auto px-4 py-8">
-          <Card className="bg-card border border-border/50 rounded-[2rem] overflow-hidden shadow-sm">
+          <Card className="bg-card border border-border/50 shadow-xl rounded-[2.5rem] p-8 -mt-10 mb-8 relative z-20">
+            <div className="space-y-3">
+              <Label className="font-black text-xs text-muted-foreground uppercase tracking-widest pl-1 flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5" /> Buscar Unidade de Saúde
+              </Label>
+              <Input
+                placeholder="Nome da unidade, bairro ou tipo..."
+                className="py-6 rounded-2xl border-border/50 focus:border-primary transition-all font-medium bg-muted/10 text-foreground placeholder:text-muted-foreground"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
+          </Card>
+        </section>
+
+        {/* Emergências - Banner Fixo */}
+        <section className="container mx-auto px-4 pb-8">
+          <Card className="bg-gradient-to-br from-red-600 to-red-500 text-white border-none rounded-[2rem] overflow-hidden shadow-xl">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-xl">
-                  <Ambulance className="w-6 h-6 text-red-600" />
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <Ambulance className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-red-900 font-black">Telefones de Emergência</CardTitle>
-                  <CardDescription className="text-red-700 font-medium">Ligue imediatamente em casos de urgência</CardDescription>
+                  <CardTitle className="text-white font-black">Telefones de Emergência</CardTitle>
+                  <CardDescription className="text-white/80 font-medium">Ligue imediatamente em casos de urgência</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -132,10 +206,10 @@ export default function SaudeNaPratica() {
                     key={item.telefone}
                     onClick={() => handleLigar(item.telefone)}
                     variant="outline"
-                    className="flex flex-col h-auto py-5 bg-background border-2 border-red-100/50 hover:border-red-400 rounded-xl transition-colors group"
+                    className="flex flex-col h-auto py-5 bg-white/10 border-2 border-white/20 hover:bg-white/20 hover:border-white/40 rounded-xl transition-colors backdrop-blur-sm text-white hover:text-white"
                   >
-                    <span className={`text-3xl font-black ${item.telefone === '190' ? 'text-blue-600' : 'text-red-600'}`}>{item.telefone}</span>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter mt-1">{item.nome}</span>
+                    <span className="text-3xl font-black">{item.telefone}</span>
+                    <span className="text-xs font-bold uppercase tracking-tighter mt-1">{item.nome}</span>
                   </Button>
                 ))}
               </div>
@@ -143,246 +217,172 @@ export default function SaudeNaPratica() {
           </Card>
         </section>
 
-        <section className="container mx-auto px-4 py-12 space-y-16">
-          {/* 24 Horas Section */}
+        {/* Lista de Unidades */}
+        <section className="container mx-auto px-4 py-8">
           <div className="space-y-8">
-            <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-              <div className="p-2.5 bg-red-100 rounded-xl">
-                <Zap className="w-6 h-6 text-red-600" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
-                Atendimento <span className="text-red-600">24 Horas</span>
+            <div className="flex items-center justify-between border-b border-border/50 pb-6">
+              <h2 className="text-2xl font-black text-foreground">
+                Unidades de <span className="text-primary">Saúde</span>
               </h2>
+              <Badge variant="secondary" className="bg-primary/10 text-primary font-bold">
+                {unidadesFiltradas.length} resultados
+              </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {unidadesSaude
-                .filter(u => u.emergencia)
-                .map((unidade, index) => (
-                  <Card key={index} className="bg-card border border-border/50 hover:border-primary/40 transition-all duration-300 overflow-hidden group p-0 shadow-lg rounded-[2rem]">
-                    <CardHeader className="p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <Badge className={`${getTipoColor(unidade.tipo)} text-white px-3 py-1 rounded-lg`}>
-                          {getTipoLabel(unidade.tipo)}
-                        </Badge>
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 animate-pulse font-black">24H</Badge>
-                      </div>
-                      <CardTitle className="text-2xl font-black group-hover:text-red-600 transition-colors uppercase tracking-tight">
-                        {unidade.nome}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 pt-0 space-y-6">
-                      <div className="flex items-start gap-3 p-4 bg-muted/20 rounded-2xl">
-                        <MapPin className="w-6 h-6 text-red-600 flex-shrink-0" />
-                        <div>
-                          <p className="font-bold text-foreground">{unidade.endereco}</p>
-                          <p className="text-sm text-muted-foreground font-medium">{unidade.bairro}</p>
-                          <button
-                            onClick={() => handleVerMapa(unidade.endereco, unidade.bairro)}
-                            className="text-xs text-blue-600 hover:underline font-bold mt-2 flex items-center gap-1"
-                          >
-                            VER NO MAPA <Navigation className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
+            {unidadesFiltradas.length === 0 ? (
+              <div className="py-24 text-center bg-muted/20 rounded-[2.5rem] border-2 border-dashed border-border/50 flex flex-col items-center gap-4">
+                <HeartPulse className="w-20 h-20 text-muted-foreground/30" />
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-foreground">Nenhuma unidade encontrada</h3>
+                  <p className="text-muted-foreground font-medium">Tente ajustar seus filtros para encontrar a unidade desejada.</p>
+                </div>
+                <Button 
+                  variant="link" 
+                  onClick={() => { setBusca(""); setFiltroCategoria("todas"); }} 
+                  className="text-primary font-bold"
+                >
+                  Limpar Filtros
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {unidadesFiltradas.map((unidade, idx) => {
+                  const Icone = getIconeCategoria(unidade.categoria);
+                  const cor = getCorCategoria(unidade.categoria);
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {unidade.telefone && (
-                          <Button
-                            onClick={() => handleLigar(unidade.telefone!)}
-                            variant="outline"
-                            className="rounded-xl py-6 font-bold border-2 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all active:scale-95"
-                          >
-                            <Phone className="w-4 h-4 mr-2" />
-                            Ligar Agora
-                          </Button>
-                        )}
-                        {unidade.whatsapp && (
-                          <Button
-                            onClick={() => handleWhatsApp(unidade.whatsapp!)}
-                            className="bg-green-500 hover:bg-green-600 text-white rounded-xl py-6 font-bold transition-all active:scale-95"
-                          >
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            WhatsApp
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest pl-1">
-                          <Activity className="w-3.5 h-3.5" /> Serviços Disponíveis
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {unidade.servicos.map((servico, idx) => (
-                            <Badge key={idx} variant="secondary" className="bg-gray-100 text-gray-600 font-bold text-[10px] py-1">
-                              {servico}
+                  return (
+                    <Card key={idx} className="group bg-card border border-border/50 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden p-0 flex flex-col">
+                      <div className={`h-3 ${cor} w-full`} />
+                      <CardHeader className="p-6 pb-4">
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className={`p-3 rounded-2xl ${cor} bg-opacity-10`}>
+                            <Icone className={`w-6 h-6 ${cor.replace('bg-', 'text-')}`} />
+                          </div>
+                          {unidade.categoria === 'emergencia' && (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-bold text-[10px] animate-pulse">
+                              24H
                             </Badge>
-                          ))}
+                          )}
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm font-bold text-foreground border-t border-border/10 pt-4">
-                        <Clock className="w-4 h-4 text-orange-500" />
-                        {unidade.horario}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          </div>
-
-          {/* UBS Section */}
-          <div className="space-y-8">
-            <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-              <div className="p-2.5 bg-blue-100 rounded-xl">
-                <Building2 className="w-6 h-6 text-blue-600" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
-                Unidades Básicas <span className="text-blue-600">(UBS)</span>
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {unidadesSaude
-                .filter(u => u.tipo === "ubs")
-                .map((unidade, index) => (
-                  <Card key={index} className="bg-card border border-border/50 hover:border-primary/40 transition-all duration-300 rounded-[2rem] overflow-hidden p-0 group shadow-lg">
-                    <CardHeader className="bg-muted/10 p-5">
-                      <Badge className="bg-blue-600 text-white w-fit mb-2">UBS</Badge>
-                      <CardTitle className="text-lg font-black group-hover:text-blue-600 transition-colors">{unidade.nome}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-5 space-y-4">
-                      <div className="flex items-start gap-2.5">
-                        <MapPin className="w-4 h-4 text-blue-500 mt-1 flex-shrink-0" />
-                        <div className="text-sm">
-                          <p className="font-bold text-foreground leading-tight">{unidade.endereco}</p>
-                          <p className="text-xs text-muted-foreground font-medium">{unidade.bairro}</p>
+                        <div className="space-y-2">
+                          <p className={`text-[10px] font-black ${cor.replace('bg-', 'text-')} uppercase tracking-widest`}>
+                            {unidade.tipo}
+                          </p>
+                          <CardTitle className="text-lg font-black text-foreground group-hover:text-primary transition-colors leading-tight">
+                            {unidade.nome}
+                          </CardTitle>
                         </div>
-                      </div>
+                      </CardHeader>
 
-                      <div className="flex flex-wrap gap-1.5 pt-2">
-                        {unidade.servicos.slice(0, 3).map((servico, idx) => (
-                          <Badge key={idx} variant="outline" className="text-[9px] font-bold text-gray-400 capitalize">{servico}</Badge>
-                        ))}
-                        {unidade.servicos.length > 3 && (
-                          <Badge variant="outline" className="text-[10px] font-bold text-blue-500">+{unidade.servicos.length - 3}</Badge>
-                        )}
-                      </div>
-
-                      <div className="pt-4 flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleLigar(unidade.telefone!)}
-                          className="flex-1 rounded-xl font-bold py-5 border-2 text-xs"
-                        >
-                          <Phone className="w-3 h-3 mr-1.5" /> Ligar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleVerMapa(unidade.endereco, unidade.bairro)}
-                          className="rounded-xl font-bold text-blue-600 text-xs px-2"
-                        >
-                          Mapa <ExternalLink className="w-3 h-3 ml-1" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          </div>
-
-          {/* Centros Especializados */}
-          <div className="space-y-8">
-            <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-              <div className="p-2.5 bg-purple-100 rounded-xl">
-                <Stethoscope className="w-6 h-6 text-purple-600" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
-                Centros <span className="text-purple-600">Especializados</span>
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {unidadesSaude
-                .filter(u => u.tipo === "especializado")
-                .map((unidade, index) => (
-                  <Card key={index} className="bg-card border border-border/50 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-[2rem] overflow-hidden p-0">
-                    <div className="bg-purple-600 p-6 text-white">
-                      <Badge className="bg-white/20 text-white border-none mb-3 font-bold uppercase tracking-widest text-[10px]">Especializado</Badge>
-                      <CardTitle className="text-2xl font-black">{unidade.nome}</CardTitle>
-                    </div>
-                    <CardContent className="p-8 space-y-8">
-                      <div className="grid sm:grid-cols-2 gap-6">
+                      <CardContent className="p-6 pt-0 flex-grow flex flex-col gap-6">
                         <div className="space-y-4">
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Localização</p>
-                            <div className="flex items-start gap-2">
-                              <MapPin className="w-4 h-4 text-purple-500 mt-1" />
-                              <span className="text-sm font-bold text-foreground">{unidade.endereco}, {unidade.bairro}</span>
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-muted/20 rounded-xl">
+                              <MapPin className="w-4 h-4 text-primary" />
+                            </div>
+                            <div className="text-sm flex-1">
+                              <p className="font-bold text-foreground leading-tight">{unidade.endereco}</p>
+                              <p className="text-xs text-muted-foreground font-medium">{unidade.bairro}</p>
                             </div>
                           </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Horário</p>
-                            <div className="flex items-start gap-2">
-                              <Clock className="w-4 h-4 text-purple-500 mt-1" />
-                              <span className="text-sm font-bold text-foreground">{unidade.horario}</span>
+
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-muted/20 rounded-xl">
+                              <Clock className="w-4 h-4 text-primary" />
                             </div>
+                            <p className="text-sm font-medium text-foreground">{unidade.horario}</p>
                           </div>
+
+                          <div className="space-y-2">
+                            {unidade.telefones.map((tel, i) => (
+                              <div key={i} className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-500/10 rounded-xl">
+                                  <Phone className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <a 
+                                  href={`tel:${tel.replace(/\D/g, '')}`} 
+                                  className="text-sm font-bold text-foreground hover:text-blue-500 transition-colors"
+                                >
+                                  {tel}
+                                </a>
+                              </div>
+                            ))}
+                            {unidade.whatsapp.map((whats, i) => (
+                              <div key={i} className="flex items-center gap-3">
+                                <div className="p-2 bg-green-500/10 rounded-xl">
+                                  <MessageSquare className="w-4 h-4 text-green-600" />
+                                </div>
+                                <a 
+                                  href={`https://wa.me/55${whats.replace(/\D/g, '')}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-sm font-bold text-foreground hover:text-green-500 transition-colors"
+                                >
+                                  WhatsApp: {whats}
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+
+                          {unidade.servicos.length > 0 && (
+                            <div className="space-y-2 pt-2">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Serviços</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {unidade.servicos.slice(0, 3).map((servico, idx) => (
+                                  <Badge key={idx} variant="secondary" className="bg-muted/30 text-foreground font-medium text-[10px] py-1">
+                                    {servico}
+                                  </Badge>
+                                ))}
+                                {unidade.servicos.length > 3 && (
+                                  <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/30">
+                                    +{unidade.servicos.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="space-y-3">
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Entrar em Contato</p>
+                        <div className="mt-auto pt-4 border-t border-border/50">
                           <Button
-                            className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold py-6 shadow-lg shadow-purple-100 transition-all uppercase text-xs tracking-tighter"
-                            onClick={() => handleLigar(unidade.telefone!)}
+                            className="w-full rounded-2xl py-5 font-bold bg-card text-foreground border-2 border-border/50 hover:border-primary/50 hover:bg-muted/30 hover:text-primary transition-all uppercase text-[10px] tracking-widest shadow-none"
+                            onClick={() => handleVerMapa(unidade.endereco, unidade.bairro)}
                           >
-                            <Phone className="w-4 h-4 mr-2" /> Ligue Agora
+                            <MapPin className="w-3.5 h-3.5 mr-2" /> Ver no Mapa
                           </Button>
                         </div>
-                      </div>
-
-                      <div className="space-y-4 pt-6 border-t border-gray-50">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Especialidades e Serviços</p>
-                        <div className="flex flex-wrap gap-2">
-                          {unidade.servicos.map((servico, idx) => (
-                            <Badge key={idx} variant="secondary" className="bg-purple-50 text-purple-700 font-bold border-none py-1.5 px-3">
-                              {servico}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          </div>
-
-          {/* Informações Section */}
-          <section className="py-8">
-            <Card className="bg-gradient-to-br from-blue-600 to-green-600 text-white rounded-[2.5rem] border-none overflow-hidden shadow-2xl relative">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                <Sparkles className="w-32 h-32" />
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
-              <CardHeader className="p-10 pb-4">
-                <CardTitle className="text-3xl font-black">Informações Importantes</CardTitle>
-              </CardHeader>
-              <CardContent className="p-10 pt-0 grid md:grid-cols-3 gap-8">
-                {[
-                  { title: "Documentos", text: "Cartão SUS, RG, CPF e comprovante de residência atualizado.", icon: ShieldCheck },
-                  { title: "Agendamento", text: "Procure a UBS mais próxima para marcar consultas e exames.", icon: Calendar },
-                  { title: "Medicamentos", text: "Farmácia Popular com entrega mediante prescrição médica.", icon: Activity }
-                ].map((info, i) => (
-                  <div key={i} className="bg-white/10 backdrop-blur-sm p-6 rounded-3xl border border-white/20">
-                    <info.icon className="w-10 h-10 mb-4 text-white" />
-                    <h3 className="font-black text-xl mb-2">{info.title}</h3>
-                    <p className="text-sm font-medium text-white/80 leading-relaxed">{info.text}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </section>
+            )}
+          </div>
+        </section>
+
+        {/* Informações Importantes */}
+        <section className="container mx-auto px-4 py-12">
+          <Card className="bg-gradient-to-br from-blue-600 to-green-600 text-white rounded-[2.5rem] border-none overflow-hidden shadow-2xl relative">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <Sparkles className="w-32 h-32" />
+            </div>
+            <CardHeader className="p-10 pb-4 relative z-10">
+              <CardTitle className="text-3xl font-black">Informações Importantes</CardTitle>
+            </CardHeader>
+            <CardContent className="p-10 pt-0 grid md:grid-cols-3 gap-8 relative z-10">
+              {[
+                { title: "Documentos", text: "Cartão SUS, RG, CPF e comprovante de residência atualizado.", icon: ShieldCheck },
+                { title: "Agendamento", text: "Procure a UBS/USF mais próxima para marcar consultas e exames.", icon: Calendar },
+                { title: "Medicamentos", text: "Farmácia Municipal com dispensação mediante prescrição médica.", icon: Pill }
+              ].map((info, i) => (
+                <div key={i} className="bg-white/10 backdrop-blur-sm p-6 rounded-3xl border border-white/20">
+                  <info.icon className="w-10 h-10 mb-4 text-white" />
+                  <h3 className="font-black text-xl mb-2">{info.title}</h3>
+                  <p className="text-sm font-medium text-white/80 leading-relaxed">{info.text}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </section>
       </main>
 

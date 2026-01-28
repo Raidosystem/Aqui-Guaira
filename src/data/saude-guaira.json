@@ -1,0 +1,281 @@
+{
+  "cidade": "Guaíra-SP",
+  "atualizado_em": "2026-01-27",
+  "unidades": [
+    {
+      "nome": "Pronto Socorro Municipal",
+      "tipo": "Pronto Socorro (Urgência/Emergência)",
+      "categoria": "emergencia",
+      "endereco": "Rua 24 (nº não informado na fonte)",
+      "bairro": "Centro",
+      "telefones": ["(17) 3331-2472"],
+      "whatsapp": [],
+      "horario": "24 horas",
+      "servicos": ["Urgência", "Emergência", "Pronto atendimento"]
+    },
+    {
+      "nome": "SAMU",
+      "tipo": "Urgência/Emergência",
+      "categoria": "emergencia",
+      "endereco": "Av. 23, nº 999",
+      "bairro": "Centro",
+      "telefones": ["192"],
+      "whatsapp": [],
+      "horario": "24 horas",
+      "servicos": ["Atendimento móvel de urgência", "Ambulância", "Socorro pré-hospitalar"]
+    },
+    {
+      "nome": "Santa Casa de Misericórdia de Guaíra",
+      "tipo": "Hospital",
+      "categoria": "emergencia",
+      "endereco": "Rua 24, nº 872",
+      "bairro": "Jardim Paulista",
+      "telefones": ["(17) 3332-7000"],
+      "whatsapp": [],
+      "horario": "24 horas",
+      "servicos": ["Internação", "Cirurgias", "Pronto Socorro", "Maternidade", "UTI"]
+    },
+    {
+      "nome": "USF Dr. José Vilela Junqueira",
+      "tipo": "USF/UBS (Atenção Básica)",
+      "categoria": "atencao_basica",
+      "endereco": "Av. 29, nº 1191",
+      "bairro": "Vila Aparecida",
+      "telefones": ["(17) 3331-7413", "(17) 3331-9570"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Consultas", "Vacinas", "Curativos", "Preventivo", "Pré-natal"]
+    },
+    {
+      "nome": "USF Cabo Agnaldo Soares Barbosa",
+      "tipo": "USF/UBS (Atenção Básica)",
+      "categoria": "atencao_basica",
+      "endereco": "Rua 46B, nº 166",
+      "bairro": "João Vaccaro",
+      "telefones": ["(17) 3331-7727", "(17) 3332-2155"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Consultas", "Vacinas", "Curativos", "Preventivo", "Pré-natal"]
+    },
+    {
+      "nome": "USF Antônio Manoel da Silva",
+      "tipo": "USF/UBS (Atenção Básica)",
+      "categoria": "atencao_basica",
+      "endereco": "Rua 44, nº 660",
+      "bairro": "Jardim Elisa",
+      "telefones": ["(17) 3331-8409", "(17) 3331-6953"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Consultas", "Vacinas", "Curativos", "Preventivo", "Pré-natal"]
+    },
+    {
+      "nome": "USF José Adalberto Lelis Garcia",
+      "tipo": "USF/UBS (Atenção Básica)",
+      "categoria": "atencao_basica",
+      "endereco": "Rua 10B, nº 455",
+      "bairro": "Aniceto",
+      "telefones": ["(17) 3331-5416", "(17) 3331-6364"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Consultas", "Vacinas", "Curativos", "Preventivo", "Pré-natal"]
+    },
+    {
+      "nome": "USF João Bosco Lelis",
+      "tipo": "USF/UBS (Atenção Básica)",
+      "categoria": "atencao_basica",
+      "endereco": "Rua 02A, nº 1344",
+      "bairro": "Nádia 1",
+      "telefones": ["(17) 3331-9941", "(17) 3331-8144"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Consultas", "Vacinas", "Curativos", "Preventivo", "Pré-natal"]
+    },
+    {
+      "nome": "USF Tarcísio Barini",
+      "tipo": "USF/UBS (Atenção Básica)",
+      "categoria": "atencao_basica",
+      "endereco": "Rua 4, nº 050",
+      "bairro": "Vivendas",
+      "telefones": ["(17) 99976-6226"],
+      "whatsapp": ["(17) 99976-6226"],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Consultas", "Vacinas", "Curativos", "Preventivo", "Pré-natal"]
+    },
+    {
+      "nome": "USF Guaritá (Área Rural)",
+      "tipo": "USF/UBS (Atenção Básica)",
+      "categoria": "atencao_basica",
+      "endereco": "São José do Albertópolis - Guaritá",
+      "bairro": "Área rural",
+      "telefones": ["(17) 3331-0105"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Consultas", "Vacinas", "Curativos", "Preventivo", "Pré-natal"]
+    },
+    {
+      "nome": "Ambulatório de Especialidades Dr. Orlando Garcia Junqueira",
+      "tipo": "Ambulatório de Especialidades / SUS",
+      "categoria": "especialidades",
+      "endereco": "Av. 9, nº 1213",
+      "bairro": "Campos Elíseos",
+      "telefones": ["(17) 3331-2823"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Cardiologia", "Ortopedia", "Ginecologia", "Pediatria", "Neurologia", "Oftalmologia"]
+    },
+    {
+      "nome": "Regulação de Vagas",
+      "tipo": "Regulação / Marcação / Encaminhamentos (SUS)",
+      "categoria": "apoio",
+      "endereco": "Av. 9, nº 1213",
+      "bairro": "Campos Elíseos",
+      "telefones": ["(17) 3331-9681"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Agendamento de consultas", "Encaminhamentos", "Regulação de vagas"]
+    },
+    {
+      "nome": "Fisioterapia (SUS)",
+      "tipo": "Reabilitação / Fisioterapia",
+      "categoria": "especialidades",
+      "endereco": "Av. 9, nº 1213",
+      "bairro": "Campos Elíseos",
+      "telefones": ["(17) 3331-2823"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Fisioterapia", "Reabilitação", "Terapia ocupacional"]
+    },
+    {
+      "nome": "Saúde Mental (Atendimento)",
+      "tipo": "Saúde Mental",
+      "categoria": "especialidades",
+      "endereco": "Av. 9, nº 1213",
+      "bairro": "Campos Elíseos",
+      "telefones": ["(17) 3331-2658"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Psicologia", "Psiquiatria", "Terapia"]
+    },
+    {
+      "nome": "CAPS Marcos Ferreira",
+      "tipo": "CAPS",
+      "categoria": "especialidades",
+      "endereco": "Av. 31, nº 949",
+      "bairro": "Jardim Paulista",
+      "telefones": ["(17) 3332-1892"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Atendimento psicossocial", "Saúde mental", "Acompanhamento terapêutico"]
+    },
+    {
+      "nome": "CAPS Álcool e Drogas",
+      "tipo": "CAPS AD",
+      "categoria": "especialidades",
+      "endereco": "Av. 31, nº 950",
+      "bairro": "Jardim Paulista",
+      "telefones": ["(17) 3331-1627"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Tratamento de dependência química", "Acompanhamento", "Reinserção social"]
+    },
+    {
+      "nome": "Centro de Especialidades Odontológicas (CEO) Sebastião R. Queiroz",
+      "tipo": "Odontologia / CEO (SUS)",
+      "categoria": "especialidades",
+      "endereco": "Av. 33, nº 120",
+      "bairro": "Bom Jesus",
+      "telefones": ["(17) 3331-7393"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Cirurgia oral", "Endodontia", "Periodontia", "Prótese dentária", "Raio-X"]
+    },
+    {
+      "nome": "Farmácia Municipal",
+      "tipo": "Farmácia (SUS)",
+      "categoria": "apoio",
+      "endereco": "Av. 31, nº 979",
+      "bairro": "Paranoá",
+      "telefones": ["(17) 3331-1227"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Dispensação de medicamentos", "Farmácia popular"]
+    },
+    {
+      "nome": "Farmácia Alto Custo",
+      "tipo": "Farmácia Alto Custo (SUS)",
+      "categoria": "apoio",
+      "endereco": "Av. 31, nº 985",
+      "bairro": "Paranoá",
+      "telefones": ["(17) 3331-2315"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Medicamentos especiais", "Alto custo", "Doenças crônicas"]
+    },
+    {
+      "nome": "Secretaria/Diretoria de Saúde (Administração)",
+      "tipo": "Gestão da Saúde",
+      "categoria": "apoio",
+      "endereco": "Av. 9, nº 901",
+      "bairro": "Centro",
+      "telefones": ["(17) 3332-2891", "(17) 3331-5716"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 8h às 17h",
+      "servicos": ["Gestão da saúde", "Informações", "Ouvidoria"]
+    },
+    {
+      "nome": "Transporte Saúde",
+      "tipo": "Transporte (Saúde)",
+      "categoria": "apoio",
+      "endereco": "Av. 9, nº 901",
+      "bairro": "Centro",
+      "telefones": ["(17) 3331-4462"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Transporte de pacientes", "TFD - Tratamento Fora Domicílio"]
+    },
+    {
+      "nome": "Zoonoses",
+      "tipo": "Zoonoses / Vigilância",
+      "categoria": "apoio",
+      "endereco": "Não informado",
+      "bairro": "Centro",
+      "telefones": ["(17) 3331-5550", "(17) 99976-3441"],
+      "whatsapp": ["(17) 99976-3441"],
+      "horario": "Segunda a Sexta, 7h às 17h",
+      "servicos": ["Controle de zoonoses", "Vacinação antirrábica", "Vigilância sanitária"]
+    },
+    {
+      "nome": "CRAS 1",
+      "tipo": "CRAS (Assistência Social)",
+      "categoria": "assistencia_social",
+      "endereco": "Av. 25, nº 1663",
+      "bairro": "Padre Mário Lano",
+      "telefones": ["(17) 3331-5595"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 8h às 17h",
+      "servicos": ["Assistência social", "Cadastro único", "Bolsa família", "Orientação"]
+    },
+    {
+      "nome": "CRAS 2",
+      "tipo": "CRAS (Assistência Social)",
+      "categoria": "assistencia_social",
+      "endereco": "Av. 21B, nº 911",
+      "bairro": "Nova Guaíra",
+      "telefones": ["(17) 3332-2489"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 8h às 17h",
+      "servicos": ["Assistência social", "Cadastro único", "Bolsa família", "Orientação"]
+    },
+    {
+      "nome": "CRAS 3",
+      "tipo": "CRAS (Assistência Social)",
+      "categoria": "assistencia_social",
+      "endereco": "Rua 6, nº 1085",
+      "bairro": "Centro",
+      "telefones": ["(17) 3331-5689"],
+      "whatsapp": [],
+      "horario": "Segunda a Sexta, 8h às 17h",
+      "servicos": ["Assistência social", "Cadastro único", "Bolsa família", "Orientação"]
+    }
+  ]
+}
