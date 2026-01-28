@@ -14,7 +14,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/sonner";
 import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2, Home } from "lucide-react";
-import { criarEmpresa, buscarCategorias, uploadImagens, supabase } from "@/lib/supabase";
+import { criarEmpresa, buscarCategorias, uploadImagens, buscarEmpresas, buscarEmpresaPorId, supabase } from "@/lib/supabase";
 import { BAIRROS_GUAIRA } from "@/data/bairros";
 import categoriasData from "@/data/categorias-empresas.json";
 
@@ -57,12 +57,17 @@ const SuaEmpresa = () => {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("");
   const [subcategoriasSelecionadas, setSubcategoriasSelecionadas] = useState<string[]>([]);
 
-  // Carregar categorias do Supabase
+  // Verificar se já está logado
   useEffect(() => {
+    const auth = localStorage.getItem('empresa_auth');
+    if (auth) {
+      navigate('/dashboard');
+    }
+
     buscarCategorias().then(cats => {
       setCategorias(cats.map(c => c.nome));
     });
-  }, []);
+  }, [navigate]);
 
   const cadastroForm = useForm<z.infer<typeof cadastroSchema>>({
     resolver: zodResolver(cadastroSchema),
@@ -122,12 +127,9 @@ const SuaEmpresa = () => {
         }
       }
 
-      // Buscar ID da categoria
-      const { data: categoriaData } = await supabase
-        .from('categorias')
-        .select('id')
-        .eq('nome', data.categoria)
-        .single();
+      // Buscar ID da categoria - Agora via JSON local
+      const categoriaEncontrada = categoriasData.categorias.find(c => c.nome === data.categoria);
+      const categoriaId = categoriaEncontrada?.id || 'outros';
 
       // Criar slug
       const slug = data.nomeFantasia
@@ -143,7 +145,7 @@ const SuaEmpresa = () => {
         nome: data.nomeFantasia,
         slug,
         descricao: data.descricao,
-        categoria_id: categoriaData?.id,
+        categoria_id: categoriaId,
         subcategorias: data.subcategorias, // ← Subcategorias adicionadas
         endereco: data.endereco,
         bairro: data.bairro,
@@ -151,7 +153,7 @@ const SuaEmpresa = () => {
         estado: 'SP',
         cep: data.cep,
         latitude: -20.3167, // Coordenadas padrão de Guaíra
-        longitude: -48.3167,
+        longitude: -48.3115,
         telefone: data.celular,
         whatsapp: data.whatsapp,
         email: data.email,
@@ -161,7 +163,8 @@ const SuaEmpresa = () => {
         link_google_maps: data.link_google_maps || undefined,
         imagens,
         logo: logoUrl,
-        status: 'aprovado' as const, // ← Mudei para 'aprovado' para aparecer na listagem
+        banner: imagens[0] || undefined, // ← Salva o banner explicitamente
+        status: 'pendente' as const, // ← Alterado para 'pendente' para aguardar aprovação do admin
         verificado: false,
         destaque: false,
         responsavel_nome: data.razaoSocial,
@@ -187,10 +190,10 @@ const SuaEmpresa = () => {
       setTimeout(() => navigate('/dashboard'), 1500);
     } catch (error: any) {
       console.error('Erro ao cadastrar:', error);
-      
+
       // Mensagem de erro mais específica
       let mensagem = "Tente novamente mais tarde";
-      
+
       if (error?.message?.includes('row-level security') || error?.code === '42501') {
         mensagem = "❌ Permissão negada. Execute o arquivo 'supabase/fix-rls.sql' no Supabase SQL Editor.";
       } else if (error?.message?.includes('Bucket not found')) {
@@ -202,7 +205,7 @@ const SuaEmpresa = () => {
       } else if (error?.message) {
         mensagem = `❌ Erro: ${error.message}`;
       }
-      
+
       toast("Erro ao cadastrar", {
         description: mensagem,
         duration: 5000
@@ -220,16 +223,16 @@ const SuaEmpresa = () => {
       const cnpjLimpo = data.cnpj.replace(/\D/g, '');
       const celularLimpo = data.celular.replace(/\D/g, '');
 
-      const { data: empresa, error } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('responsavel_telefone', data.celular)
-        .single();
+      const empresasEncontradas = await buscarEmpresas({
+        responsavel_telefone: data.celular
+      });
 
-      if (error || !empresa) {
+      const empresa = empresasEncontradas[0];
+
+      if (!empresa) {
         toast("Login falhou", {
-          description: "CNPJ ou celular incorretos",
-          duration: 2000
+          description: "Nenhuma empresa encontrada com este celular",
+          duration: 3000
         });
         return;
       }
@@ -329,20 +332,20 @@ const SuaEmpresa = () => {
           <div className="flex gap-2 mb-6">
             <Button
               onClick={() => navigate(-1)}
-              className="gap-2 bg-orange-500 hover:bg-orange-600 text-white"
+              className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </Button>
             <Button
               onClick={() => navigate('/')}
-              className="gap-2 bg-green-500 hover:bg-green-600 text-white"
+              className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
             >
               <Home className="w-4 h-4" />
-              Página Inicial
+              Início
             </Button>
           </div>
-          
+
           <div className="flex flex-col gap-4 max-w-3xl">
             <h2 className="text-3xl font-bold gradient-text flex items-center gap-3"><Building2 className="h-8 w-8 text-primary" /> Sua Empresa</h2>
             <p className="text-sm text-muted-foreground max-w-xl">Cadastre seu negócio no diretório local ou acesse para ajustar suas informações. Todos os campos principais são obrigatórios para garantir qualidade dos dados exibidos.</p>
@@ -420,8 +423,8 @@ const SuaEmpresa = () => {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Categoria Principal *</label>
-                        <Select 
-                          value={categoriaSelecionada} 
+                        <Select
+                          value={categoriaSelecionada}
                           onValueChange={(v) => {
                             setCategoriaSelecionada(v);
                             cadastroForm.setValue("categoria", v);
@@ -462,7 +465,7 @@ const SuaEmpresa = () => {
                             ?.subcategorias.map((sub) => {
                               const isSelected = subcategoriasSelecionadas.includes(sub);
                               const canAdd = subcategoriasSelecionadas.length < 3;
-                              
+
                               return (
                                 <div
                                   key={sub}
@@ -477,13 +480,12 @@ const SuaEmpresa = () => {
                                       cadastroForm.setValue("subcategorias", novas);
                                     }
                                   }}
-                                  className={`p-3 rounded-md border-2 cursor-pointer transition-all text-sm ${
-                                    isSelected 
-                                      ? 'border-primary bg-primary/10 text-primary font-medium' 
-                                      : canAdd 
-                                        ? 'border-border hover:border-primary/50 hover:bg-accent/50' 
-                                        : 'border-border/50 opacity-50 cursor-not-allowed'
-                                  }`}
+                                  className={`p-3 rounded-md border-2 cursor-pointer transition-all text-sm ${isSelected
+                                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                                    : canAdd
+                                      ? 'border-border hover:border-primary/50 hover:bg-accent/50'
+                                      : 'border-border/50 opacity-50 cursor-not-allowed'
+                                    }`}
                                 >
                                   {sub}
                                   {isSelected && <span className="ml-2 text-primary">✓</span>}
@@ -498,8 +500,8 @@ const SuaEmpresa = () => {
                           {subcategoriasSelecionadas.map(sub => (
                             <Badge key={sub} variant="default" className="gap-1">
                               {sub}
-                              <X 
-                                className="h-3 w-3 cursor-pointer" 
+                              <X
+                                className="h-3 w-3 cursor-pointer"
                                 onClick={() => {
                                   const novas = subcategoriasSelecionadas.filter(s => s !== sub);
                                   setSubcategoriasSelecionadas(novas);

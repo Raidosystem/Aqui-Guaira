@@ -14,12 +14,12 @@
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 */
 
-import { Search, Heart, Building2, MapPin, Star, ChevronDown, Filter, X, Check, Phone } from "lucide-react";
+import { Search, Heart, Building2, MapPin, Star, ChevronDown, Filter, X, Check, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useRef } from "react";
-import { supabase, type EmpresaCompleta, getUsuarioLogado } from "@/lib/supabase";
+import { buscarEmpresas, type EmpresaCompleta, getUsuarioLogado } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { LoginDialog } from "@/components/LoginDialog";
 import categoriasData from '@/data/categorias-empresas.json';
@@ -33,109 +33,32 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface Categoria {
-  id: string;
-  nome: string;
-  icone: string;
-  cor: string;
-}
-
 const SearchSection = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<EmpresaCompleta[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [loadingCategorias, setLoadingCategorias] = useState(false);
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [empresasDestaque, setEmpresasDestaque] = useState<EmpresaCompleta[]>([]);
-  const [carouselIndex, setCarouselIndex] = useState<{ [key: string]: number }>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const user = getUsuarioLogado();
 
-  // Carregar categorias que têm empresas
+  // Carregar empresas destaque
   useEffect(() => {
-    const carregarCategorias = async () => {
-      setLoadingCategorias(true);
-      try {
-        // Buscar todas as empresas aprovadas para pegar categorias únicas
-        const { data: empresasData, error } = await supabase
-          .from('empresas')
-          .select(`
-            categoria_id,
-            categorias:categoria_id(id, nome, icone, cor)
-          `)
-          .eq('status', 'aprovado');
-
-        if (error) throw error;
-
-        // Extrair categorias únicas
-        const categoriasUnicas = new Map<string, Categoria>();
-        empresasData?.forEach(empresa => {
-          if (empresa.categorias && empresa.categoria_id) {
-            const cat = empresa.categorias as any;
-            if (!categoriasUnicas.has(cat.id)) {
-              categoriasUnicas.set(cat.id, {
-                id: cat.id,
-                nome: cat.nome,
-                icone: cat.icone,
-                cor: cat.cor
-              });
-            }
-          }
-        });
-
-        // Converter para array e ordenar por nome
-        const categoriasArray = Array.from(categoriasUnicas.values())
-          .sort((a, b) => a.nome.localeCompare(b.nome));
-
-        setCategorias(categoriasArray);
-      } catch (error) {
-        console.error('Erro ao carregar categorias:', error);
-      } finally {
-        setLoadingCategorias(false);
-      }
-    };
-
     const carregarEmpresasDestaque = async () => {
       try {
-        const { data, error } = await supabase
-          .from("empresas_completas")
-          .select("*")
-          .eq("destaque", true)
-          .order("visualizacoes", { ascending: false })
-          .limit(3);
-        if (error) throw error;
+        const data = await buscarEmpresas({ destaque: true });
         console.log('⭐ Empresas em destaque carregadas:', data);
-        setEmpresasDestaque(data || []);
+        setEmpresasDestaque(data ? data.slice(0, 3) : []);
       } catch (error) {
         console.error("Erro ao carregar empresas em destaque:", error);
       }
     };
 
-    carregarCategorias();
     carregarEmpresasDestaque();
   }, []);
-
-  // Carousel automático para empresas em destaque
-  useEffect(() => {
-    if (empresasDestaque.length === 0) return;
-
-    const interval = setInterval(() => {
-      setCarouselIndex(prev => {
-        const newIndex = { ...prev };
-        empresasDestaque.forEach(empresa => {
-          const currentIndex = prev[empresa.id] || 0;
-          newIndex[empresa.id] = (currentIndex + 1) % 5; // 5 slides (incluindo logo)
-        });
-        return newIndex;
-      });
-    }, 4000); // 4 segundos
-
-    return () => clearInterval(interval);
-  }, [empresasDestaque]);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -160,35 +83,12 @@ const SearchSection = () => {
 
       setLoading(true);
       try {
-        // Usar empresas_completas que já inclui subcategorias e categoria_nome
-        const { data, error } = await supabase
-          .from("empresas_completas")
-          .select("*")
-          .or(`nome.ilike.%${searchTerm}%,descricao.ilike.%${searchTerm}%,bairro.ilike.%${searchTerm}%,categoria_nome.ilike.%${searchTerm}%`)
-          .order("destaque", { ascending: false })
-          .order("visualizacoes", { ascending: false })
-          .limit(20); // Aumentado para 20 pois agora busca em mais campos
-
-        if (error) throw error;
-
-        // Filtrar também por subcategorias no lado do cliente (pois PostgreSQL não suporta ILIKE em arrays diretamente)
-        let resultados = data || [];
-        const searchLower = searchTerm.toLowerCase();
-        
-        resultados = resultados.filter(empresa => {
-          // Já passou pelos filtros do .or() acima
-          const matchBasico = true;
-          
-          // Verificar subcategorias
-          const matchSubcategorias = empresa.subcategorias?.some((sub: string) => 
-            sub.toLowerCase().includes(searchLower)
-          );
-          
-          return matchBasico || matchSubcategorias;
+        const data = await buscarEmpresas({
+          busca: searchTerm,
+          categoria: categoriaFiltro || undefined
         });
 
-        // Limitar a 8 resultados finais
-        setSearchResults(resultados.slice(0, 8));
+        setSearchResults(data.slice(0, 8));
         setShowDropdown(true);
       } catch (error) {
         console.error("Erro ao buscar empresas:", error);
@@ -208,7 +108,7 @@ const SearchSection = () => {
   const handleSelectEmpresa = (empresaId: string) => {
     setShowDropdown(false);
     setSearchTerm("");
-    navigate(`/empresas?id=${empresaId}`);
+    navigate(`/perfil-de-empresa?id=${empresaId}`);
   };
 
   const handleMeusFavoritos = () => {
@@ -219,136 +119,109 @@ const SearchSection = () => {
     navigate('/meus-locais');
   };
 
-  const handleSelecionarCategoria = (categoriaId: string) => {
-    navigate(`/empresas?categoria=${categoriaId}`);
-  };
-
-  const renderCarouselContent = (empresa: EmpresaCompleta) => {
-    const slideIndex = carouselIndex[empresa.id] || 0;
-
-    switch (slideIndex) {
-      case 0:
-        // Slide 1: Subcategorias
-        return empresa.subcategorias && empresa.subcategorias.length > 0 ? (
-          <div className="flex flex-wrap gap-1 mb-2 animate-fade-in">
-            {empresa.subcategorias.slice(0, 2).map((sub, idx) => (
-              <span key={idx} className="text-xs text-gray-900 font-semibold drop-shadow-md">
-                • {sub}
-              </span>
-            ))}
-            {empresa.subcategorias.length > 2 && (
-              <span className="text-xs text-gray-900 font-semibold drop-shadow-md">
-                • +{empresa.subcategorias.length - 2} mais
-              </span>
-            )}
-          </div>
-        ) : null;
-
-      case 1:
-        // Slide 2: Ponto de coleta Mercado Livre (se aplicável)
-        return (
-          <div className="mb-2 animate-fade-in flex items-center justify-center">
-            <p className="text-lg text-gray-900 font-black drop-shadow-lg text-center leading-tight">
-              📦 Ponto de coleta<br/>
-              <span className="text-2xl font-black drop-shadow-xl" style={{ color: '#FFE600', textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>Mercado Livre</span>
-            </p>
-          </div>
-        );
-
-      case 2:
-        // Slide 3: Endereço
-        return (
-          <div className="mb-2 animate-fade-in">
-            <p className="text-sm text-gray-900 font-semibold drop-shadow-md">
-              📍 {empresa.endereco || `${empresa.bairro}, Guaíra-SP`}
-            </p>
-          </div>
-        );
-
-      case 3:
-        // Slide 4: WhatsApp
-        return empresa.whatsapp ? (
-          <div className="mb-2 animate-fade-in">
-            <p className="text-sm text-green-600 font-bold drop-shadow-md">
-              💬 WhatsApp: {empresa.whatsapp}
-            </p>
-          </div>
-        ) : (
-          <div className="mb-2 animate-fade-in">
-            <p className="text-sm text-gray-900 font-semibold drop-shadow-md">
-              📞 {empresa.telefone}
-            </p>
-          </div>
-        );
-
-      case 4:
-        // Slide 5: Apenas logo em destaque (sem texto)
-        return null;
-
-      default:
-        return null;
-    }
-  };
-
   return (
-    <section className="container mx-auto px-4 -mt-16 relative z-10">
-      <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10 border-2 animate-slide-up">
-        <h3 className="text-3xl md:text-4xl font-bold text-center mb-3 gradient-text">
-          Encontre empresas locais
-        </h3>
-        <p className="text-center text-muted-foreground mb-6 text-lg">
-          Busque por nome, categoria ou serviço
-        </p>
+    <section className="container mx-auto px-4 mt-8 relative z-10">
+      <div className="glass-card rounded-[3rem] shadow-2xl p-8 md:p-12 border-2 border-primary/5 animate-slide-up bg-background/40 backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto text-center mb-12">
+          <h3 className="text-4xl md:text-5xl font-black mb-4 tracking-tight leading-tight">
+            Encontre <span className="gradient-text">empresas locais</span>
+          </h3>
+          <p className="text-muted-foreground text-lg md:text-xl font-medium">
+            O guia definitivo de Guaíra. Busque por nome, categoria ou serviço.
+          </p>
+        </div>
 
         {/* Empresas em Destaque */}
         {empresasDestaque.length > 0 && (
-          <div className="mb-8">
-            <p className="text-base font-medium text-muted-foreground mb-3 text-center">⭐ Empresas em Destaque</p>
-            <div className="grid gap-3 md:grid-cols-3 max-w-4xl mx-auto">
-              {empresasDestaque.map((empresa) => {
-                const slideIndex = carouselIndex[empresa.id] || 0;
-                const isLogoSlide = slideIndex === 4;
-                
-                return (
-                  <div
-                    key={empresa.id}
-                    onClick={() => navigate(`/empresas?id=${empresa.id}`)}
-                    className="relative overflow-hidden p-4 rounded-lg border-2 border-primary/20 bg-gradient-to-br from-amber-50/50 to-orange-50/50 hover:shadow-md transition-all cursor-pointer group"
+          <div className="mb-20">
+            <div className="flex items-center justify-center gap-3 mb-10">
+              <Sparkles className="h-6 w-6 text-amber-500 fill-amber-500 animate-pulse" />
+              <h4 className="text-2xl font-black text-foreground tracking-tight">
+                Empresas em <span className="text-primary">Destaque</span>
+              </h4>
+              <Sparkles className="h-6 w-6 text-amber-500 fill-amber-500 animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {empresasDestaque.map((emp) => (
+                <div key={emp.id} className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/perfil-de-empresa?id=${emp.id}`)}
+                    className="w-full text-left relative rounded-[2.5rem] overflow-hidden border border-border/50 bg-card shadow-sm hover:shadow-2xl transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:-translate-y-2"
                   >
-                    {/* Logo como background */}
-                    {empresa.logo && (
-                      <div 
-                        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 ${
-                          isLogoSlide ? 'opacity-90' : 'opacity-40 group-hover:opacity-50'
-                        }`}
-                        style={{ backgroundImage: `url(${empresa.logo})` }}
-                      />
-                    )}
-                    
-                    {/* Conteúdo por cima do background */}
-                    <div className={`relative z-10 transition-opacity duration-700 ${isLogoSlide ? 'opacity-0' : 'opacity-100'}`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-sm text-gray-900 drop-shadow-sm">{empresa.nome}</h3>
-                        <span className="text-amber-500 text-lg drop-shadow-sm">⭐</span>
+                    {/* Imagem de Capa */}
+                    <div className="h-48 w-full overflow-hidden relative bg-gradient-to-br from-primary/5 to-accent/10">
+                      {emp.imagens && emp.imagens.length > 0 ? (
+                        <img
+                          src={emp.imagens[0]}
+                          alt={emp.nome}
+                          className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Building2 className="h-20 w-20 text-primary/20" />
+                        </div>
+                      )}
+
+                      {/* Badge de Destaque Premium */}
+                      <div className="absolute top-4 left-4 z-20">
+                        <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-xl gap-1.5 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest">
+                          <Star className="h-3.5 w-3.5 fill-white" />
+                          Destaque
+                        </Badge>
                       </div>
-                      
-                      <p className="text-xs text-gray-700 mb-3 drop-shadow-sm font-medium">{empresa.categoria_nome}</p>
-                      
-                      {/* Carousel de informações */}
-                      <div className="min-h-[60px] flex items-center">
-                        {renderCarouselContent(empresa)}
+
+                      {/* Overlay gradiente */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center gap-4">
+                        {/* Logo Premium */}
+                        {emp.logo ? (
+                          <div className="flex-shrink-0 w-16 h-16 rounded-[1.25rem] overflow-hidden border-4 border-background shadow-2xl bg-background -mt-14 relative z-10 group-hover:scale-105 transition-transform">
+                            <img
+                              src={emp.logo}
+                              alt={`Logo ${emp.nome}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex-shrink-0 w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-primary/10 to-accent/20 flex items-center justify-center border-4 border-background shadow-2xl -mt-14 relative z-10">
+                            <Building2 className="h-8 w-8 text-primary" />
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-black text-xl truncate group-hover:text-primary transition-colors">
+                            {emp.nome}
+                          </h3>
+                          <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tighter bg-primary/10 text-primary border-none">
+                            {emp.categoria_nome}
+                          </Badge>
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center gap-3 text-xs text-gray-700 mt-2 drop-shadow-sm font-medium">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {empresa.bairro}
+
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 min-h-[40px]">
+                        {emp.descricao}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                          <div className="p-1 bg-primary/5 rounded-md">
+                            <MapPin className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          {emp.bairro}
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] font-black uppercase text-primary group-hover:translate-x-1 transition-transform">
+                          Ver Detalhes
+                          <Check className="h-3 w-3" />
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -361,11 +234,10 @@ const SearchSection = () => {
                 {/* Filtro de Categoria */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       className={`h-8 px-2 hover:bg-primary/10 ${categoriaFiltro ? 'text-primary' : 'text-muted-foreground'}`}
-                      disabled={loadingCategorias}
                     >
                       <Filter className="h-4 w-4" />
                     </Button>
@@ -382,28 +254,19 @@ const SearchSection = () => {
                           Limpar filtro
                         </DropdownMenuItem>
                       )}
-                      {loadingCategorias ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                          Carregando...
-                        </div>
-                      ) : categorias.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                          Nenhuma categoria disponível
-                        </div>
-                      ) : (
-                        categorias.map((categoria) => (
-                          <DropdownMenuItem
-                            key={categoria.id}
-                            onClick={() => setCategoriaFiltro(categoria.id)}
-                            className={`cursor-pointer ${categoriaFiltro === categoria.id ? 'bg-primary/10' : ''}`}
-                          >
-                            <span className="font-medium">{categoria.nome}</span>
-                            {categoriaFiltro === categoria.id && (
-                              <Check className="h-4 w-4 ml-auto text-primary" />
-                            )}
-                          </DropdownMenuItem>
-                        ))
-                      )}
+                      {categoriasData.categorias.map((categoria) => (
+                        <DropdownMenuItem
+                          key={categoria.id}
+                          onClick={() => setCategoriaFiltro(categoria.id)}
+                          className={`cursor-pointer ${categoriaFiltro === categoria.id ? 'bg-primary/10' : ''}`}
+                        >
+                          <span className="font-medium mr-2">{categoria.icone}</span>
+                          <span className="font-medium">{categoria.nome}</span>
+                          {categoriaFiltro === categoria.id && (
+                            <Check className="h-4 w-4 ml-auto text-primary" />
+                          )}
+                        </DropdownMenuItem>
+                      ))}
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -412,12 +275,12 @@ const SearchSection = () => {
                 {categoriaFiltro && (
                   <>
                     <div className="h-5 w-px bg-border/60" />
-                    <Badge 
+                    <Badge
                       variant="secondary"
                       className="flex items-center gap-1 pr-0.5 py-0.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
                     >
                       <span className="text-xs font-semibold pl-1.5">
-                        {categorias.find(c => c.id === categoriaFiltro)?.nome}
+                        {categoriasData.categorias.find(c => c.id === categoriaFiltro)?.nome}
                       </span>
                       <button
                         onClick={(e) => {
@@ -455,8 +318,8 @@ const SearchSection = () => {
                         {/* Logo ou Ícone */}
                         <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                           {empresa.logo ? (
-                            <img 
-                              src={empresa.logo} 
+                            <img
+                              src={empresa.logo}
                               alt={empresa.nome}
                               className="w-full h-full object-cover"
                             />
@@ -475,7 +338,7 @@ const SearchSection = () => {
                               <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
                             )}
                           </div>
-                          
+
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {empresa.categoria_nome && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
@@ -487,32 +350,14 @@ const SearchSection = () => {
                                 {empresa.subcategorias[0]}
                               </span>
                             )}
-                            {empresa.subcategorias && empresa.subcategorias.length > 1 && (
-                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                                +{empresa.subcategorias.length - 1}
-                              </span>
-                            )}
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <MapPin className="h-3 w-3" />
                               <span className="line-clamp-1">{empresa.bairro}</span>
                             </div>
                           </div>
-
-                          {empresa.descricao && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                              {empresa.descricao}
-                            </p>
-                          )}
                         </div>
                       </button>
                     ))}
-                  </div>
-                  
-                  {/* Footer do Dropdown */}
-                  <div className="px-4 py-2 bg-muted/30 border-t border-border">
-                    <p className="text-xs text-center text-muted-foreground">
-                      {searchResults.length} {searchResults.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
-                    </p>
                   </div>
                 </div>
               )}
@@ -533,8 +378,8 @@ const SearchSection = () => {
                 </div>
               )}
             </div>
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="px-8 py-7 rounded-2xl shadow-lg bg-gradient-to-r from-primary to-primary/80"
               onClick={() => searchTerm.trim() && navigate(`/empresas?search=${searchTerm}`)}
             >
@@ -549,8 +394,8 @@ const SearchSection = () => {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="gap-2 border-2"
             size="default"
             onClick={handleMeusFavoritos}
@@ -558,11 +403,11 @@ const SearchSection = () => {
             <Heart className="h-5 w-5" />
             Meus Favoritos
           </Button>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="gap-2 border-2"
                 size="default"
               >
@@ -615,7 +460,6 @@ const SearchSection = () => {
         </div>
       </div>
 
-      {/* Dialog de Login */}
       <LoginDialog
         open={showLogin}
         onOpenChange={setShowLogin}

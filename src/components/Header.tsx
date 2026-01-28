@@ -1,4 +1,11 @@
-import { Building2, Home, FileText, Settings, BarChart3, Heart, Image, Info, ChevronDown, User, LogOut, Shield, ClipboardList, Menu, X, Search, ShoppingBag } from "lucide-react";
+import {
+  Building2, Home, FileText, Settings, BarChart3, Heart,
+  Image, Info, ChevronDown, User, LogOut, Shield,
+  ClipboardList, Menu, X, Search, ShoppingBag,
+  Map, PawPrint, Pill, Stethoscope, AlertTriangle, GraduationCap,
+  ChevronLeft, ChevronRight, Sun, Moon, Monitor, Laptop, Sparkles
+} from "lucide-react";
+import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,19 +29,36 @@ import { toast } from "sonner";
 
 const Header = () => {
   const location = useLocation();
-  const [active, setActive] = useState<string>("Início");
+  const [active, setActive] = useState<string>("");
   const manualOverride = useRef(false);
   const [showLogin, setShowLogin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState(getUsuarioLogado());
+  const { theme, setTheme } = useTheme();
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
 
   const mainNavItems = [
     { icon: Home, label: "Início", href: "/" },
     { icon: Info, label: "Sobre Guaíra", href: "/#sobre-guaira" },
+    { icon: Sparkles, label: "Voz da Cidade", href: "/voz-da-cidade" },
     { icon: Image, label: "Mural", href: "/mural" },
     { icon: Building2, label: "Empresas", href: "/empresas" },
     { icon: Heart, label: "Meus Locais", href: "/meus-locais" },
     { icon: FileText, label: "Sua Empresa", href: "/sua-empresa" },
+  ];
+
+  const quickLinks = [
+    { label: "Painel da Cidade", sub: "Acesse", icon: Building2, path: "/painel-cidade", textColor: "text-blue-600" },
+    { label: "Serviços por Bairro", sub: "Veja", icon: Map, path: "/servicos-por-bairro", textColor: "text-purple-600" },
+    { label: "Achados e Perdidos", sub: "Consulte", icon: Search, path: "/achados-perdidos", textColor: "text-orange-600" },
+    { label: "Pets e Adoção", sub: "Ajude", icon: PawPrint, path: "/pets-perdidos", textColor: "text-pink-600" },
+    { label: "Farmácia Plantão", sub: "Veja", icon: Pill, path: "/farmacia-plantao", textColor: "text-red-600" },
+    { label: "Saúde na Prática", sub: "Acesse", icon: Stethoscope, path: "/saude-na-pratica", textColor: "text-emerald-600" },
+    { label: "Ocorrências", sub: "Registre", icon: AlertTriangle, path: "#", textColor: "text-amber-600" },
+    { label: "Escolas e Creches", sub: "Encontre", icon: GraduationCap, path: "/escolas-creches", textColor: "text-cyan-600" },
   ];
 
   const ferramentasItems = [
@@ -47,6 +71,10 @@ const Header = () => {
     const { pathname, hash } = location;
     if (pathname === "/mural") {
       setActive("Mural");
+      return;
+    }
+    if (pathname === "/voz-da-cidade") {
+      setActive("Voz da Cidade");
       return;
     }
     if (pathname === "/empresas") {
@@ -66,11 +94,8 @@ const Header = () => {
       return;
     }
     if (pathname === "/") {
-      // Scroll listener para alternar entre Início e Sobre Guaíra
       const onScroll = () => {
-        // Se usuário acabou de clicar em Sobre, evita troca imediata para Início enquanto rola
         if (manualOverride.current) {
-          // Cancela override quando passa da região ou se está no topo novamente
           if (window.scrollY < 60) {
             manualOverride.current = false;
           }
@@ -78,7 +103,6 @@ const Header = () => {
         const sobreEl = document.getElementById("sobre-guaira");
         if (sobreEl) {
           const rect = sobreEl.getBoundingClientRect();
-          // Quando topo do card entra um pouco na viewport, ativa Sobre (se não está em override para Início)
           if (rect.top <= 140 && rect.bottom > 180) {
             if (!manualOverride.current) {
               setActive("Sobre Guaíra");
@@ -86,7 +110,6 @@ const Header = () => {
             return;
           }
         }
-        // Caso contrário, se perto do topo, ativa Início
         if (window.scrollY < 140 && !manualOverride.current) {
           setActive("Início");
         }
@@ -95,9 +118,37 @@ const Header = () => {
       onScroll();
       return () => window.removeEventListener("scroll", onScroll);
     }
-    // Fallback
-    setActive("Início");
+    setActive("");
   }, [location]);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftArrow(scrollLeft > 10);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScroll);
+      checkScroll();
+      window.addEventListener('resize', checkScroll);
+      setTimeout(checkScroll, 100);
+      return () => {
+        container.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+  }, []);
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -110,7 +161,6 @@ const Header = () => {
     setUser(getUsuarioLogado());
   };
 
-  // Obter inicial do email
   const getInitial = () => {
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
@@ -120,7 +170,6 @@ const Header = () => {
     <header className="bg-background border-b border-border sticky top-0 z-[1000] shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
-          {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="bg-primary rounded-lg p-2">
               <Building2 className="h-6 w-6 text-primary-foreground" />
@@ -131,12 +180,10 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="lg:hidden flex items-center gap-2">
-            {/* User Avatar Mobile */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center justify-center h-9 w-9 rounded-full border-2 border-border bg-background hover:border-primary transition-colors">
+                <button className="flex items-center justify-center h-9 w-9 rounded-full border-2 border-border bg-background hover:border-primary transition-colors focus:outline-none">
                   {user ? (
                     <span className="font-semibold text-xs">{getInitial()}</span>
                   ) : (
@@ -170,91 +217,143 @@ const Header = () => {
                     Entrar
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest pl-1">Tema</span>
+                </div>
+                <div className="flex gap-1 px-2 pb-2">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                    onClick={() => setTheme('light')}
+                    title="Claro"
+                  >
+                    <Sun className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                    onClick={() => setTheme('dark')}
+                    title="Escuro"
+                  >
+                    <Moon className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                    onClick={() => setTheme('system')}
+                    title="Sistema"
+                  >
+                    <Monitor className="h-4 w-4" />
+                  </Button>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Hamburger Menu */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm" className="p-2">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-72 sm:w-80">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    Menu
+              <SheetContent side="right" className="w-full sm:w-[400px] p-0 flex flex-col">
+                <SheetHeader className="p-6 border-b">
+                  <SheetTitle className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-lg">
+                      <Building2 className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex flex-col items-start leading-none">
+                      <span className="text-xl font-bold">Menu Principal</span>
+                      <span className="text-xs text-muted-foreground font-medium">Aqui Guaíra</span>
+                    </div>
                   </SheetTitle>
                 </SheetHeader>
-                <div className="mt-6 flex flex-col gap-1">
-                  {mainNavItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = active === item.label;
-                    const isSuaEmpresa = item.label === "Sua Empresa";
-                    return (
-                      <a
-                        key={item.label}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                          isActive 
-                            ? isSuaEmpresa 
-                              ? 'bg-green-600 text-white' 
-                              : 'bg-primary text-primary-foreground'
+                <div className="flex-grow overflow-y-auto px-4 py-6">
+                  <div className="flex flex-col gap-2">
+                    <span className="px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Navegação</span>
+                    {mainNavItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = active === item.label;
+                      const isSuaEmpresa = item.label === "Sua Empresa";
+                      return (
+                        <a
+                          key={item.label}
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-300 ${isActive
+                            ? isSuaEmpresa
+                              ? 'bg-green-600 text-white shadow-lg shadow-green-200'
+                              : 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                             : isSuaEmpresa
-                              ? 'hover:bg-green-50 text-green-600 border border-green-200'
-                              : 'hover:bg-accent'
-                        }`}
-                      >
-                        <Icon className={`h-5 w-5 ${isSuaEmpresa && !isActive ? 'text-green-600' : ''}`} />
-                        <span className={`font-medium ${isSuaEmpresa ? 'font-semibold' : ''}`}>{item.label}</span>
-                      </a>
-                    );
-                  })}
-                  
-                  <div className="my-2 border-t border-border" />
-                  
-                  <a
-                    href="/marketplace"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-colors shadow-md"
-                  >
-                    <ShoppingBag className="h-5 w-5" />
-                    <span className="font-semibold">Marketplace</span>
-                  </a>
-                  
-                  <div className="my-2 border-t border-border" />
-                  
-                  {ferramentasItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <a
-                        key={item.label}
-                        href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
-                      >
-                        <Icon className="h-5 w-5" />
-                        <span className="font-medium">{item.label}</span>
-                      </a>
-                    );
-                  })}
+                              ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                              : 'hover:bg-accent border border-transparent'
+                            }`}
+                        >
+                          <div className={`p-2 rounded-xl ${isActive ? 'bg-white/20' : isSuaEmpresa ? 'bg-green-100' : 'bg-secondary'}`}>
+                            <Icon className={`h-5 w-5 ${isActive ? 'text-white' : isSuaEmpresa ? 'text-green-600' : 'text-primary'}`} />
+                          </div>
+                          <span className={`text-base font-bold ${isSuaEmpresa ? 'text-green-800' : ''}`}>{item.label}</span>
+                        </a>
+                      );
+                    })}
+
+                    <div className="my-4 border-t border-border/50" />
+                    <span className="px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Social & Negócios</span>
+
+                    <a
+                      href="/marketplace"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-4 px-4 py-4 rounded-2xl bg-orange-500 text-white hover:bg-orange-600 transition-all shadow-lg shadow-orange-200"
+                    >
+                      <div className="p-2 bg-white/20 rounded-xl">
+                        <ShoppingBag className="h-5 w-5" />
+                      </div>
+                      <span className="text-base font-black">Marketplace Aqui Guaíra</span>
+                    </a>
+
+                    <div className="my-4 border-t border-border/50" />
+                    <span className="px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Ferramentas Úteis</span>
+
+                    <div className="grid grid-cols-1 gap-2">
+                      {ferramentasItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <a
+                            key={item.label}
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-4 px-4 py-3 rounded-2xl border border-border bg-card hover:bg-accent transition-all group"
+                          >
+                            <div className="p-2 rounded-xl bg-secondary group-hover:bg-primary/10 transition-colors">
+                              <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                            </div>
+                            <span className="text-sm font-bold">{item.label}</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 bg-muted/30 border-t">
+                  <p className="text-[10px] text-center text-muted-foreground font-bold uppercase tracking-[0.2em]">
+                    © 2024 Aqui Guaíra • Portal da Cidade
+                  </p>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
 
-          {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-2">
             {mainNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = active === item.label;
               const isSuaEmpresa = item.label === "Sua Empresa";
-              const baseVariant = isActive ? "animated" : "ghost";
-              // Se for Sua Empresa ativa, força fundo verde sólido com texto branco.
+              const baseVariant = isActive ? "default" : "ghost";
               const suaEmpresaActiveClasses = isSuaEmpresa && isActive
                 ? "bg-green-600 text-white border-green-600 hover:bg-green-600 hover:text-white"
                 : isSuaEmpresa
@@ -297,7 +396,6 @@ const Header = () => {
               );
             })}
 
-            {/* Ferramentas */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 empresa-btn border border-green-500 text-green-600 hover:text-green-600 hover:bg-transparent focus-visible:text-green-600">
@@ -320,11 +418,10 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Marketplace Button */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 hover:text-white border-0 shadow-md"
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-2 shadow-sm"
               asChild
             >
               <a href="/marketplace">
@@ -333,7 +430,6 @@ const Header = () => {
               </a>
             </Button>
 
-            {/* User Avatar */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center justify-center h-10 w-10 rounded-full border-2 border-border bg-background hover:border-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
@@ -370,13 +466,91 @@ const Header = () => {
                     Entrar
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest pl-1">Tema</span>
+                </div>
+                <div className="flex gap-1 px-2 pb-2">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                    onClick={() => setTheme('light')}
+                    title="Claro"
+                  >
+                    <Sun className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                    onClick={() => setTheme('dark')}
+                    title="Escuro"
+                  >
+                    <Moon className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                    onClick={() => setTheme('system')}
+                    title="Sistema"
+                  >
+                    <Monitor className="h-4 w-4" />
+                  </Button>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </nav>
         </div>
       </div>
 
-      {/* Dialog de Login */}
+      <div className="border-t border-border bg-background overflow-hidden relative">
+        <div className="container mx-auto px-4 relative group/subheader">
+          {showLeftArrow && (
+            <button
+              onClick={() => handleScroll('left')}
+              className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-primary border border-primary text-white hover:bg-primary/90 hidden lg:flex items-center justify-center"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
+
+          <div
+            ref={scrollContainerRef}
+            className="flex overflow-x-auto no-scrollbar py-3 gap-4 scroll-smooth px-10 md:px-12"
+          >
+            {quickLinks.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={idx}
+                  href={item.path}
+                  className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors"
+                >
+                  <div className={`p-2 rounded-lg bg-secondary/50 border border-border/50 ${item.textColor}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] uppercase tracking-wider font-bold opacity-60 leading-none mb-0.5">{item.sub}</span>
+                    <span className="text-xs font-bold whitespace-nowrap leading-none">{item.label}</span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+
+          {showRightArrow && (
+            <button
+              onClick={() => handleScroll('right')}
+              className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-primary border border-primary text-white hover:bg-primary/90 hidden lg:flex items-center justify-center"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <LoginDialog
         open={showLogin}
         onOpenChange={setShowLogin}

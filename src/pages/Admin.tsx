@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { 
-  Shield, 
-  Building2, 
-  FileText, 
-  Users, 
+import {
+  Shield,
+  Building2,
+  FileText,
+  Users,
   Activity,
   CheckCircle2,
   XCircle,
@@ -32,9 +31,19 @@ import {
   Globe,
   Instagram,
   Facebook,
-  Search
+  Search,
+  Trash2,
+  LayoutDashboard,
+  UserCheck,
+  History,
+  Menu,
+  ChevronRight,
+  ExternalLink,
+  Plus,
+  X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Estatisticas {
   empresas_ativas: number;
@@ -50,6 +59,8 @@ interface Estatisticas {
 interface Empresa {
   id: string;
   nome: string;
+  razaoSocial?: string;
+  cnpj?: string;
   descricao?: string;
   categoria_id: string;
   categorias?: { nome: string };
@@ -59,6 +70,7 @@ interface Empresa {
   data_cadastro: string;
   motivo_bloqueio?: string;
   telefone?: string;
+  celular?: string;
   whatsapp?: string;
   email?: string;
   site?: string;
@@ -67,42 +79,64 @@ interface Empresa {
   endereco?: string;
   bairro?: string;
   cidade?: string;
+  cep?: string;
   logo?: string;
+  banner?: string;
+  link_google_maps?: string;
   imagens?: string[];
 }
 
-interface Categoria {
+interface User {
   id: string;
   nome: string;
+  email: string;
+  is_admin: boolean;
+  created_at: string;
 }
 
 interface Post {
   id: string;
   titulo: string;
   conteudo: string;
-  imagem?: string;
-  aprovado: boolean;
-  data_criacao: string;
+  imagens?: string[];
+  status: string; // 'pendente', 'aprovado', 'rejeitado'
+  created_at: string;
   data_aprovacao?: string;
   motivo_rejeicao?: string;
-  empresa_id: string;
-  user_id: string;
+  empresa_id?: string;
+  user_id?: string;
   bairro?: string;
   logradouro?: string;
+  autor_nome?: string;
+  autor_email?: string;
+  autor_bairro?: string;
   empresas?: { nome: string };
   users?: { nome: string; email: string };
+}
+
+interface AdminLog {
+  id: string;
+  admin_id: string;
+  acao: string;
+  entidade_tipo: string;
+  entidade_id: string;
+  detalhes: string;
+  created_at: string;
 }
 
 export default function Admin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [adminData, setAdminData] = useState<any>(null);
   const [estatisticas, setEstatisticas] = useState<Estatisticas | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [empresasFiltradas, setEmpresasFiltradas] = useState<Empresa[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
+  const [categorias, setCategorias] = useState<any[]>([]);
+
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(null);
   const [postSelecionado, setPostSelecionado] = useState<Post | null>(null);
   const [motivoBloqueio, setMotivoBloqueio] = useState("");
@@ -110,11 +144,11 @@ export default function Admin() {
   const [showBloqueioDialog, setShowBloqueioDialog] = useState(false);
   const [showRejeicaoDialog, setShowRejeicaoDialog] = useState(false);
   const [showDetalhesDialog, setShowDetalhesDialog] = useState(false);
-  
-  // Filtros
+  const [showPostDetalhesDialog, setShowPostDetalhesDialog] = useState(false);
+
+  // Filtros Empresas
   const [filtroNome, setFiltroNome] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todas");
-  const [filtroCategoria, setFiltroCategoria] = useState("todas");
   const [showRejeitarEmpresaDialog, setShowRejeitarEmpresaDialog] = useState(false);
   const [motivoRejeicaoEmpresa, setMotivoRejeicaoEmpresa] = useState("");
 
@@ -122,18 +156,11 @@ export default function Admin() {
     verificarAdmin();
   }, []);
 
-  // Aplicar filtros sempre que empresas ou filtros mudarem
   useEffect(() => {
     let filtered = [...empresas];
-
-    // Filtro por nome
     if (filtroNome.trim()) {
-      filtered = filtered.filter(e => 
-        e.nome.toLowerCase().includes(filtroNome.toLowerCase())
-      );
+      filtered = filtered.filter(e => e.nome.toLowerCase().includes(filtroNome.toLowerCase()));
     }
-
-    // Filtro por status
     if (filtroStatus === "ativas") {
       filtered = filtered.filter(e => e.ativa && e.status === 'aprovado');
     } else if (filtroStatus === "bloqueadas") {
@@ -141,32 +168,21 @@ export default function Admin() {
     } else if (filtroStatus === "pendentes") {
       filtered = filtered.filter(e => e.status === 'pendente');
     }
-
-    // Filtro por categoria
-    if (filtroCategoria !== "todas") {
-      filtered = filtered.filter(e => e.categoria_id === filtroCategoria);
-    }
-
     setEmpresasFiltradas(filtered);
-  }, [empresas, filtroNome, filtroStatus, filtroCategoria]);
+  }, [empresas, filtroNome, filtroStatus]);
 
   const verificarAdmin = async () => {
     try {
-      // Verificar se há admin logado no localStorage
       const adminStr = localStorage.getItem("admin");
-      
       if (!adminStr) {
         navigate("/admin");
         return;
       }
-
       const admin = JSON.parse(adminStr);
-      
-      // Verificar se o login não expirou (24 horas)
       const loginTime = new Date(admin.loginTime);
       const now = new Date();
       const diffHours = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
-      
+
       if (diffHours > 24) {
         localStorage.removeItem("admin");
         toast.error("Sessão expirada. Faça login novamente.");
@@ -184,1044 +200,920 @@ export default function Admin() {
     }
   };
 
+  const carregarDados = async () => {
+    await Promise.all([
+      carregarEstatisticas(),
+      carregarEmpresas(),
+      carregarPosts(),
+      carregarUsuarios(),
+      carregarLogs(),
+      carregarCategorias()
+    ]);
+  };
+
+  const carregarEstatisticas = async () => {
+    const res = await fetch('/api/admin?action=stats');
+    if (res.ok) setEstatisticas(await res.json());
+  };
+
+  const carregarEmpresas = async () => {
+    const res = await fetch('/api/empresas?admin=true');
+    if (res.ok) setEmpresas(await res.json());
+  };
+
+  const carregarPosts = async () => {
+    const res = await fetch('/api/posts?admin=true');
+    if (res.ok) setPosts(await res.json());
+  };
+
+  const carregarUsuarios = async () => {
+    const res = await fetch('/api/admin?action=usuarios');
+    if (res.ok) setUsuarios(await res.json());
+  };
+
+  const carregarLogs = async () => {
+    const res = await fetch('/api/admin?action=logs');
+    if (res.ok) setLogs(await res.json());
+  };
+
+  const carregarCategorias = async () => {
+    const { buscarCategorias } = await import("@/lib/supabase");
+    setCategorias(await buscarCategorias());
+  };
+
   const handleLogoutAdmin = () => {
     localStorage.removeItem("admin");
     toast.success("Logout realizado");
     navigate("/admin");
   };
 
-
-  const carregarDados = async () => {
-    await Promise.all([
-      carregarEstatisticas(),
-      carregarEmpresas(),
-      carregarPosts(),
-      carregarCategorias()
-    ]);
-  };
-
-  const carregarEstatisticas = async () => {
-    const { data, error } = await supabase
-      .from("admin_estatisticas")
-      .select("*")
-      .single();
-
-    if (!error && data) {
-      setEstatisticas(data);
-    }
-  };
-
-  const carregarEmpresas = async () => {
-    const { data, error } = await supabase
-      .from("empresas")
-      .select(`
-        *,
-        categorias(nome)
-      `)
-      .order("data_cadastro", { ascending: false });
-
-    if (!error && data) {
-      setEmpresas(data);
-    } else if (error) {
-      console.error("Erro ao carregar empresas:", error);
-    }
-  };
-
-  const carregarPosts = async () => {
-    const { data, error } = await supabase
-      .from("mural_posts")
-      .select(`
-        *,
-        empresas!empresa_id(nome),
-        users!user_id(nome, email)
-      `)
-      .order("data_criacao", { ascending: false });
-
-    if (!error && data) {
-      setPosts(data);
-    }
-  };
-
-  const carregarCategorias = async () => {
-    const { data, error } = await supabase
-      .from("categorias")
-      .select("id, nome")
-      .order("nome");
-
-    if (!error && data) {
-      setCategorias(data);
-    }
-  };
-
+  // Açôes de Empresa
   const handleBloquearEmpresa = async () => {
     if (!empresaSelecionada || !motivoBloqueio.trim()) {
       toast.error("Informe o motivo do bloqueio");
       return;
     }
-
-    if (!adminData) return;
-
-    // Atualizar empresa diretamente
-    const { error: updateError } = await supabase
-      .from("empresas")
-      .update({
-        ativa: false,
-        motivo_bloqueio: motivoBloqueio
-      })
-      .eq("id", empresaSelecionada.id);
-
-    if (updateError) {
-      toast.error("Erro ao bloquear empresa");
-      console.error(updateError);
-      return;
-    }
-
-    // Registrar log
-    await supabase.from("admin_logs").insert({
-      admin_id: adminData.id,
-      acao: "bloquear_empresa",
-      entidade_tipo: "empresa",
-      entidade_id: empresaSelecionada.id,
-      detalhes: `Empresa "${empresaSelecionada.nome}" bloqueada: ${motivoBloqueio}`
+    const res = await fetch(`/api/empresas?id=${empresaSelecionada.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ativa: false, status: 'bloqueado', motivo_bloqueio: motivoBloqueio })
     });
-
-    toast.success("Empresa bloqueada com sucesso");
-    setShowBloqueioDialog(false);
-    setMotivoBloqueio("");
-    setEmpresaSelecionada(null);
-    await carregarDados();
+    if (res.ok) {
+      await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: adminData.id, acao: "bloquear_empresa", entidade_tipo: "empresa", entidade_id: empresaSelecionada.id, detalhes: `Empresa "${empresaSelecionada.nome}" bloqueada: ${motivoBloqueio}` })
+      });
+      toast.success("Empresa bloqueada");
+      setShowBloqueioDialog(false);
+      await carregarDados();
+    }
   };
 
-  const handleDesbloquearEmpresa = async (empresa: Empresa) => {
-    if (!adminData) return;
-
-    // Atualizar empresa diretamente
-    const { error: updateError } = await supabase
-      .from("empresas")
-      .update({
-        ativa: true,
-        motivo_bloqueio: null
-      })
-      .eq("id", empresa.id);
-
-    if (updateError) {
-      toast.error("Erro ao desbloquear empresa");
-      console.error(updateError);
-      return;
+  const handleToggleAdmin = async (userId: string) => {
+    const res = await fetch(`/api/admin?action=toggle_admin&id=${userId}`, { method: 'PATCH' });
+    if (res.ok) {
+      toast.success("Status de admin alterado");
+      await carregarDados();
     }
-
-    // Registrar log
-    await supabase.from("admin_logs").insert({
-      admin_id: adminData.id,
-      acao: "desbloquear_empresa",
-      entidade_tipo: "empresa",
-      entidade_id: empresa.id,
-      detalhes: `Empresa "${empresa.nome}" desbloqueada`
-    });
-
-    toast.success("Empresa desbloqueada com sucesso");
-    await carregarDados();
   };
 
-  const handleAprovarEmpresa = async (empresa: Empresa) => {
-    if (!adminData) return;
-
-    // Aprovar empresa: status='aprovado' e ativa=true
-    const { error: updateError } = await supabase
-      .from("empresas")
-      .update({
-        status: 'aprovado',
-        ativa: true,
-        verificado: true
-      })
-      .eq("id", empresa.id);
-
-    if (updateError) {
-      toast.error("Erro ao aprovar empresa");
-      console.error(updateError);
-      return;
+  const handleExcluirUsuario = async (userId: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este usuário?")) return;
+    const res = await fetch(`/api/admin?action=usuario&id=${userId}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast.success("Usuário excluído");
+      await carregarDados();
     }
-
-    // Registrar log
-    await supabase.from("admin_logs").insert({
-      admin_id: adminData.id,
-      acao: "aprovar_empresa",
-      entidade_tipo: "empresa",
-      entidade_id: empresa.id,
-      detalhes: `Empresa "${empresa.nome}" aprovada`
-    });
-
-    toast.success(`✅ ${empresa.nome} aprovada com sucesso!`);
-    await carregarDados();
   };
 
-  const handleRejeitarEmpresa = async (empresa: Empresa, motivo: string) => {
-    if (!adminData) return;
-
-    // Rejeitar empresa
-    const { error: updateError } = await supabase
-      .from("empresas")
-      .update({
-        status: 'rejeitado',
-        ativa: false,
-        motivo_bloqueio: motivo
-      })
-      .eq("id", empresa.id);
-
-    if (updateError) {
-      toast.error("Erro ao rejeitar empresa");
-      console.error(updateError);
-      return;
+  const handleExcluirEmpresa = async (empresa: Empresa) => {
+    if (!window.confirm(`Excluir permanentemente "${empresa.nome}"?`)) return;
+    const res = await fetch(`/api/empresas?id=${empresa.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: adminData.id, acao: "excluir_empresa", entidade_tipo: "empresa", entidade_id: empresa.id, detalhes: `Empresa "${empresa.nome}" excluída` })
+      });
+      toast.success("Empresa excluída");
+      await carregarDados();
     }
-
-    // Registrar log
-    await supabase.from("admin_logs").insert({
-      admin_id: adminData.id,
-      acao: "rejeitar_empresa",
-      entidade_tipo: "empresa",
-      entidade_id: empresa.id,
-      detalhes: `Empresa "${empresa.nome}" rejeitada. Motivo: ${motivo}`
-    });
-
-    toast.success("Empresa rejeitada");
-    await carregarDados();
+  };
+  const handleExcluirPost = async (post: Post) => {
+    if (!window.confirm(`Excluir permanentemente o post "${post.titulo}"?`)) return;
+    const res = await fetch(`/api/posts?id=${post.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_id: adminData.id,
+          acao: "excluir_post",
+          entidade_tipo: "post",
+          entidade_id: post.id,
+          detalhes: `Post "${post.titulo}" excluído pelo administrador`
+        })
+      });
+      toast.success("Post excluído permanentemente");
+      setShowPostDetalhesDialog(false);
+      await carregarDados();
+    } else {
+      toast.error("Erro ao excluir post");
+    }
   };
 
-  const handleToggleDestaque = async (empresa: Empresa) => {
-    if (!adminData) return;
 
-    const novoDestaque = !empresa.destaque;
-
-    // Alternar destaque
-    const { error: updateError } = await supabase
-      .from("empresas")
-      .update({
-        destaque: novoDestaque
-      })
-      .eq("id", empresa.id);
-
-    if (updateError) {
-      toast.error("Erro ao atualizar destaque");
-      console.error(updateError);
-      return;
-    }
-
-    // Registrar log
-    await supabase.from("admin_logs").insert({
-      admin_id: adminData.id,
-      acao: novoDestaque ? "destacar_empresa" : "remover_destaque_empresa",
-      entidade_tipo: "empresa",
-      entidade_id: empresa.id,
-      detalhes: `Empresa "${empresa.nome}" ${novoDestaque ? 'adicionada ao' : 'removida do'} destaque`
-    });
-
-    toast.success(novoDestaque ? "⭐ Empresa destacada!" : "Destaque removido");
-    await carregarDados();
-  };
-
-  const handleAprovarPost = async (post: Post) => {
-    if (!adminData) return;
-
-    // Atualizar o post diretamente
-    const { error: updateError } = await supabase
-      .from("mural_posts")
-      .update({
-        aprovado: true,
-        data_aprovacao: new Date().toISOString(),
-        admin_aprovador_id: adminData.id
-      })
-      .eq("id", post.id);
-
-    if (updateError) {
-      toast.error("Erro ao aprovar post");
-      console.error(updateError);
-      return;
-    }
-
-    // Registrar log
-    await supabase.from("admin_logs").insert({
-      admin_id: adminData.id,
-      acao: "aprovar_post",
-      entidade_tipo: "post",
-      entidade_id: post.id,
-      detalhes: `Post "${post.titulo}" aprovado`
-    });
-
-    toast.success("Post aprovado com sucesso");
-    await carregarDados();
-  };
-
-  const handleRejeitarPost = async () => {
-    if (!postSelecionado || !motivoRejeicao.trim()) {
-      toast.error("Informe o motivo da rejeição");
-      return;
-    }
-
-    if (!adminData) return;
-
-    // Atualizar o post com motivo de rejeição
-    const { error: updateError } = await supabase
-      .from("mural_posts")
-      .update({
-        aprovado: false,
-        motivo_rejeicao: motivoRejeicao
-      })
-      .eq("id", postSelecionado.id);
-
-    if (updateError) {
-      toast.error("Erro ao rejeitar post");
-      console.error(updateError);
-      return;
-    }
-
-    // Registrar log
-    await supabase.from("admin_logs").insert({
-      admin_id: adminData.id,
-      acao: "rejeitar_post",
-      entidade_tipo: "post",
-      entidade_id: postSelecionado.id,
-      detalhes: `Post "${postSelecionado.titulo}" rejeitado: ${motivoRejeicao}`
-    });
-
-    toast.success("Post rejeitado");
-    setShowRejeicaoDialog(false);
-    setMotivoRejeicao("");
-    setPostSelecionado(null);
-    await carregarDados();
-  };
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-background">
+      <div className="text-center animate-in fade-in duration-500">
+        <Shield className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
+        <p className="text-muted-foreground font-medium">Autenticando acesso seguro...</p>
+      </div>
+    </div>
+  );
 
   const formatarData = (data: string) => {
-    return new Date(data).toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    if (!data) return "N/D";
+    try {
+      return new Date(data).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch (e) {
+      return "Data inválida";
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="container py-8">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <Activity className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Carregando painel administrativo...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const navItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "empresas", label: "Empresas", icon: Building2 },
+    { id: "posts", label: "Posts do Mural", icon: FileText, badge: estatisticas?.posts_pendentes },
+    { id: "usuarios", label: "Usuários", icon: Users },
+    { id: "logs", label: "Auditoria", icon: History },
+  ];
 
   return (
-    <div className="container py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <Shield className="w-8 h-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Painel Administrativo</h1>
-            <p className="text-muted-foreground">Olá, {adminData?.nome}! Gerencie empresas, posts e visualize estatísticas</p>
+    <div className="flex h-screen bg-[#f8fafc] dark:bg-zinc-950 overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col shadow-sm z-20">
+        <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+          <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center p-2 shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <img src="/images/logo.png" alt="Aqui Guaíra" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-zinc-900 dark:text-zinc-100 leading-none">Aqui Guaíra</span>
+            <span className="text-[10px] uppercase tracking-wider text-primary font-bold mt-1">Painel Admin</span>
           </div>
         </div>
-        <Button variant="outline" onClick={handleLogoutAdmin}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Sair
-        </Button>
-      </div>
 
-      {/* Estatísticas */}
-      {estatisticas && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Empresas Ativas</CardTitle>
-              <Building2 className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.empresas_ativas}</div>
-              <p className="text-xs text-muted-foreground">
-                Total: {estatisticas.total_empresas}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Empresas Bloqueadas</CardTitle>
-              <Ban className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.empresas_bloqueadas}</div>
-              <p className="text-xs text-muted-foreground">
-                {((estatisticas.empresas_bloqueadas / estatisticas.total_empresas) * 100).toFixed(1)}% do total
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Posts Aprovados</CardTitle>
-              <FileText className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.posts_aprovados}</div>
-              <p className="text-xs text-muted-foreground">
-                Total: {estatisticas.total_posts}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Usuários</CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.total_usuarios}</div>
-              <p className="text-xs text-muted-foreground">
-                {estatisticas.total_admins} administradores
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Tabs de Conteúdo */}
-      <Tabs defaultValue="empresas" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="empresas">
-            <Building2 className="w-4 h-4 mr-2" />
-            Empresas
-          </TabsTrigger>
-          <TabsTrigger value="posts">
-            <FileText className="w-4 h-4 mr-2" />
-            Posts do Mural
-            {estatisticas && estatisticas.posts_pendentes > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {estatisticas.posts_pendentes}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Tab Empresas */}
-        <TabsContent value="empresas" className="space-y-4">
-          {/* Filtros */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Filtrar Empresas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Buscar por Nome</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Digite o nome..."
-                      value={filtroNome}
-                      onChange={(e) => setFiltroNome(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todas">Todas</SelectItem>
-                      <SelectItem value="pendentes">⏳ Pendentes</SelectItem>
-                      <SelectItem value="ativas">✅ Ativas</SelectItem>
-                      <SelectItem value="bloqueadas">🚫 Bloqueadas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todas">Todas</SelectItem>
-                      {categorias.map((categoria) => (
-                        <SelectItem key={categoria.id} value={categoria.id}>
-                          {categoria.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="mt-4 text-sm text-muted-foreground">
-                Mostrando {empresasFiltradas.length} de {empresas.length} empresas
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Lista de Empresas */}
-          {empresasFiltradas.map((empresa) => (
-            <Card key={empresa.id}>
-              <CardHeader>
-                <div className="flex items-start gap-4">
-                  {/* Logo */}
-                  {empresa.logo ? (
-                    <img 
-                      src={empresa.logo} 
-                      alt={empresa.nome}
-                      className="w-20 h-20 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center">
-                      <Building2 className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                  )}
-
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CardTitle>{empresa.nome}</CardTitle>
-                      {empresa.status === 'pendente' && (
-                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Pendente
-                        </Badge>
-                      )}
-                      {empresa.status === 'aprovado' && empresa.ativa && (
-                        <Badge variant="default" className="bg-green-600">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Ativa
-                        </Badge>
-                      )}
-                      {empresa.status === 'aprovado' && !empresa.ativa && (
-                        <Badge variant="destructive">
-                          <Ban className="w-3 h-3 mr-1" />
-                          Bloqueada
-                        </Badge>
-                      )}
-                      {empresa.status === 'rejeitado' && (
-                        <Badge variant="destructive">
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Rejeitada
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <CardDescription className="mb-3">
-                      {empresa.categorias?.nome} • Cadastrada em {formatarData(empresa.data_cadastro)}
-                    </CardDescription>
-
-                    {/* Informações de contato */}
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      {empresa.bairro && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          {empresa.bairro}
-                        </div>
-                      )}
-                      {empresa.telefone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="w-4 h-4" />
-                          {empresa.telefone}
-                        </div>
-                      )}
-                      {empresa.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="w-4 h-4" />
-                          {empresa.email}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Botões de Ação */}
-                  <div className="flex gap-2 flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEmpresaSelecionada(empresa);
-                        setShowDetalhesDialog(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Detalhes
-                    </Button>
-                    
-                    {/* Botões para empresas PENDENTES */}
-                    {empresa.status === 'pendente' && (
-                      <>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleAprovarEmpresa(empresa)}
-                        >
-                          <CheckCircle2 className="w-4 h-4 mr-2" />
-                          Aprovar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setEmpresaSelecionada(empresa);
-                            setShowRejeitarEmpresaDialog(true);
-                          }}
-                        >
-                          <XCircle className="w-4 h-4 mr-2" />
-                          Rejeitar
-                        </Button>
-                      </>
-                    )}
-                    
-                    {/* Botões para empresas ATIVAS/APROVADAS */}
-                    {empresa.status === 'aprovado' && empresa.ativa && (
-                      <>
-                        <Button
-                          variant={empresa.destaque ? "secondary" : "default"}
-                          size="sm"
-                          className={empresa.destaque ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
-                          onClick={() => handleToggleDestaque(empresa)}
-                        >
-                          <TrendingUp className="w-4 h-4 mr-2" />
-                          {empresa.destaque ? "⭐ Destacada" : "Destacar"}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setEmpresaSelecionada(empresa);
-                            setShowBloqueioDialog(true);
-                          }}
-                        >
-                          <Ban className="w-4 h-4 mr-2" />
-                          Bloquear
-                        </Button>
-                      </>
-                    )}
-                    
-                    {/* Botões para empresas BLOQUEADAS */}
-                    {empresa.status === 'aprovado' && !empresa.ativa && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleDesbloquearEmpresa(empresa)}
-                      >
-                        <Unlock className="w-4 h-4 mr-2" />
-                        Desbloquear
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              {!empresa.ativa && empresa.motivo_bloqueio && (
-                <CardContent>
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>Motivo do bloqueio:</strong> {empresa.motivo_bloqueio}
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto mt-2">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${activeTab === item.id
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]"
+                : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+                }`}
+            >
+              <item.icon className={`w-5 h-5 ${activeTab === item.id ? "" : "group-hover:scale-110 transition-transform"}`} />
+              <span className="font-medium flex-1 text-left">{item.label}</span>
+              {item.badge && item.badge > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === item.id ? "bg-white text-primary" : "bg-red-500 text-white animate-bounce"}`}>
+                  {item.badge}
+                </span>
               )}
-            </Card>
+            </button>
           ))}
+        </nav>
 
-          {empresasFiltradas.length === 0 && (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Nenhuma empresa encontrada com os filtros selecionados
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+        <div className="p-4 border-t border-zinc-100 dark:border-zinc-800">
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs uppercase">
+              {adminData?.nome?.[0] || "A"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{adminData?.nome}</p>
+              <p className="text-[10px] text-zinc-500 truncate uppercase tracking-tighter">Administrador</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 gap-3 rounded-xl"
+            onClick={handleLogoutAdmin}
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium">Sair do Painel</span>
+          </Button>
+        </div>
+      </aside>
 
-        {/* Tab Posts */}
-        <TabsContent value="posts" className="space-y-4">
-          {posts.map((post) => (
-            <Card key={post.id} className="overflow-hidden">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CardTitle className="text-lg">{post.titulo}</CardTitle>
-                      {post.motivo_rejeicao ? (
-                        <Badge variant="destructive">
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Rejeitado
-                        </Badge>
-                      ) : post.aprovado ? (
-                        <Badge variant="default" className="bg-green-600">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Aprovado
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-yellow-600 text-white">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Pendente
-                        </Badge>
-                      )}
-                    </div>
-                    <CardDescription className="mb-1">
-                      {post.empresas?.nome} • {formatarData(post.data_criacao)}
-                    </CardDescription>
-                    {post.users && (
-                      <p className="text-sm text-muted-foreground">
-                        Por: {post.users.nome} ({post.users.email})
-                      </p>
-                    )}
-                    {(post.bairro || post.logradouro) && (
-                      <div className="mt-2">
-                        <Badge variant="secondary" className="gap-1">
-                          <MapPin className="w-3 h-3" />
-                          <span className="text-xs">
-                            {[post.logradouro, post.bairro].filter(Boolean).join(' • ')}
-                          </span>
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                  {!post.aprovado && !post.motivo_rejeicao && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleAprovarPost(post)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Aprovar
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setPostSelecionado(post);
-                          setShowRejeicaoDialog(true);
-                        }}
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Rejeitar
-                      </Button>
-                    </div>
-                  )}
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        {/* Top Header */}
+        <header className="h-16 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-8 z-10">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+              {navItems.find(i => i.id === activeTab)?.label}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{formatarData(new Date().toISOString()).split(',')[0]}</p>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Status: Sistema Online ✅</p>
+            </div>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <ScrollArea className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+            {/* 1. DASHBOARD */}
+            {activeTab === "dashboard" && (
+              <div className="space-y-8">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard label="Ativas" value={estatisticas?.empresas_ativas} sub={`Total: ${estatisticas?.total_empresas}`} icon={Building2} color="bg-emerald-500" />
+                  <StatCard label="Bloqueadas" value={estatisticas?.empresas_bloqueadas} sub="Excluídas do site" icon={Ban} color="bg-rose-500" />
+                  <StatCard label="Posts Mural" value={estatisticas?.total_posts} sub={`${estatisticas?.posts_pendentes} pendentes`} icon={FileText} color="bg-amber-500" />
+                  <StatCard label="Comunidade" value={estatisticas?.total_usuarios} sub={`${estatisticas?.total_admins} admins`} icon={Users} color="bg-blue-500" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                {post.imagem ? (
-                  <div className="space-y-4">
-                    <div className="relative rounded-lg overflow-hidden bg-muted">
-                      <img 
-                        src={post.imagem} 
-                        alt={post.titulo}
-                        className="w-full h-auto max-h-96 object-cover"
-                      />
-                    </div>
-                    <p className="text-sm leading-relaxed">{post.conteudo}</p>
-                  </div>
-                ) : (
-                  <p className="text-sm leading-relaxed">{post.conteudo}</p>
-                )}
-                {post.motivo_rejeicao && (
-                  <Alert variant="destructive" className="mt-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>Motivo da rejeição:</strong> {post.motivo_rejeicao}
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {post.aprovado && post.data_aprovacao && (
-                  <div className="mt-4 pt-4 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      Aprovado em {formatarData(post.data_aprovacao)}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-          {posts.length === 0 && (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Nenhum post encontrado
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
 
-      {/* Dialog Bloqueio Empresa */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Recent Logs (preview) */}
+                  <Card className="lg:col-span-2 shadow-sm border-zinc-200 dark:border-zinc-800 rounded-3xl overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 bg-zinc-50/50 dark:bg-zinc-800/30">
+                      <div>
+                        <CardTitle className="text-lg">Atividades Recentes</CardTitle>
+                        <CardDescription>Ultimas ações realizadas no painel</CardDescription>
+                      </div>
+                      <History className="w-5 h-5 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="space-y-4">
+                        {logs.slice(0, 5).map((log) => (
+                          <div key={log.id} className="flex items-start gap-4 p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-zinc-100 dark:hover:border-zinc-700">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${log.acao.includes('bloquear') || log.acao.includes('excluir') || log.acao.includes('rejeitar') ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                              <Activity className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{log.detalhes}</p>
+                              <p className="text-xs text-zinc-500">{formatarData(log.created_at)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button variant="link" className="w-full mt-4 text-primary font-bold" onClick={() => setActiveTab("logs")}>
+                        Ver histórico completo
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Quick Actions / Tips */}
+                  <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 rounded-3xl">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Acesso Rápido</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <QuickButton icon={Plus} label="Novo Local Turístico" disabled />
+                      <QuickButton icon={Building2} label="Validar Empresas" onClick={() => setActiveTab("empresas")} />
+                      <QuickButton icon={FileText} label="Moderar Mural" onClick={() => setActiveTab("posts")} accent />
+                      <QuickButton icon={UserCheck} label="Gerenciar Equipe" onClick={() => setActiveTab("usuarios")} />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* 2. EMPRESAS */}
+            {activeTab === "empresas" && (
+              <div className="space-y-6">
+                <Card className="rounded-3xl shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                        <Input
+                          placeholder="Buscar empresa por nome..."
+                          className="pl-10 rounded-xl"
+                          value={filtroNome}
+                          onChange={(e) => setFiltroNome(e.target.value)}
+                        />
+                      </div>
+                      <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                        <SelectTrigger className="w-full md:w-48 rounded-xl">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="todas">Todos Status</SelectItem>
+                          <SelectItem value="ativas">Ativas</SelectItem>
+                          <SelectItem value="pendentes">Pendentes</SelectItem>
+                          <SelectItem value="bloqueadas">Bloqueadas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {empresasFiltradas.map((empresa) => (
+                    <Card key={empresa.id} className="rounded-3xl border-zinc-200 dark:border-zinc-800 hover:shadow-md transition-all group">
+                      <CardContent className="p-0">
+                        <div className="flex flex-col md:flex-row items-center p-6 gap-6">
+                          <div className="w-20 h-20 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-100 dark:border-zinc-700 overflow-hidden">
+                            {empresa.logo ? (
+                              <img src={empresa.logo} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building2 className="w-8 h-8 text-zinc-300" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 text-center md:text-left space-y-1">
+                            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-center md:justify-start gap-2">
+                              {empresa.nome}
+                              {empresa.destaque && <Badge className="bg-amber-500 text-[10px] uppercase">⭐ Destaque</Badge>}
+                            </h3>
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-1 text-xs text-zinc-500 uppercase font-bold tracking-tighter">
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {empresa.bairro || 'Guaíra'}</span>
+                              <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {empresa.whatsapp || empresa.telefone || 'S/ Tel'}</span>
+                            </div>
+                            <div className="pt-2 flex flex-wrap justify-center md:justify-start gap-2">
+                              <StatusBadge status={empresa.status} ativa={empresa.ativa} />
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap justify-center md:justify-end gap-2 shrink-0">
+                            <ActionBtn icon={Eye} label="Ver Detalhes" onClick={() => { setEmpresaSelecionada(empresa); setShowDetalhesDialog(true); }} />
+                            {empresa.status === 'pendente' ? (
+                              <ActionBtn icon={CheckCircle2} label="Aprovar" variant="success" onClick={async () => {
+                                const res = await fetch(`/api/empresas?id=${empresa.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'aprovado', ativa: true }) });
+                                if (res.ok) { toast.success("Empresa aprovada!"); await carregarDados(); }
+                              }} />
+                            ) : (
+                              <ActionBtn
+                                icon={empresa.ativa ? Ban : Unlock}
+                                label={empresa.ativa ? "Bloquear" : "Ativar"}
+                                variant={empresa.ativa ? "danger" : "success"}
+                                onClick={async () => {
+                                  if (empresa.ativa) {
+                                    setEmpresaSelecionada(empresa);
+                                    setShowBloqueioDialog(true);
+                                  } else {
+                                    const res = await fetch(`/api/empresas?id=${empresa.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativa: true, motivo_bloqueio: null, status: 'aprovado' }) });
+                                    if (res.ok) { toast.success("Empresa ativada!"); await carregarDados(); }
+                                  }
+                                }}
+                              />
+                            )}
+                            <ActionBtn icon={Trash2} variant="ghost-danger" onClick={() => handleExcluirEmpresa(empresa)} />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. POSTS */}
+            {activeTab === "posts" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {posts.length === 0 ? (
+                  <Card className="col-span-full py-16 text-center border-dashed rounded-3xl">
+                    <p className="text-zinc-500">Nenhum post no mural para moderar.</p>
+                  </Card>
+                ) : posts.map((post) => (
+                  <Card key={post.id} className="rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all border-zinc-200 dark:border-zinc-800 flex flex-col">
+                    <div className="relative aspect-video bg-zinc-100 dark:bg-zinc-800 border-b dark:border-zinc-800">
+                      {post.imagens && post.imagens.length > 0 ? (
+                        <img src={post.imagens[0]} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                          <FileText className="w-12 h-12" />
+                        </div>
+                      )}
+                      <div className="absolute top-4 right-4">
+                        <PostStatusBadge status={post.status} />
+                      </div>
+                    </div>
+                    <CardHeader className="p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <CardDescription className="text-xs font-bold uppercase tracking-widest text-primary">
+                          {post.autor_nome || post.empresas?.nome || 'Anônimo'}
+                        </CardDescription>
+                        <span className="text-[10px] text-zinc-400 font-medium">{formatarData(post.created_at).split(',')[0]}</span>
+                      </div>
+                      <CardTitle className="text-lg mb-1 leading-tight line-clamp-1">{post.titulo}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-6 pb-4 flex-1">
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">{post.conteudo}</p>
+                    </CardContent>
+                    <div className="p-4 bg-zinc-50/80 dark:bg-zinc-800/80 border-t dark:border-zinc-800 space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 rounded-xl h-9 gap-2 font-bold"
+                          onClick={() => { setPostSelecionado(post); setShowPostDetalhesDialog(true); }}
+                        >
+                          <Eye className="w-4 h-4" /> Detalhes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl h-9 px-3 border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:border-rose-900/30 dark:hover:bg-rose-950/20"
+                          onClick={() => handleExcluirPost(post)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        {post.status === 'pendente' && (
+                          <>
+                            <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 rounded-xl gap-2 h-10 shadow-lg shadow-emerald-500/20" onClick={async () => {
+                              const res = await fetch(`/api/posts?id=${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'aprovado', data_aprovacao: new Date().toISOString(), admin_aprovador_id: adminData.id }) });
+                              if (res.ok) { toast.success("Post aprovado!"); await carregarDados(); }
+                            }}>
+                              <CheckCircle2 className="w-4 h-4" /> Aprovar
+                            </Button>
+                            <Button variant="outline" className="flex-1 border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl h-10" onClick={() => { setPostSelecionado(post); setShowRejeicaoDialog(true); }}>
+                              Rejeitar
+                            </Button>
+                          </>
+                        )}
+                        {post.status !== 'pendente' && (
+                          <Button variant="ghost" className="w-full rounded-xl text-zinc-400 cursor-default h-10 text-xs font-bold bg-zinc-100 dark:bg-zinc-800/50">
+                            {post.status === 'aprovado' ? "Post já publicado ✅" : "Post rejeitado ❌"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* 4. USUÁRIOS */}
+            {activeTab === "usuarios" && (
+              <div className="space-y-6">
+                <Card className="rounded-3xl shadow-sm border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 uppercase text-[10px] font-bold tracking-widest border-b dark:border-zinc-800">
+                        <tr>
+                          <th className="px-6 py-4">Usuário</th>
+                          <th className="px-6 py-4">Status</th>
+                          <th className="px-6 py-4 text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {usuarios.map((u) => (
+                          <tr key={u.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${u.is_admin ? 'bg-primary text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'}`}>
+                                  {u.nome?.[0] || 'U'}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">{u.nome || 'Sem nome'}</p>
+                                  <p className="text-xs text-zinc-500">{u.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {u.is_admin ? (
+                                <Badge className="bg-primary shadow-sm">Administrador</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-zinc-400 border-zinc-200">Visitante</Badge>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className={`rounded-xl gap-2 ${u.is_admin ? 'text-rose-500 hover:bg-rose-50' : 'text-primary hover:bg-primary/10'}`}
+                                  onClick={() => handleToggleAdmin(u.id)}
+                                >
+                                  {u.is_admin ? <Shield className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                  {u.is_admin ? 'Revogar Admin' : 'Tornar Admin'}
+                                </Button>
+                                <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl" onClick={() => handleExcluirUsuario(u.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {/* 5. LOGS */}
+            {activeTab === "logs" && (
+              <div className="space-y-4">
+                <Card className="rounded-3xl shadow-sm border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                  <CardHeader className="bg-zinc-50 dark:bg-zinc-800/50 p-6 border-b dark:border-zinc-800">
+                    <CardTitle>Histórico de Auditoria</CardTitle>
+                    <CardDescription>Todas as modificações feitas pelo sistema administrativo</CardDescription>
+                  </CardHeader>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {logs.map((log) => (
+                      <div key={log.id} className="p-6 flex items-start gap-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                        <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                          <Activity className="w-5 h-5 text-zinc-400" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{log.detalhes}</p>
+                          <div className="flex gap-4 text-xs font-bold text-zinc-400 uppercase tracking-tighter">
+                            <span>🚀 {log.acao}</span>
+                            <span>👤 ID: {log.admin_id?.slice(-6)}</span>
+                            <span>📅 {formatarData(log.created_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            )}
+
+          </div>
+        </ScrollArea>
+      </main>
+
+      {/* MODALS / DIALOGS (Mantenho os mesmos mas posso dar um tapa no estilo depois) */}
       <Dialog open={showBloqueioDialog} onOpenChange={setShowBloqueioDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-3xl border-none shadow-2xl">
           <DialogHeader>
             <DialogTitle>Bloquear Empresa</DialogTitle>
-            <DialogDescription>
-              Informe o motivo do bloqueio de "{empresaSelecionada?.nome}"
-            </DialogDescription>
+            <DialogDescription>A empresa não aparecerá mais no site. Informe o motivo:</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Motivo do Bloqueio</Label>
-              <Textarea
-                value={motivoBloqueio}
-                onChange={(e) => setMotivoBloqueio(e.target.value)}
-                placeholder="Ex: Conteúdo inadequado, informações falsas..."
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBloqueioDialog(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleBloquearEmpresa}>
-              Bloquear Empresa
-            </Button>
+          <Textarea
+            className="rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+            placeholder="Ex: Informações falsas, fotos impróprias..."
+            value={motivoBloqueio}
+            onChange={(e) => setMotivoBloqueio(e.target.value)}
+          />
+          <DialogFooter className="gap-2 pt-4">
+            <Button variant="ghost" onClick={() => setShowBloqueioDialog(false)}>Manter Ativa</Button>
+            <Button variant="destructive" className="rounded-xl shadow-lg shadow-rose-500/20" onClick={handleBloquearEmpresa}>Confirmar Bloqueio</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Rejeição Empresa */}
-      <Dialog open={showRejeitarEmpresaDialog} onOpenChange={setShowRejeitarEmpresaDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rejeitar Empresa</DialogTitle>
-            <DialogDescription>
-              Informe o motivo da rejeição de "{empresaSelecionada?.nome}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Motivo da Rejeição</Label>
-              <Textarea
-                value={motivoRejeicaoEmpresa}
-                onChange={(e) => setMotivoRejeicaoEmpresa(e.target.value)}
-                placeholder="Ex: CNPJ inválido, informações incompletas, duplicada..."
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejeitarEmpresaDialog(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => {
-                if (empresaSelecionada && motivoRejeicaoEmpresa.trim()) {
-                  handleRejeitarEmpresa(empresaSelecionada, motivoRejeicaoEmpresa);
-                  setShowRejeitarEmpresaDialog(false);
-                  setMotivoRejeicaoEmpresa("");
-                }
-              }}
-            >
-              Rejeitar Empresa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog Rejeição Post */}
       <Dialog open={showRejeicaoDialog} onOpenChange={setShowRejeicaoDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rejeitar Post</DialogTitle>
-            <DialogDescription>
-              Informe o motivo da rejeição do post "{postSelecionado?.titulo}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Motivo da Rejeição</Label>
-              <Textarea
-                value={motivoRejeicao}
-                onChange={(e) => setMotivoRejeicao(e.target.value)}
-                placeholder="Ex: Conteúdo ofensivo, propaganda enganosa..."
-                rows={4}
-              />
-            </div>
-          </div>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader><DialogTitle>Rejeitar Conteúdo</DialogTitle></DialogHeader>
+          <Textarea
+            className="rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 min-h-[100px]"
+            value={motivoRejeicao}
+            onChange={(e) => setMotivoRejeicao(e.target.value)}
+            placeholder="Motivo da rejeição para o usuário..."
+          />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejeicaoDialog(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleRejeitarPost}>
-              Rejeitar Post
-            </Button>
+            <Button variant="destructive" onClick={async () => {
+              const res = await fetch(`/api/posts?id=${postSelecionado?.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'rejeitado', motivo_rejeicao: motivoRejeicao }) });
+              if (res.ok) { toast.success("Post rejeitado"); setShowRejeicaoDialog(false); await carregarDados(); }
+            }}>Rejeitar Post</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Detalhes Empresa */}
-      <Dialog open={showDetalhesDialog} onOpenChange={setShowDetalhesDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Detalhes da Empresa</DialogTitle>
-          </DialogHeader>
-          {empresaSelecionada && (
-            <div className="space-y-6">
-              {/* Header com Logo */}
-              <div className="flex items-start gap-4">
-                {empresaSelecionada.logo ? (
-                  <img 
-                    src={empresaSelecionada.logo} 
-                    alt={empresaSelecionada.nome}
-                    className="w-24 h-24 rounded-lg object-cover"
-                  />
+      {/* Post Detalhes Dialog */}
+      <Dialog open={showPostDetalhesDialog} onOpenChange={setShowPostDetalhesDialog}>
+        <DialogContent className="max-w-2xl rounded-[40px] p-0 overflow-hidden border-none shadow-2xl">
+          {postSelecionado && (
+            <div className="flex flex-col">
+              <div className="h-64 relative bg-zinc-100 dark:bg-zinc-900">
+                {postSelecionado.imagens && postSelecionado.imagens.length > 0 ? (
+                  <img src={postSelecionado.imagens[0]} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center">
-                    <Building2 className="w-12 h-12 text-muted-foreground" />
+                  <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                    <FileText className="w-20 h-20" />
                   </div>
                 )}
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold">{empresaSelecionada.nome}</h3>
-                  <p className="text-muted-foreground">{empresaSelecionada.categorias?.nome}</p>
-                  {empresaSelecionada.ativa ? (
-                    <Badge variant="default" className="bg-green-600 mt-2">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Ativa
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive" className="mt-2">
-                      <Ban className="w-3 h-3 mr-1" />
-                      Bloqueada
-                    </Badge>
-                  )}
+                <div className="absolute top-6 left-6">
+                  <PostStatusBadge status={postSelecionado.status} />
                 </div>
               </div>
 
-              {/* Descrição */}
-              {empresaSelecionada.descricao && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Descrição</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{empresaSelecionada.descricao}</p>
-                  </CardContent>
-                </Card>
-              )}
+              <div className="p-10 space-y-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                    <History className="w-3 h-3" />
+                    Enviado em {formatarData(postSelecionado.created_at)}
+                  </div>
+                  <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 leading-tight">
+                    {postSelecionado.titulo}
+                  </h2>
+                </div>
 
-              {/* Localização */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Localização
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {empresaSelecionada.endereco && (
-                    <p className="text-sm"><strong>Endereço:</strong> {empresaSelecionada.endereco}</p>
-                  )}
-                  {empresaSelecionada.bairro && (
-                    <p className="text-sm"><strong>Bairro:</strong> {empresaSelecionada.bairro}</p>
-                  )}
-                  {empresaSelecionada.cidade && (
-                    <p className="text-sm"><strong>Cidade:</strong> {empresaSelecionada.cidade}</p>
-                  )}
-                </CardContent>
-              </Card>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-zinc-50 dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                    <p className="text-[9px] font-black uppercase text-zinc-400 mb-1 tracking-widest">Autor</p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{postSelecionado.autor_nome || postSelecionado.users?.nome || 'Não identificado'}</p>
+                    <p className="text-[10px] text-zinc-500">{postSelecionado.autor_email || postSelecionado.users?.email || 'Sem e-mail'}</p>
+                  </div>
+                  <div className="p-4 bg-zinc-50 dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                    <p className="text-[9px] font-black uppercase text-zinc-400 mb-1 tracking-widest">Localização</p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{postSelecionado.bairro || 'Guaíra'}</p>
+                    <p className="text-[10px] text-zinc-500">{postSelecionado.logradouro || 'Endereço não informado'}</p>
+                  </div>
+                </div>
 
-              {/* Contato */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Contato</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {empresaSelecionada.telefone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="w-4 h-4" />
-                      <span>{empresaSelecionada.telefone}</span>
-                    </div>
-                  )}
-                  {empresaSelecionada.whatsapp && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="w-4 h-4 text-green-600" />
-                      <span>{empresaSelecionada.whatsapp}</span>
-                    </div>
-                  )}
-                  {empresaSelecionada.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="w-4 h-4" />
-                      <span>{empresaSelecionada.email}</span>
-                    </div>
-                  )}
-                  {empresaSelecionada.site && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Globe className="w-4 h-4" />
-                      <a href={empresaSelecionada.site} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        {empresaSelecionada.site}
-                      </a>
-                    </div>
-                  )}
-                  {empresaSelecionada.instagram && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Instagram className="w-4 h-4" />
-                      <a href={`https://instagram.com/${empresaSelecionada.instagram}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        @{empresaSelecionada.instagram}
-                      </a>
-                    </div>
-                  )}
-                  {empresaSelecionada.facebook && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Facebook className="w-4 h-4" />
-                      <a href={empresaSelecionada.facebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        Facebook
-                      </a>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black uppercase text-zinc-400 tracking-widest pl-1">Conteúdo da Mensagem</p>
+                  <div className="p-6 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+                    <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap">
+                      {postSelecionado.conteudo}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Galeria de Imagens */}
-              {empresaSelecionada.imagens && empresaSelecionada.imagens.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Galeria de Imagens</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {empresaSelecionada.imagens.map((img, idx) => (
-                        <img 
-                          key={idx}
-                          src={img} 
-                          alt={`${empresaSelecionada.nome} ${idx + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                {postSelecionado.motivo_rejeicao && (
+                  <div className="p-4 bg-rose-50 dark:bg-rose-950/20 rounded-2xl border border-rose-100 dark:border-rose-900/50">
+                    <p className="text-[9px] font-black uppercase text-rose-500 mb-1">Motivo da Rejeição</p>
+                    <p className="text-xs text-rose-700 dark:text-rose-400 font-medium">{postSelecionado.motivo_rejeicao}</p>
+                  </div>
+                )}
 
-              {/* Informações Administrativas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Informações Administrativas</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <p><strong>Cadastrada em:</strong> {formatarData(empresaSelecionada.data_cadastro)}</p>
-                  {!empresaSelecionada.ativa && empresaSelecionada.motivo_bloqueio && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Motivo do bloqueio:</strong> {empresaSelecionada.motivo_bloqueio}
-                      </AlertDescription>
-                    </Alert>
+                <div className="pt-4 flex gap-3">
+                  <Button variant="ghost" className="flex-1 rounded-2xl h-12 font-bold" onClick={() => setShowPostDetalhesDialog(false)}>
+                    Fechar
+                  </Button>
+                  {postSelecionado.status === 'aprovado' && (
+                    <Button variant="outline" className="rounded-2xl h-12 px-6 border-rose-200 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-bold" onClick={() => handleExcluirPost(postSelecionado)}>
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
                   )}
-                </CardContent>
-              </Card>
+                  {postSelecionado.status === 'pendente' && (
+                    <Button className="flex-1 rounded-2xl h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20" onClick={async () => {
+                      const res = await fetch(`/api/posts?id=${postSelecionado.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'aprovado', data_aprovacao: new Date().toISOString(), admin_aprovador_id: adminData.id }) });
+                      if (res.ok) { toast.success("Post aprovado!"); await carregarDados(); setShowPostDetalhesDialog(false); }
+                    }}>
+                      Aprovar Agora
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Detalhes Modal (Premium Style) */}
+      <Dialog open={showDetalhesDialog} onOpenChange={setShowDetalhesDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[40px] border-none shadow-2xl p-0 bg-white dark:bg-zinc-950 overflow-x-hidden">
+          {empresaSelecionada && (
+            <div className="flex flex-col">
+              {/* Banner Section */}
+              <div className="h-64 relative overflow-hidden group">
+                {(empresaSelecionada.banner || (empresaSelecionada.imagens && empresaSelecionada.imagens[0])) ? (
+                  <img
+                    src={empresaSelecionada.banner || empresaSelecionada.imagens?.[0]}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-emerald-500 via-emerald-600 to-indigo-700" />
+                )}
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+              </div>
+
+              {/* Profile Info Section */}
+              <div className="px-10 pb-10 -mt-20 relative z-10 flex flex-col md:flex-row gap-8 items-end">
+                <div className="w-40 h-40 rounded-[40px] bg-white dark:bg-zinc-900 p-2 shadow-2xl mx-auto md:mx-0 shrink-0 transform hover:rotate-3 transition-transform duration-500 border border-zinc-100 dark:border-zinc-800">
+                  <div className="w-full h-full rounded-[32px] bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center overflow-hidden">
+                    {empresaSelecionada.logo ? (
+                      <img src={empresaSelecionada.logo} className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 className="w-16 h-16 text-zinc-300" />
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1 pb-4 text-center md:text-left">
+                  <h2 className="text-4xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-none mb-2">{empresaSelecionada.nome}</h2>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                    <p className="text-zinc-500 font-bold uppercase tracking-[0.2em] text-[10px]">
+                      {categorias.find(c => c.id === empresaSelecionada.categoria_id)?.nome || 'Empreendedor Local'}
+                    </p>
+                    <span className="w-1 h-1 bg-zinc-300 rounded-full" />
+                    <StatusBadge status={empresaSelecionada.status} ativa={empresaSelecionada.ativa} />
+                    {empresaSelecionada.destaque && <Badge className="bg-amber-400 text-amber-950 font-black border-none animate-pulse">PREMIUM ⭐</Badge>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-10 pb-12">
+                {/* Main Info Column */}
+                <div className="lg:col-span-2 space-y-8">
+                  {/* Identity Card */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest pl-1">Informações de Registro</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+                        <p className="text-[9px] uppercase font-black text-zinc-400 mb-1">CNPJ / Documento</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{empresaSelecionada.cnpj || 'Não informado'}</p>
+                      </div>
+                      <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+                        <p className="text-[9px] uppercase font-black text-zinc-400 mb-1">Razão Social</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{empresaSelecionada.razaoSocial || empresaSelecionada.nome}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bio Section */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest pl-1">Descrição do Negócio</label>
+                    <div className="p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 border border-zinc-100 dark:border-zinc-800 relative">
+                      <span className="absolute top-4 left-6 text-6xl text-primary/5 font-serif">“</span>
+                      <p className="relative z-10">{empresaSelecionada.descricao || "Esta empresa ainda não cadastrou uma descrição detalhada sobre seus serviços ou história."}</p>
+                    </div>
+                  </div>
+
+                  {/* Location Summary */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest pl-1">Localização</label>
+                    <div className="p-8 bg-white dark:bg-zinc-900 rounded-[32px] border-2 border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row items-center gap-6">
+                      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <MapPin className="w-8 h-8 text-primary" />
+                      </div>
+                      <div className="flex-1 text-center md:text-left">
+                        <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{empresaSelecionada.endereco || 'Apenas atendimento remoto'}</p>
+                        <p className="text-sm text-zinc-500 font-medium">{empresaSelecionada.bairro} • Guaíra - SP {empresaSelecionada.cep ? `• CEP ${empresaSelecionada.cep}` : ''}</p>
+                      </div>
+                      {empresaSelecionada.link_google_maps && (
+                        <Button className="rounded-2xl gap-2 font-bold group shadow-lg shadow-primary/20" onClick={() => window.open(empresaSelecionada.link_google_maps, '_blank')}>
+                          Ver no Maps <ExternalLink className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sidebar Info Column */}
+                <div className="space-y-8">
+                  {/* Contacts */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest pl-1">Canais de Contato</label>
+                    <div className="grid grid-cols-1 gap-3">
+                      <ContactItem icon={Phone} label="WhatsApp Business" value={empresaSelecionada.whatsapp} isSuccess />
+                      <ContactItem icon={Phone} label="Celular / Tel" value={empresaSelecionada.celular || empresaSelecionada.telefone} />
+                      <ContactItem icon={Mail} label="E-mail" value={empresaSelecionada.email} />
+                      <ContactItem icon={Globe} label="Website" value={empresaSelecionada.site} isPrimary />
+                    </div>
+                  </div>
+
+                  {/* Social Media */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest pl-1">Redes Sociais</label>
+                    <div className="flex gap-4">
+                      {empresaSelecionada.instagram && (
+                        <button className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] flex items-center justify-center text-white shadow-lg transform hover:-translate-y-1 transition-transform" onClick={() => window.open(`https://instagram.com/${empresaSelecionada.instagram}`, '_blank')}>
+                          <Instagram className="w-6 h-6" />
+                        </button>
+                      )}
+                      {empresaSelecionada.facebook && (
+                        <button className="w-12 h-12 rounded-2xl bg-[#1877F2] flex items-center justify-center text-white shadow-lg transform hover:-translate-y-1 transition-transform" onClick={() => window.open(empresaSelecionada.facebook, '_blank')}>
+                          <Facebook className="w-6 h-6" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Admin Actions Box */}
+                  <div className="p-8 bg-zinc-900 rounded-[40px] text-white shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-10 -mt-10" />
+                    <p className="text-[10px] font-bold uppercase opacity-50 mb-6 tracking-[0.3em] flex items-center gap-2">
+                      <Shield className="w-3 h-3" /> Gestão de Status
+                    </p>
+                    <div className="flex flex-col gap-3 relative z-10">
+                      <Button className="w-full h-12 rounded-2xl bg-white text-zinc-900 hover:bg-zinc-200 font-black uppercase tracking-widest text-[10px]" onClick={async () => {
+                        const novoDestaque = !empresaSelecionada.destaque;
+                        const res = await fetch(`/api/empresas?id=${empresaSelecionada.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ destaque: novoDestaque }) });
+                        if (res.ok) { toast.success(novoDestaque ? "Destaque ativado!" : "Destaque removido"); await carregarDados(); }
+                      }}>
+                        {empresaSelecionada.destaque ? "Remover Destaque" : "⭐ Ativar Destaque"}
+                      </Button>
+                      {empresaSelecionada.ativa ? (
+                        <Button className="w-full h-12 rounded-2xl border-2 border-white/20 bg-white/5 text-white hover:bg-rose-500 hover:border-rose-500 font-black uppercase tracking-widest text-[10px] transition-all" onClick={() => { setShowDetalhesDialog(false); setShowBloqueioDialog(true); }}>
+                          Bloquear
+                        </Button>
+                      ) : (
+                        <Button className="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px]" onClick={async () => {
+                          const res = await fetch(`/api/empresas?id=${empresaSelecionada.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativa: true, motivo_bloqueio: null, status: 'aprovado' }) });
+                          if (res.ok) { toast.success("Empresa Reativada!"); await carregarDados(); setShowDetalhesDialog(false); }
+                        }}>
+                          Reativar Agora
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// UI COMPONENTS HELPER
+// --------------------------------------------------------------------------------------------------------------------
+
+function StatCard({ label, value, sub, icon: Icon, color }: any) {
+  return (
+    <Card className="rounded-3xl border-none shadow-sm hover:shadow-md transition-all group overflow-hidden bg-white dark:bg-zinc-900">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-4">
+          <div className={`w-14 h-14 rounded-2xl ${color} flex items-center justify-center text-white shadow-lg shadow-${color.split('-')[1]}-500/20 group-hover:scale-110 transition-transform`}>
+            <Icon className="w-7 h-7" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">{label}</p>
+            <p className="text-3xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5 leading-none">{value || 0}</p>
+            <p className="text-[10px] text-zinc-400 font-bold mt-1.5">{sub}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuickButton({ icon: Icon, label, onClick, disabled, accent }: any) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300
+        ${disabled ? 'opacity-40 cursor-not-allowed bg-zinc-50 dark:bg-zinc-800' :
+          accent ? 'bg-primary/5 border-primary/20 text-primary hover:bg-primary shadow-sm hover:text-white hover:shadow-lg hover:shadow-primary/20' :
+            'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-primary hover:bg-primary/5 hover:text-primary'}
+      `}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${accent ? 'bg-primary/10' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+        <span className="text-sm font-bold">{label}</span>
+      </div>
+      <ChevronRight className="w-4 h-4 opacity-30" />
+    </button>
+  );
+}
+
+function StatusBadge({ status, ativa }: any) {
+  if (!ativa) return <Badge variant="destructive" className="bg-rose-500 border-none shadow-sm gap-1"><XCircle className="w-3 h-3" /> Bloqueada</Badge>;
+  if (status === 'pendente') return <Badge className="bg-amber-500 border-none shadow-sm gap-1 text-white"><Clock className="w-3 h-3" /> Pendente</Badge>;
+  if (status === 'rejeitado') return <Badge variant="destructive" className="bg-rose-500 border-none shadow-sm gap-1"><XCircle className="w-3 h-3" /> Rejeitada</Badge>;
+  return <Badge className="bg-emerald-500 border-none shadow-sm gap-1"><CheckCircle2 className="w-3 h-3" /> Ativa</Badge>;
+}
+
+function PostStatusBadge({ status }: { status: string }) {
+  if (status === 'aprovado') return <Badge className="bg-emerald-500 border-none shadow-lg"><CheckCircle2 className="w-3 h-3 mr-1" /> Público</Badge>;
+  if (status === 'pendente') return <Badge className="bg-amber-500 border-none shadow-lg"><Clock className="w-3 h-3 mr-1" /> Moderando</Badge>;
+  return <Badge variant="destructive" className="border-none shadow-lg"><XCircle className="w-3 h-3 mr-1" /> Recusado</Badge>;
+}
+
+function ActionBtn({ icon: Icon, label, onClick, variant = 'default' }: any) {
+  const styles: any = {
+    default: "bg-white dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700",
+    success: "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50 hover:bg-emerald-500 hover:text-white",
+    danger: "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/50 hover:bg-rose-500 hover:text-white",
+    'ghost-danger': "bg-transparent text-zinc-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 border-transparent",
+  };
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className={`rounded-xl px-3 h-9 transition-all duration-300 font-bold border-2 ${styles[variant]}`}
+      onClick={onClick}
+    >
+      <Icon className={`w-4 h-4 ${label ? 'mr-2' : ''}`} />
+      {label}
+    </Button>
+  );
+}
+
+function ContactItem({ icon: Icon, label, value, isPrimary, isSuccess }: any) {
+  if (!value) return null;
+  return (
+    <div className={`p-4 rounded-2xl flex items-center gap-3 border transition-colors
+      ${isPrimary ? 'bg-indigo-50/50 border-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:border-indigo-900 dark:text-indigo-400' :
+        isSuccess ? 'bg-emerald-50/50 border-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400' :
+          'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'}
+    `}>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center 
+        ${isPrimary ? 'bg-indigo-500/10' : isSuccess ? 'bg-emerald-500/10' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <div>
+        <p className="text-[9px] uppercase font-black opacity-50 leading-none mb-1 tracking-widest">{label}</p>
+        <p className="text-xs font-bold leading-none truncate max-w-[120px]">{value}</p>
+      </div>
     </div>
   );
 }
