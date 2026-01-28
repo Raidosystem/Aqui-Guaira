@@ -4,7 +4,3 @@ node_modules
 .env.local
 .DS_Store
 mongo_seed
-src/marketplace-pages
-src/marketplace-components
-src/marketplace-lib
-src/marketplace-contexts
