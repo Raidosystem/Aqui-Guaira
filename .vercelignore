@@ -1,0 +1,10 @@
+node_modules
+.git
+*.log
+.env.local
+.DS_Store
+mongo_seed
+src/marketplace-pages
+src/marketplace-components
+src/marketplace-lib
+src/marketplace-contexts
