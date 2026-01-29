@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [active, setActive] = useState<string>("");
   const manualOverride = useRef(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -41,7 +42,6 @@ const Header = () => {
   const [showRightArrow, setShowRightArrow] = useState(true);
 
   const mainNavItems = [
-    { icon: Home, label: "Início", href: "/" },
     { icon: Info, label: "Sobre Guaíra", href: "/#sobre-guaira" },
     { icon: Sparkles, label: "Voz da Cidade", href: "/voz-da-cidade" },
     { icon: Image, label: "Mural", href: "/mural" },
@@ -111,7 +111,7 @@ const Header = () => {
           }
         }
         if (window.scrollY < 140 && !manualOverride.current) {
-          setActive("Início");
+          setActive("");
         }
       };
       window.addEventListener("scroll", onScroll, { passive: true });
@@ -170,7 +170,15 @@ const Header = () => {
     <header className="bg-background border-b border-border sticky top-0 z-[1000] shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              navigate('/');
+              setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }, 100);
+            }}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <div className="bg-primary rounded-lg p-2">
               <Building2 className="h-6 w-6 text-primary-foreground" />
             </div>
@@ -178,7 +186,7 @@ const Header = () => {
               <h1 className="text-xl font-bold text-foreground">Aqui Guaíra</h1>
               <p className="text-xs text-muted-foreground">Portal da Cidade</p>
             </div>
-          </div>
+          </button>
 
           <div className="lg:hidden flex items-center gap-2">
             <DropdownMenu>
@@ -370,13 +378,7 @@ const Header = () => {
                   <a
                     href={item.href}
                     onClick={(e) => {
-                      if (item.label === "Início" && window.location.pathname === "/") {
-                        e.preventDefault();
-                        manualOverride.current = true;
-                        setActive("Início");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                        setTimeout(() => { manualOverride.current = false; }, 600);
-                      } else if (item.label === "Sobre Guaíra" && window.location.pathname === "/") {
+                      if (item.label === "Sobre Guaíra" && window.location.pathname === "/") {
                         e.preventDefault();
                         const el = document.getElementById("sobre-guaira");
                         if (el) {
