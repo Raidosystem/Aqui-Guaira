@@ -1,0 +1,161 @@
+{
+  "municipio": "Guaíra-SP",
+  "fonte": {
+    "pagina_oficial": "https://www.guaira.sp.gov.br/pagina/17/limpeza-publica-dias-e-horarios"
+  },
+  "informacoes_gerais": {
+    "coleta_lixo_domestico": {
+      "horario_seg_sex": "manhã, a partir das 06h",
+      "horario_sabado_feriado": "a partir das 14h (para os bairros atendidos no sábado)",
+      "observacao_domingo": "aos domingos: feira livre"
+    },
+    "observacoes": {
+      "podas": "A remoção de galhos/folhas de podas ou cortes de árvores é responsabilidade de quem realizou o serviço; a Prefeitura retira apenas em casos de acidentes, vendavais ou mediante notificação oficial.",
+      "limpeza_terrenos": "Resíduos comuns de limpeza de terrenos, quintais, jardins e materiais inservíveis continuam com a coleta normal.",
+      "rcc": "A coleta regular não abrange Resíduos da Construção Civil (RCC)."
+    }
+  },
+  "setores": {
+    "1": {
+      "numero": 1,
+      "semana": 1,
+      "bairros": [
+        "Aniceto Carlos Nogueira",
+        "Antonio Garcia",
+        "Antonio Nery Lopes",
+        "Desm. Santo Antonio",
+        "Ernesto Pacheco",
+        "Jardim Califórnia",
+        "Jardim Solaris",
+        "Joaquim P. Lelis",
+        "José Pugliesi",
+        "Luiz Afonso",
+        "Res. Amélia",
+        "Res. Bárbara",
+        "Res. José Alves Casagrande",
+        "Res. Lígia",
+        "Res. Nova Guaíra",
+        "Res. Portinari",
+        "Res. R. Guimarães",
+        "Res. Santa Teresinha",
+        "Res. Taís",
+        "C. Hab. José Gomes"
+      ],
+      "calendario_2026": {
+        "Janeiro": [5, 6, 7, 8],
+        "Fevereiro": [2, 3, 4, 5],
+        "Março": [2, 3, 4, 5],
+        "Abril": [6, 7, 8, 9],
+        "Maio": [4, 5, 6, 7],
+        "Junho": [1, 2, 3, 4],
+        "Julho": [6, 7, 8, 9],
+        "Agosto": [3, 4, 5, 6],
+        "Setembro": [7, 8, 9, 10],
+        "Outubro": [5, 6, 7, 8],
+        "Novembro": [2, 3, 4, 5],
+        "Dezembro": [30, 1, 2, 3]
+      }
+    },
+    "2": {
+      "numero": 2,
+      "semana": 2,
+      "bairros": [
+        "Campos Eliseos",
+        "Centro",
+        "Desm. Chácara Paraíso",
+        "Jardim Novo Horizonte",
+        "Res. Cidade Jardim",
+        "Res. Lígia 2",
+        "Res. São Francisco",
+        "São José do Albertópolis",
+        "Vivendas do Bom Jardim"
+      ],
+      "calendario_2026": {
+        "Janeiro": [12, 13, 14, 15],
+        "Fevereiro": [9, 10, 11, 12],
+        "Março": [9, 10, 11, 12],
+        "Abril": [13, 14, 15, 16],
+        "Maio": [11, 12, 13, 14],
+        "Junho": [8, 9, 10, 11],
+        "Julho": [13, 14, 15, 16],
+        "Agosto": [10, 11, 12, 13],
+        "Setembro": [14, 15, 16, 17],
+        "Outubro": [12, 13, 14, 15],
+        "Novembro": [9, 10, 11, 12],
+        "Dezembro": [7, 8, 9, 10]
+      }
+    },
+    "3": {
+      "numero": 3,
+      "semana": 3,
+      "bairros": [
+        "Bom Jesus",
+        "Desm. Thobias Landim",
+        "Dist. Ind. Luis Carlos Nogueira",
+        "Jardim Alegria",
+        "Jardim das Acácias",
+        "Jardim Eldorado",
+        "Palmares",
+        "Paranoá",
+        "Portal do Lago",
+        "Maracá",
+        "Mario Garcia da Costa",
+        "Morada do Sol",
+        "Muraishi 1 e 2",
+        "Nobre Ville",
+        "Portal do Ipê",
+        "Res. Dona Ira",
+        "Res. Marina",
+        "Res. Nadia 1, 2, 3 e 4",
+        "Reynaldo Stein"
+      ],
+      "calendario_2026": {
+        "Janeiro": [19, 20, 21, 22],
+        "Fevereiro": [16, 17, 18, 19],
+        "Março": [16, 17, 18, 19],
+        "Abril": [20, 21, 22, 23],
+        "Maio": [18, 19, 20, 21],
+        "Junho": [15, 16, 17, 18],
+        "Julho": [20, 21, 22, 23],
+        "Agosto": [17, 18, 19, 20],
+        "Setembro": [21, 22, 23, 24],
+        "Outubro": [19, 20, 21, 22],
+        "Novembro": [16, 17, 18, 19],
+        "Dezembro": [14, 15, 16, 17]
+      }
+    },
+    "4": {
+      "numero": 4,
+      "semana": 4,
+      "bairros": [
+        "Abdala Elias",
+        "Antônio Manoel",
+        "Antônio Nogueira Lelis",
+        "Etelvina Santana",
+        "Fábio Talarico",
+        "Gabriel Garcia",
+        "Geralda Geltrudes (CECAP)",
+        "Jardim Eliza",
+        "Jardim Paulista",
+        "João Vaccaro",
+        "Miguel Fabiano",
+        "Pe. Mario Lano",
+        "Vila Aparecida"
+      ],
+      "calendario_2026": {
+        "Janeiro": [26, 27, 28, 29],
+        "Fevereiro": [23, 24, 25, 26],
+        "Março": [23, 24, 25, 26],
+        "Abril": [27, 28, 29, 30],
+        "Maio": [25, 26, 27, 28],
+        "Junho": [22, 23, 24, 25],
+        "Julho": [27, 28, 29, 30],
+        "Agosto": [24, 25, 26, 27],
+        "Setembro": [28, 29, 30, 1],
+        "Outubro": [26, 27, 28, 29],
+        "Novembro": [23, 24, 25, 26],
+        "Dezembro": [21, 22, 23, 24]
+      }
+    }
+  }
+}
