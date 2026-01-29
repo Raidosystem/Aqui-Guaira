@@ -3,7 +3,7 @@ import {
   Image, Info, ChevronDown, User, LogOut, Shield,
   ClipboardList, Menu, X, Search, ShoppingBag,
   Map, PawPrint, Pill, Stethoscope, AlertTriangle, GraduationCap,
-  ChevronLeft, ChevronRight, Sun, Moon, Monitor, Laptop, Sparkles
+  ChevronLeft, ChevronRight, Sun, Moon, Monitor, Laptop, Sparkles, Calendar
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
@@ -26,6 +26,7 @@ import {
 import { LoginDialog } from "@/components/LoginDialog";
 import { getUsuarioLogado, logout, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { getBuscaCepUrl, getGeradorCurriculoUrl } from "@/lib/ferramentas";
 
 const Header = () => {
   const location = useLocation();
@@ -62,8 +63,8 @@ const Header = () => {
   ];
 
   const ferramentasItems = [
-    { icon: Search, label: "Busca CEP", href: "https://busca-cep-raval.vercel.app/" },
-    { icon: FileText, label: "Gerador de Currículo", href: "https://cria-curriculo-raval.vercel.app/" },
+    { icon: Search, label: "Busca CEP", href: getBuscaCepUrl() },
+    { icon: FileText, label: "Gerador de Currículo", href: getGeradorCurriculoUrl() },
   ];
 
   // Atualiza active baseado em pathname/hash
@@ -525,10 +526,14 @@ const Header = () => {
             {quickLinks.map((item, idx) => {
               const Icon = item.icon;
               return (
-                <a
+                <button
                   key={idx}
-                  href={item.path}
-                  className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors"
+                  onClick={() => {
+                    if (item.path !== '#') {
+                      navigate(item.path);
+                    }
+                  }}
+                  className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors cursor-pointer"
                 >
                   <div className={`p-2 rounded-lg bg-secondary/50 border border-border/50 ${item.textColor}`}>
                     <Icon className="w-4 h-4" />
@@ -537,7 +542,7 @@ const Header = () => {
                     <span className="text-[9px] uppercase tracking-wider font-bold opacity-60 leading-none mb-0.5">{item.sub}</span>
                     <span className="text-xs font-bold whitespace-nowrap leading-none">{item.label}</span>
                   </div>
-                </a>
+                </button>
               );
             })}
           </div>

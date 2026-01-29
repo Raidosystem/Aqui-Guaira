@@ -12,7 +12,8 @@ import {
 } from './ui/dialog'
 import { criarOuLogarUsuario, getUsuarioLogado, logout } from '@/lib/supabase'
 import { toast } from 'sonner'
-import { Loader2, LogIn, LogOut, User as UserIcon, UserPlus } from 'lucide-react'
+import { Loader2, LogIn, LogOut, User as UserIcon, UserPlus, Search } from 'lucide-react'
+import { getBuscaCepUrl } from '@/lib/ferramentas'
 
 interface LoginDialogProps {
   open: boolean
@@ -29,9 +30,49 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
   // Estado do formulário de Registro
   const [registerEmail, setRegisterEmail] = useState('')
   const [registerNome, setRegisterNome] = useState('')
+  const [registerCpf, setRegisterCpf] = useState('')
+  const [registerTelefone, setRegisterTelefone] = useState('')
+  const [registerEndereco, setRegisterEndereco] = useState('')
+  const [registerNumero, setRegisterNumero] = useState('')
+  const [registerBairro, setRegisterBairro] = useState('')
+  const [registerCidade, setRegisterCidade] = useState('Guaíra')
+  const [registerEstado, setRegisterEstado] = useState('SP')
+  const [registerCep, setRegisterCep] = useState('')
   const [registerSenha, setRegisterSenha] = useState('')
   const [registerConfirmarSenha, setRegisterConfirmarSenha] = useState('')
   const [loadingRegister, setLoadingRegister] = useState(false)
+
+  // Estado para carregamento de CEP
+  const [loadingCep, setLoadingCep] = useState(false)
+
+  // Função para buscar CEP
+  const buscarCep = async (cep: string) => {
+    const cepLimpo = cep.replace(/\D/g, '')
+    if (cepLimpo.length !== 8) return
+
+    setLoadingCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+      const data = await response.json()
+
+      if (data.erro) {
+        toast.error('CEP não encontrado')
+        return
+      }
+
+      // Preencher automaticamente os campos
+      setRegisterEndereco(data.logradouro || '')
+      setRegisterBairro(data.bairro || '')
+      setRegisterCidade(data.localidade || 'Guaíra')
+      setRegisterEstado(data.uf || 'SP')
+
+      toast.success('Logradouro preenchido automaticamente!')
+    } catch (error) {
+      toast.error('Erro ao buscar CEP')
+    } finally {
+      setLoadingCep(false)
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,7 +117,37 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
       return
     }
     if (!registerNome.trim()) {
-      toast.error('Digite seu nome')
+      toast.error('Digite seu nome completo')
+      return
+    }
+    if (!registerCpf.trim()) {
+      toast.error('Digite seu CPF')
+      return
+    }
+    // Validação simples de CPF (11 dígitos)
+    const cpfLimpo = registerCpf.replace(/\D/g, '')
+    if (cpfLimpo.length !== 11) {
+      toast.error('CPF inválido. Digite 11 dígitos')
+      return
+    }
+    if (!registerTelefone.trim()) {
+      toast.error('Digite seu telefone')
+      return
+    }
+    if (!registerEndereco.trim()) {
+      toast.error('Digite o logradouro')
+      return
+    }
+    if (!registerNumero.trim()) {
+      toast.error('Digite o número')
+      return
+    }
+    if (!registerBairro.trim()) {
+      toast.error('Digite seu bairro')
+      return
+    }
+    if (!registerCep.trim()) {
+      toast.error('Digite seu CEP')
       return
     }
     if (!registerSenha.trim()) {
@@ -94,14 +165,36 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
 
     setLoadingRegister(true)
     try {
-      await criarOuLogarUsuario(registerEmail, registerNome, registerSenha, true)
+      // Combinar logradouro e número
+      const enderecoCompleto = `${registerEndereco}, ${registerNumero}`.trim()
+      
+      await criarOuLogarUsuario(
+        registerEmail, 
+        registerNome, 
+        registerSenha, 
+        true,
+        registerCpf.replace(/\D/g, ''), // Remove formatação do CPF
+        registerTelefone,
+        enderecoCompleto,
+        registerBairro,
+        registerCidade,
+        registerEstado,
+        registerCep.replace(/\D/g, '') // Remove formatação do CEP
+      )
       
       toast.success('Conta criada com sucesso!', {
         description: 'Você já está logado e pode usar o sistema.'
       })
       
+      // Limpar todos os campos
       setRegisterEmail('')
       setRegisterNome('')
+      setRegisterCpf('')
+      setRegisterTelefone('')
+      setRegisterEndereco('')
+      setRegisterNumero('')
+      setRegisterBairro('')
+      setRegisterCep('')
       setRegisterSenha('')
       setRegisterConfirmarSenha('')
       onOpenChange(false)
@@ -117,7 +210,7 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[9999]">
         <DialogHeader>
           <DialogTitle>Entrar ou Criar Conta</DialogTitle>
           <DialogDescription>
@@ -176,16 +269,57 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
 
           {/* Tab de Registro */}
           <TabsContent value="register">
-            <form onSubmit={handleRegister} className="space-y-4 pt-4">
+            <form onSubmit={handleRegister} className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto pr-2">
               <div className="space-y-2">
                 <Label htmlFor="register-nome">Nome Completo</Label>
                 <Input
                   id="register-nome"
                   type="text"
-                  placeholder="Seu nome"
+                  placeholder="Seu nome completo"
                   value={registerNome}
                   onChange={(e) => setRegisterNome(e.target.value)}
                   required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="register-cpf">CPF</Label>
+                <Input
+                  id="register-cpf"
+                  type="text"
+                  placeholder="000.000.000-00"
+                  value={registerCpf}
+                  onChange={(e) => {
+                    let valor = e.target.value.replace(/\D/g, '')
+                    if (valor.length <= 11) {
+                      valor = valor.replace(/(\d{3})(\d)/, '$1.$2')
+                      valor = valor.replace(/(\d{3})(\d)/, '$1.$2')
+                      valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+                      setRegisterCpf(valor)
+                    }
+                  }}
+                  required
+                  maxLength={14}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="register-telefone">Telefone/WhatsApp</Label>
+                <Input
+                  id="register-telefone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  value={registerTelefone}
+                  onChange={(e) => {
+                    let valor = e.target.value.replace(/\D/g, '')
+                    if (valor.length <= 11) {
+                      valor = valor.replace(/^(\d{2})(\d)/, '($1) $2')
+                      valor = valor.replace(/(\d{5})(\d)/, '$1-$2')
+                      setRegisterTelefone(valor)
+                    }
+                  }}
+                  required
+                  maxLength={15}
                 />
               </div>
 
@@ -199,6 +333,110 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
                   onChange={(e) => setRegisterEmail(e.target.value)}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="register-cep">CEP</Label>
+                  <a 
+                    href={getBuscaCepUrl()} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
+                  >
+                    <Search className="w-3 h-3" />
+                    Busque seu CEP
+                  </a>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="register-cep"
+                    type="text"
+                    placeholder="00000-000"
+                    value={registerCep}
+                    onChange={(e) => {
+                      let valor = e.target.value.replace(/\D/g, '')
+                      if (valor.length <= 8) {
+                        valor = valor.replace(/(\d{5})(\d)/, '$1-$2')
+                        setRegisterCep(valor)
+                        // Buscar CEP automaticamente quando completar 8 dígitos
+                        if (valor.replace(/\D/g, '').length === 8) {
+                          buscarCep(valor)
+                        }
+                      }
+                    }}
+                    required
+                    maxLength={9}
+                    disabled={loadingCep}
+                  />
+                  {loadingCep && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="register-endereco">Logradouro</Label>
+                  <Input
+                    id="register-endereco"
+                    type="text"
+                    placeholder="Rua, Avenida..."
+                    value={registerEndereco}
+                    onChange={(e) => setRegisterEndereco(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-numero">Número</Label>
+                  <Input
+                    id="register-numero"
+                    type="text"
+                    placeholder="123"
+                    value={registerNumero}
+                    onChange={(e) => setRegisterNumero(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="register-bairro">Bairro</Label>
+                <Input
+                  id="register-bairro"
+                  type="text"
+                  placeholder="Seu bairro"
+                  value={registerBairro}
+                  onChange={(e) => setRegisterBairro(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="register-cidade">Cidade</Label>
+                  <Input
+                    id="register-cidade"
+                    type="text"
+                    value={registerCidade}
+                    onChange={(e) => setRegisterCidade(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-estado">Estado</Label>
+                  <Input
+                    id="register-estado"
+                    type="text"
+                    value={registerEstado}
+                    onChange={(e) => setRegisterEstado(e.target.value)}
+                    required
+                    maxLength={2}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

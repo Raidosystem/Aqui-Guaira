@@ -752,7 +752,14 @@ export async function criarOuLogarUsuario(
   email: string,
   nome?: string,
   senha?: string,
-  isRegistro: boolean = false
+  isRegistro: boolean = false,
+  cpf?: string,
+  telefone?: string,
+  endereco?: string,
+  bairro?: string,
+  cidade?: string,
+  estado?: string,
+  cep?: string
 ): Promise<User | null> {
   if (!senha) {
     throw new Error('Senha é obrigatória')
@@ -764,7 +771,18 @@ export async function criarOuLogarUsuario(
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, senha, nome })
+      body: JSON.stringify({ 
+        email, 
+        senha, 
+        nome,
+        cpf,
+        telefone,
+        endereco,
+        bairro,
+        cidade,
+        estado,
+        cep
+      })
     });
 
     const data = await response.json();

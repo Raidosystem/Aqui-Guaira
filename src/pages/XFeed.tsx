@@ -22,6 +22,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getUsuarioLogado, buscarPosts, criarPost, uploadImagem, buscarComentarios, criarComentario } from "@/lib/supabase";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { LoginDialog } from "@/components/LoginDialog";
 
 interface Post {
     id: string;
@@ -81,6 +84,9 @@ const XFeed = () => {
     const [editingComment, setEditingComment] = useState<Comentario | null>(null);
     const [editCommentContent, setEditCommentContent] = useState("");
 
+    // Login Dialog state
+    const [showLoginDialog, setShowLoginDialog] = useState(false);
+
     useEffect(() => {
         carregarPosts();
     }, []);
@@ -88,10 +94,10 @@ const XFeed = () => {
     const carregarPosts = async () => {
         setLoading(true);
         try {
-            // Se tiver user, busca os dele também (pendentes)
+            // Todos veem posts aprovados. Se tiver user, busca os dele também (pendentes)
             const data = await buscarPosts({
                 limite: 50,
-                userId: user?.id
+                userId: user?.id // Inclui posts pendentes do próprio usuário
             });
             setPosts(data);
         } catch (err) {
@@ -188,7 +194,11 @@ const XFeed = () => {
     };
 
     const handleApoiar = async (postId: string, currentCurtidas: number) => {
-        if (!user) { toast.error("Faça login para apoiar"); return; }
+        if (!user) { 
+            toast.error("Faça login para apoiar publicações");
+            setShowLoginDialog(true);
+            return; 
+        }
         const isApoiado = userApoios[postId];
         const newCount = isApoiado ? Math.max(0, currentCurtidas - 1) : currentCurtidas + 1;
         setUserApoios(prev => ({ ...prev, [postId]: !isApoiado }));
@@ -215,7 +225,11 @@ const XFeed = () => {
     };
 
     const handleComment = async (postId: string) => {
-        if (!user) { toast.error("Faça login!"); return; }
+        if (!user) { 
+            toast.error("Faça login para comentar");
+            setShowLoginDialog(true);
+            return; 
+        }
         const texto = novoComentario[postId];
         if (!texto?.trim()) return;
         try {
@@ -280,32 +294,108 @@ const XFeed = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A0A0B] text-zinc-900 dark:text-zinc-100 selection:bg-primary/30 antialiased font-sans pb-20">
+        <div className="min-h-screen flex flex-col bg-background">
+            <Header />
 
-            <nav className="sticky top-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-sm">
-                <div className="container mx-auto max-w-5xl h-20 flex items-center justify-between px-6">
-                    <div className="flex items-center gap-4">
-                        <Button onClick={() => navigate("/")} variant="ghost" size="icon" className="rounded-2xl bg-zinc-100 dark:bg-zinc-900">
-                            <ArrowLeft className="w-5 h-5" />
-                        </Button>
-                        <div>
-                            <h1 className="text-2xl font-black tracking-tight">Voz da Cidade</h1>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Comunidade Ativa</span>
+            <main className="flex-grow">
+                {/* Premium Hero Section */}
+                <section className="relative pt-12 pb-20 overflow-hidden bg-background">
+                    <div className="absolute top-0 right-0 -mr-24 -mt-24 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px]" />
+                    <div className="absolute bottom-0 left-0 -ml-24 -mb-24 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
+
+                    <div className="container mx-auto px-4 relative z-10">
+                        {/* Navegação */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => navigate(-1)}
+                                    className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                    Voltar
+                                </Button>
+                                <Button
+                                    onClick={() => navigate('/')}
+                                    className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
+                                >
+                                    <Home className="w-4 h-4" />
+                                    Início
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="max-w-4xl mx-auto text-center space-y-6">
+                            <div className="inline-flex p-3 bg-primary/10 rounded-2xl mb-2">
+                                <MessageSquare className="w-8 h-8 text-primary" />
+                            </div>
+                            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-foreground leading-[1.1]">
+                                Voz da <br />
+                                <span className="gradient-text">Cidade</span>
+                            </h1>
+                            <p className="text-lg md:text-xl text-muted-foreground font-medium max-w-2xl mx-auto">
+                                Compartilhe o que está acontecendo no seu bairro e conecte-se com a comunidade de Guaíra-SP.
+                            </p>
+
+                            {/* Stats */}
+                            <div className="flex flex-wrap gap-4 justify-center mt-8">
+                                <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
+                                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                                        <Check className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-2xl font-black text-foreground">{posts.filter(p => p.status === 'aprovado').length}</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Aprovados</p>
+                                </div>
+                                <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
+                                    <div className="w-10 h-10 bg-cyan-100 text-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    </div>
+                                    <p className="text-2xl font-black text-foreground">Ativa</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Comunidade</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div className="hidden md:flex bg-primary/5 px-4 py-2 rounded-2xl border border-primary/10">
-                        <span className="text-xs font-black text-primary uppercase">{posts.filter(p => p.status === 'aprovado').length} Aprovados</span>
-                    </div>
-                </div>
-            </nav>
+                </section>
 
-            <main className="container mx-auto max-w-5xl py-8 px-4 md:px-6">
+                {/* COMPOSER AND FEED SECTION */}
+                <section className="container mx-auto px-4 py-8">
+                    <div className="max-w-5xl mx-auto">
 
                 {/* COMPOSER CARD */}
                 <div className="mb-10">
+                    {!user ? (
+                        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 border-2 rounded-[2.5rem] p-8 text-center">
+                            <div className="inline-flex p-3 bg-primary/10 rounded-2xl mb-4">
+                                <User className="w-8 h-8 text-primary" />
+                            </div>
+                            <h3 className="text-2xl font-black mb-3">Participe da Conversa!</h3>
+                            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                                Faça login para compartilhar o que está acontecendo no seu bairro e interagir com a comunidade.
+                            </p>
+                            <Button 
+                                onClick={() => setShowLoginDialog(true)} 
+                                size="lg" 
+                                className="rounded-2xl font-black text-lg px-8 mb-6"
+                            >
+                                Fazer Login para Postar
+                            </Button>
+                            
+                            {/* Aviso de Moderação */}
+                            <div className="mt-6 pt-6 border-t border-primary/20">
+                                <div className="flex items-start gap-3 text-left max-w-md mx-auto">
+                                    <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-xl shrink-0">
+                                        <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-black text-sm text-foreground">Ambiente Moderado</h4>
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            <strong>Faça login</strong> para participar da conversa. Todas as publicações são <strong>analisadas pela administração</strong> antes de serem exibidas publicamente, garantindo um ambiente seguro e respeitoso para toda a comunidade.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    ) : (
                     <Card className="bg-white dark:bg-[#121214] border-none shadow-xl rounded-[2.5rem] p-4 md:p-8">
                         <div className="flex gap-4 md:gap-6">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-foreground flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0">
@@ -360,6 +450,7 @@ const XFeed = () => {
                             </div>
                         </div>
                     </Card>
+                    )}
                 </div>
 
                 {/* FEED CONTENT */}
@@ -453,16 +544,25 @@ const XFeed = () => {
                                         {/* COMMENTS SECTION */}
                                         {expandedComments[post.id] && (
                                             <div className="mt-6 space-y-4 pt-6 border-t border-dashed border-zinc-100 dark:border-zinc-800 animate-in fade-in slide-in-from-top-4 duration-500">
-                                                <div className="flex gap-3">
-                                                    <Input
-                                                        value={novoComentario[post.id] || ""}
-                                                        onChange={(e) => setNovoComentario(prev => ({ ...prev, [post.id]: e.target.value }))}
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
-                                                        placeholder="Sua resposta para a comunidade..."
-                                                        className="rounded-2xl h-11 bg-zinc-50 dark:bg-zinc-900 border-none px-5 text-sm font-medium focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 transition-all"
-                                                    />
-                                                    <Button onClick={() => handleComment(post.id)} size="icon" className="h-11 w-11 rounded-2xl shrink-0"><Send className="w-4 h-4" /></Button>
-                                                </div>
+                                                {user ? (
+                                                    <div className="flex gap-3">
+                                                        <Input
+                                                            value={novoComentario[post.id] || ""}
+                                                            onChange={(e) => setNovoComentario(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                                            onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
+                                                            placeholder="Sua resposta para a comunidade..."
+                                                            className="rounded-2xl h-11 bg-zinc-50 dark:bg-zinc-900 border-none px-5 text-sm font-medium focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 transition-all"
+                                                        />
+                                                        <Button onClick={() => handleComment(post.id)} size="icon" className="h-11 w-11 rounded-2xl shrink-0"><Send className="w-4 h-4" /></Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-primary/5 rounded-2xl p-4 text-center">
+                                                        <p className="text-sm text-muted-foreground mb-3">Faça login para comentar e interagir</p>
+                                                        <Button onClick={() => setShowLoginDialog(true)} size="sm" className="rounded-xl font-bold">
+                                                            Fazer Login
+                                                        </Button>
+                                                    </div>
+                                                )}
 
                                                 <div className="space-y-3">
                                                     {(comentarios[post.id] || []).map(c => {
@@ -513,7 +613,11 @@ const XFeed = () => {
                         })}
                     </div>
                 )}
+                    </div>
+                </section>
             </main>
+
+            <Footer />
 
             {/* LIGHTBOX */}
             <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
@@ -584,6 +688,17 @@ const XFeed = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* LOGIN DIALOG */}
+            <LoginDialog
+                open={showLoginDialog}
+                onOpenChange={setShowLoginDialog}
+                onLoginSuccess={() => {
+                    setShowLoginDialog(false);
+                    carregarPosts(); // Recarrega posts para incluir os pendentes do usuário
+                    toast.success("Login realizado com sucesso!");
+                }}
+            />
         </div>
     );
 };

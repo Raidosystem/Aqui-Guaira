@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -82,7 +82,9 @@ interface Estatistica {
 
 export default function PainelCidade() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'obras');
 
   const [obras, setObras] = useState<Obra[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -91,7 +93,11 @@ export default function PainelCidade() {
 
   useEffect(() => {
     carregarDados();
-  }, []);
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const carregarDados = async () => {
     setLoading(true);
@@ -275,7 +281,7 @@ export default function PainelCidade() {
           )}
 
           {/* Tabs Section - Modern Design */}
-          <Tabs defaultValue="obras" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-muted p-1.5 rounded-2xl h-auto gap-1">
               <TabsTrigger value="obras" className="gap-2 py-4 rounded-xl font-bold data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:text-primary transition-all">
                 <Construction className="w-5 h-5" />
