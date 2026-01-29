@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, MapPin, Clock, AlertCircle, Building2, Stethoscope, Ambulance, ArrowLeft, Home, HeartPulse, Activity, Zap, Navigation, ExternalLink, ShieldCheck, Sparkles, Calendar, MessageSquare, Users, Star, Pill, Hospital, Siren } from "lucide-react";
+import { Phone, MapPin, Clock, AlertCircle, Building2, Stethoscope, Ambulance, ArrowLeft, Home, HeartPulse, Activity, Zap, Navigation, ExternalLink, ShieldCheck, Sparkles, Calendar, MessageSquare, Users, Star, Pill, Hospital, Siren, Mail, Globe, Instagram, Facebook } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,16 @@ interface UnidadeSaude {
   whatsapp: string[];
   horario: string;
   servicos: string[];
+  email?: string;
+  site?: string;
+  redes_sociais?: {
+    instagram?: string;
+    facebook?: string;
+  };
+  direcao?: {
+    diretor?: string;
+    vice_diretor?: string;
+  };
 }
 
 const emergencias = [
@@ -339,6 +349,78 @@ export default function SaudeNaPratica() {
                                   </Badge>
                                 )}
                               </div>
+                            </div>
+                          )}
+
+                          {/* Campos extras para APAE */}
+                          {unidade.email && (
+                            <div className="flex items-center gap-3 pt-2">
+                              <div className="p-2 bg-purple-500/10 rounded-xl">
+                                <Mail className="w-4 h-4 text-purple-600" />
+                              </div>
+                              <a 
+                                href={`mailto:${unidade.email}`} 
+                                className="text-sm font-medium text-foreground hover:text-purple-500 transition-colors truncate"
+                              >
+                                {unidade.email}
+                              </a>
+                            </div>
+                          )}
+
+                          {unidade.site && (
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-500/10 rounded-xl">
+                                <Globe className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <a 
+                                href={`https://${unidade.site}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-sm font-medium text-foreground hover:text-blue-500 transition-colors truncate"
+                              >
+                                {unidade.site}
+                              </a>
+                            </div>
+                          )}
+
+                          {unidade.redes_sociais && (
+                            <div className="flex gap-2 pt-2">
+                              {unidade.redes_sociais.instagram && (
+                                <a 
+                                  href={unidade.redes_sociais.instagram} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl hover:scale-110 transition-transform"
+                                >
+                                  <Instagram className="w-4 h-4 text-white" />
+                                </a>
+                              )}
+                              {unidade.redes_sociais.facebook && (
+                                <a 
+                                  href={unidade.redes_sociais.facebook} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="p-2 bg-blue-600 rounded-xl hover:scale-110 transition-transform"
+                                >
+                                  <Facebook className="w-4 h-4 text-white" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+
+                          {unidade.direcao && (
+                            <div className="space-y-1 pt-2 border-t border-border/30 mt-2">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Direção</p>
+                              {unidade.direcao.diretor && (
+                                <p className="text-xs font-medium text-foreground">
+                                  <span className="font-bold">Diretor:</span> {unidade.direcao.diretor}
+                                </p>
+                              )}
+                              {unidade.direcao.vice_diretor && (
+                                <p className="text-xs font-medium text-foreground">
+                                  <span className="font-bold">Vice:</span> {unidade.direcao.vice_diretor}
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>

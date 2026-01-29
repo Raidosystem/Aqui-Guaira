@@ -276,6 +276,27 @@
       "whatsapp": [],
       "horario": "Segunda a Sexta, 8h às 17h",
       "servicos": ["Assistência social", "Cadastro único", "Bolsa família", "Orientação"]
+    },
+    {
+      "nome": "APAE – Associação de Pais e Amigos dos Excepcionais",
+      "tipo": "APAE (Assistência Social e Saúde)",
+      "categoria": "assistencia_social",
+      "endereco": "Rua Alexandre Muraishi, nº 250",
+      "bairro": "Centro",
+      "telefones": ["(17) 3331-2760"],
+      "whatsapp": ["(17) 99975-2760"],
+      "horario": "Consultar horário de atendimento",
+      "servicos": ["Atendimento especializado", "Inclusão social", "Terapias", "Educação especial"],
+      "email": "secretaria@apaeguaira.org.br",
+      "site": "apaeguaira.org.br",
+      "redes_sociais": {
+        "instagram": "https://www.instagram.com/apaeguaira/",
+        "facebook": "https://www.facebook.com/apaedeguaira.apae/"
+      },
+      "direcao": {
+        "diretor": "Edvar Garcia de Paula",
+        "vice_diretor": "Washington Luis de Campos"
+      }
     }
   ]
 }
