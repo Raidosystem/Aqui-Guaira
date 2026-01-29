@@ -4,9 +4,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCNPJ, formatPhone, isValidCNPJ } from "@/lib/utils";
 import { z } from "zod";
@@ -14,9 +14,90 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/sonner";
 import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2, Home } from "lucide-react";
-import { criarEmpresa, buscarCategorias, uploadImagens, buscarEmpresas, buscarEmpresaPorId, supabase } from "@/lib/supabase";
+import { criarEmpresa, uploadImagens, buscarEmpresas, buscarEmpresaPorId, supabase } from "@/lib/supabase";
 import { BAIRROS_GUAIRA } from "@/data/bairros";
 import categoriasData from "@/data/categorias-empresas.json";
+import cnaeCodes from "@/data/cnae-codes.json";
+
+type CnpjApiResponse = {
+  razao_social?: string;
+  nome_fantasia?: string;
+  email?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cep?: string;
+  municipio?: string;
+  uf?: string;
+  ddd_telefone_1?: string;
+  cnae_fiscal?: number | string;
+  cnae_fiscal_descricao?: string;
+  descricao_atividade_principal?: string;
+  atividade_principal?: Array<{ text?: string }>;
+  cnaes_secundarios?: Array<{ codigo?: number | string; descricao?: string }>;
+};
+
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const buildKeywords = (text: string) =>
+  normalizeText(text)
+    .split(' ')
+    .filter((token) => token.length >= 4);
+
+const categoryMatchers = categoriasData.categorias.map((categoria) => {
+  const primaryKeywords = Array.from(new Set(buildKeywords(categoria.nome)));
+  const secondaryKeywords = Array.from(
+    new Set(
+      categoria.subcategorias
+        ?.flatMap((sub) => buildKeywords(sub))
+        .filter((token) => token.length >= 4) || []
+    )
+  );
+
+  return {
+    nome: categoria.nome,
+    normalizedNome: normalizeText(categoria.nome),
+    primaryKeywords,
+    secondaryKeywords,
+  };
+});
+
+const scoreMatch = (normalized: string, keywords: string[]) =>
+  keywords.reduce((score, keyword) => (normalized.includes(keyword) ? score + 1 : score), 0);
+
+const findCategoriaByDescricao = (descricao?: string, options?: { includeSecondary?: boolean; minScore?: number }) => {
+  if (!descricao) return "";
+  const normalized = normalizeText(descricao);
+  const includeSecondary = options?.includeSecondary ?? false;
+  const minScore = options?.minScore ?? 2;
+
+  let best = { nome: "", score: 0 };
+
+  for (const categoria of categoryMatchers) {
+    if (normalized.includes(categoria.normalizedNome)) {
+      return categoria.nome;
+    }
+
+    const keywords = includeSecondary
+      ? [...categoria.primaryKeywords, ...categoria.secondaryKeywords]
+      : categoria.primaryKeywords;
+    const score = scoreMatch(normalized, keywords);
+
+    if (score > best.score) {
+      best = { nome: categoria.nome, score };
+    }
+  }
+
+  return best.score >= minScore ? best.nome : "";
+};
+
 
 // Schema de cadastro
 const cadastroSchema = z.object({
@@ -25,16 +106,22 @@ const cadastroSchema = z.object({
   nomeFantasia: z.string().min(2, "Mínimo 2 caracteres"),
   celular: z.string().min(15, "Celular incompleto"),
   email: z.string().email("Email inválido"),
+  cnae: z.string().optional().or(z.literal("")),
+  cnaeDescricao: z.string().optional().or(z.literal("")),
+  cnaeSecundario: z.string().optional().or(z.literal("")),
+  cnaeSecundarioDescricao: z.string().optional().or(z.literal("")),
   categoria: z.string().min(1, "Selecione uma categoria"),
-  subcategorias: z.array(z.string()).min(1, "Selecione ao menos 1 subcategoria").max(3, "Máximo 3 subcategorias"),
   bairro: z.string().min(1, "Informe o bairro"),
-  endereco: z.string().min(5, "Endereço muito curto"),
+  cep: z.string().min(9, "CEP incompleto"),
+  logradouro: z.string().min(3, "Informe o logradouro"),
+  numero: z.string().min(1, "Informe o número"),
+  cidade: z.string().min(2, "Informe a cidade"),
+  estado: z.string().min(2, "Informe o UF"),
   whatsapp: z.string().min(15, "WhatsApp incompleto"),
   site: z.string().url("URL inválida").optional().or(z.literal("")),
   descricao: z.string().min(10, "Descreva com mais detalhes (mín. 10)"),
   logoFile: z.instanceof(File).optional(),
   bannerFile: z.instanceof(File).optional(),
-  cep: z.string().optional(),
   instagram: z.string().optional(),
   facebook: z.string().optional(),
   link_google_maps: z.string().url("URL inválida").optional().or(z.literal("")),
@@ -53,9 +140,9 @@ const SuaEmpresa = () => {
   const [dragLogo, setDragLogo] = useState(false);
   const [dragBanner, setDragBanner] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [categorias, setCategorias] = useState<string[]>([]);
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("");
-  const [subcategoriasSelecionadas, setSubcategoriasSelecionadas] = useState<string[]>([]);
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [lastCnpjBuscado, setLastCnpjBuscado] = useState<string>("");
 
   // Verificar se já está logado
   useEffect(() => {
@@ -64,9 +151,6 @@ const SuaEmpresa = () => {
       navigate('/dashboard');
     }
 
-    buscarCategorias().then(cats => {
-      setCategorias(cats.map(c => c.nome));
-    });
   }, [navigate]);
 
   const cadastroForm = useForm<z.infer<typeof cadastroSchema>>({
@@ -77,10 +161,17 @@ const SuaEmpresa = () => {
       nomeFantasia: "",
       celular: "",
       email: "",
+      cnae: "",
+      cnaeDescricao: "",
+      cnaeSecundario: "",
+      cnaeSecundarioDescricao: "",
       categoria: "",
-      subcategorias: [],
       bairro: "",
-      endereco: "",
+      cep: "",
+      logradouro: "",
+      numero: "",
+      cidade: "",
+      estado: "",
       whatsapp: "",
       site: "",
       descricao: "",
@@ -107,7 +198,7 @@ const SuaEmpresa = () => {
       // Tentar upload, mas não falhar se bucket não existir
       if (data.bannerFile) {
         try {
-          const [bannerUrl] = await uploadImagens('empresas-images', [data.bannerFile], 'banners');
+          const [bannerUrl] = await uploadImagens('empresas-images', [data.bannerFile], 'logos');
           if (bannerUrl) imagens.push(bannerUrl);
         } catch (error) {
           console.warn('Upload de banner falhou, continuando sem imagem', error);
@@ -118,7 +209,7 @@ const SuaEmpresa = () => {
 
       if (data.logoFile) {
         try {
-          const [url] = await uploadImagens('empresas-images', [data.logoFile], 'logos');
+          const [url] = await uploadImagens('empresas-images', [data.logoFile], 'banners');
           logoUrl = url;
         } catch (error) {
           console.warn('Upload de logo falhou, continuando sem logo', error);
@@ -139,6 +230,8 @@ const SuaEmpresa = () => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
+      const enderecoCompleto = `${data.logradouro}, ${data.numero}`.trim();
+
       // Criar empresa no Supabase
       const empresaData = {
         cnpj: data.cnpj, // ← CNPJ adicionado
@@ -146,12 +239,14 @@ const SuaEmpresa = () => {
         slug,
         descricao: data.descricao,
         categoria_id: categoriaId,
-        subcategorias: data.subcategorias, // ← Subcategorias adicionadas
-        endereco: data.endereco,
+        cnae: data.cnae || undefined,
+        cnae_secundario: data.cnaeSecundario || undefined,
+        subcategorias: [],
+        endereco: enderecoCompleto,
         bairro: data.bairro,
-        cidade: 'Guaíra',
-        estado: 'SP',
-        cep: data.cep,
+        cidade: data.cidade,
+        estado: data.estado,
+        cep: data.cep.replace(/\D/g, ''),
         latitude: -20.3167, // Coordenadas padrão de Guaíra
         longitude: -48.3115,
         telefone: data.celular,
@@ -188,21 +283,21 @@ const SuaEmpresa = () => {
 
       // Redirecionar para dashboard
       setTimeout(() => navigate('/dashboard'), 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao cadastrar:', error);
 
       // Mensagem de erro mais específica
       let mensagem = "Tente novamente mais tarde";
 
-      if (error?.message?.includes('row-level security') || error?.code === '42501') {
+      if (error instanceof Error && error.message.includes('row-level security')) {
         mensagem = "❌ Permissão negada. Execute o arquivo 'supabase/fix-rls.sql' no Supabase SQL Editor.";
-      } else if (error?.message?.includes('Bucket not found')) {
+      } else if (error instanceof Error && error.message.includes('Bucket not found')) {
         mensagem = "❌ Buckets de storage não configurados. Veja SETUP_RAPIDO.md";
-      } else if (error?.message?.includes('relation') && error?.message?.includes('does not exist')) {
+      } else if (error instanceof Error && error.message.includes('relation') && error.message.includes('does not exist')) {
         mensagem = "❌ Tabela não existe. Execute o arquivo 'supabase/schema.sql' no Supabase SQL Editor primeiro.";
-      } else if (error?.code === '23505') {
+      } else if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505') {
         mensagem = "❌ Esta empresa já está cadastrada (CNPJ duplicado).";
-      } else if (error?.message) {
+      } else if (error instanceof Error) {
         mensagem = `❌ Erro: ${error.message}`;
       }
 
@@ -262,17 +357,130 @@ const SuaEmpresa = () => {
     }
   };
 
+  const buscarDadosCnpj = async (cnpjComMascara: string) => {
+    const cnpjLimpo = cnpjComMascara.replace(/\D/g, "");
+    if (cnpjLimpo.length !== 14) return;
+    if (cnpjLimpo === lastCnpjBuscado) return;
+
+    setLoadingCnpj(true);
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+      if (!response.ok) {
+        throw new Error("CNPJ não encontrado");
+      }
+      const data: CnpjApiResponse = await response.json();
+
+      const bairroApi = data.bairro || "";
+      const bairroValido = BAIRROS_GUAIRA.includes(bairroApi) ? bairroApi : "";
+
+      const setIfEmpty = (field: keyof z.infer<typeof cadastroSchema>, value?: string) => {
+        const current = cadastroForm.getValues(field) as string;
+        if (!current && value) {
+          cadastroForm.setValue(field, value);
+        }
+      };
+
+      const setCategoriaIfEmpty = (value?: string) => {
+        if (!value) return;
+        const current = cadastroForm.getValues("categoria");
+        if (!current) {
+          cadastroForm.setValue("categoria", value);
+        }
+      };
+
+
+      setIfEmpty("razaoSocial", data.razao_social);
+      setIfEmpty("nomeFantasia", data.nome_fantasia || data.razao_social);
+      setIfEmpty("email", data.email);
+      if (data.cnae_fiscal) setIfEmpty("cnae", String(data.cnae_fiscal));
+      if (data.cnae_fiscal) setIfEmpty("cnaeDescricao", cnaeCodes[String(data.cnae_fiscal)]);
+      const cnaeSecundarioApi = data.cnaes_secundarios?.[0]?.codigo;
+      if (cnaeSecundarioApi) setIfEmpty("cnaeSecundario", String(cnaeSecundarioApi));
+      if (cnaeSecundarioApi) setIfEmpty("cnaeSecundarioDescricao", cnaeCodes[String(cnaeSecundarioApi)]);
+      setIfEmpty("logradouro", data.logradouro);
+      setIfEmpty("numero", data.numero);
+      setIfEmpty("cidade", data.municipio);
+      setIfEmpty("estado", data.uf);
+      if (bairroValido) setIfEmpty("bairro", bairroValido);
+      if (data.cep) setIfEmpty("cep", data.cep);
+
+
+      if (data.ddd_telefone_1) {
+        const telefone = formatPhone(data.ddd_telefone_1);
+        setIfEmpty("celular", telefone);
+        setIfEmpty("whatsapp", telefone);
+      }
+
+      toast("Dados do CNPJ preenchidos!", {
+        description: "Confira e complete as informações restantes",
+        duration: 2000,
+      });
+      setLastCnpjBuscado(cnpjLimpo);
+    } catch (error) {
+      toast("Não foi possível buscar o CNPJ", {
+        description: "Verifique o número digitado",
+        duration: 2000,
+      });
+    } finally {
+      setLoadingCnpj(false);
+    }
+  };
+
+  const buscarCep = async (cepComMascara: string) => {
+    const cepLimpo = cepComMascara.replace(/\D/g, "");
+    if (cepLimpo.length !== 8) return;
+
+    setLoadingCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        toast("CEP não encontrado", { duration: 2000 });
+        return;
+      }
+
+      const setIfEmpty = (field: keyof z.infer<typeof cadastroSchema>, value?: string) => {
+        const current = cadastroForm.getValues(field) as string;
+        if (!current && value) {
+          cadastroForm.setValue(field, value);
+        }
+      };
+
+      setIfEmpty("logradouro", data.logradouro);
+      setIfEmpty("bairro", data.bairro);
+      setIfEmpty("cidade", data.localidade);
+      setIfEmpty("estado", data.uf);
+
+      toast("Endereço preenchido pelo CEP", { duration: 2000 });
+    } catch (error) {
+      toast("Erro ao buscar CEP", { duration: 2000 });
+    } finally {
+      setLoadingCep(false);
+    }
+  };
+
   // Helpers de formatação onChange
   const onMaskCNPJ = (e: React.ChangeEvent<HTMLInputElement>, formType: "login" | "cadastro") => {
     const masked = formatCNPJ(e.target.value);
-    if (formType === "cadastro") cadastroForm.setValue("cnpj", masked);
+    if (formType === "cadastro") {
+      cadastroForm.setValue("cnpj", masked);
+      if (masked.replace(/\D/g, "").length === 14) {
+        buscarDadosCnpj(masked);
+      }
+    }
     else loginForm.setValue("cnpj", masked);
   };
 
   const onMaskPhone = (e: React.ChangeEvent<HTMLInputElement>, field: "celular" | "whatsapp", formType: "login" | "cadastro") => {
     const masked = formatPhone(e.target.value);
-    if (formType === "cadastro") cadastroForm.setValue(field as any, masked);
-    else loginForm.setValue(field as any, masked);
+    if (formType === "cadastro") {
+      cadastroForm.setValue(field, masked);
+      return;
+    }
+    if (field === "celular") {
+      loginForm.setValue("celular", masked);
+    }
   };
 
   const fileToDataUrl = (file: File, cb: (url: string) => void) => {
@@ -369,7 +577,15 @@ const SuaEmpresa = () => {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-xs font-medium">CNPJ *</label>
-                        <Input value={cadastroForm.watch("cnpj")} onChange={(e) => onMaskCNPJ(e, "cadastro")} placeholder="00.000.000/0000-00" />
+                        <div className="relative">
+                          <Input value={cadastroForm.watch("cnpj")} onChange={(e) => onMaskCNPJ(e, "cadastro")} placeholder="00.000.000/0000-00" />
+                          {loadingCnpj && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">Ao completar o CNPJ, os dados serão preenchidos automaticamente.</p>
                         {cadastroForm.formState.errors.cnpj && <p className="text-xs text-destructive">{cadastroForm.formState.errors.cnpj.message}</p>}
                       </div>
                       <div className="space-y-2">
@@ -387,13 +603,47 @@ const SuaEmpresa = () => {
                         <Input type="email" {...cadastroForm.register("email")} />
                         {cadastroForm.formState.errors.email && <p className="text-xs text-destructive">{cadastroForm.formState.errors.email.message}</p>}
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">CNAE</label>
+                        <Input
+                          value={cadastroForm.watch("cnae")}
+                          onChange={(e) => cadastroForm.setValue("cnae", e.target.value)}
+                          placeholder="Número do CNAE"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Descrição do CNAE</label>
+                        <Input
+                          value={cadastroForm.watch("cnaeDescricao")}
+                          onChange={(e) => cadastroForm.setValue("cnaeDescricao", e.target.value)}
+                          placeholder="Descrição oficial do CNAE"
+                          readOnly
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">CNAE Secundário</label>
+                        <Input
+                          value={cadastroForm.watch("cnaeSecundario")}
+                          onChange={(e) => cadastroForm.setValue("cnaeSecundario", e.target.value)}
+                          placeholder="Número do CNAE secundário"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Descrição do CNAE Secundário</label>
+                        <Input
+                          value={cadastroForm.watch("cnaeSecundarioDescricao")}
+                          onChange={(e) => cadastroForm.setValue("cnaeSecundarioDescricao", e.target.value)}
+                          placeholder="Descrição oficial do CNAE secundário"
+                          readOnly
+                        />
+                      </div>
                     </div>
                   </div>
 
                   {/* Contato */}
                   <div className="space-y-6">
                     <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Contato</h3>
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Celular (login) *</label>
                         <Input value={cadastroForm.watch("celular")} onChange={(e) => onMaskPhone(e, "celular", "cadastro")} placeholder="(11) 90000-0000" />
@@ -422,105 +672,99 @@ const SuaEmpresa = () => {
                     <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Localização</h3>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-xs font-medium">Categoria Principal *</label>
-                        <Select
-                          value={categoriaSelecionada}
-                          onValueChange={(v) => {
-                            setCategoriaSelecionada(v);
-                            cadastroForm.setValue("categoria", v);
-                            setSubcategoriasSelecionadas([]);
-                            cadastroForm.setValue("subcategorias", []);
-                          }}
-                        >
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
-                            {categoriasData.categorias.map(c => (
-                              <SelectItem key={c.id} value={c.nome}>
-                                {c.icone} {c.nome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {cadastroForm.formState.errors.categoria && <p className="text-xs text-destructive">{cadastroForm.formState.errors.categoria.message}</p>}
+                        <label className="text-xs font-medium">CEP *</label>
+                        <div className="relative">
+                          <Input
+                            value={cadastroForm.watch("cep")}
+                            onChange={(e) => {
+                              let valor = e.target.value.replace(/\D/g, "");
+                              if (valor.length <= 8) {
+                                valor = valor.replace(/(\d{5})(\d)/, "$1-$2");
+                                cadastroForm.setValue("cep", valor);
+                                if (valor.replace(/\D/g, "").length === 8) {
+                                  buscarCep(valor);
+                                }
+                              }
+                            }}
+                            placeholder="00000-000"
+                          />
+                          {loadingCep && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            </div>
+                          )}
+                        </div>
+                        {cadastroForm.formState.errors.cep && <p className="text-xs text-destructive">{cadastroForm.formState.errors.cep.message}</p>}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Bairro *</label>
-                        <Select value={cadastroForm.watch("bairro")} onValueChange={(v) => cadastroForm.setValue("bairro", v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Selecione o bairro" /></SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
-                            {BAIRROS_GUAIRA.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          value={cadastroForm.watch("bairro")}
+                          onChange={(e) => cadastroForm.setValue("bairro", e.target.value)}
+                          placeholder="Digite o bairro"
+                        />
                         {cadastroForm.formState.errors.bairro && <p className="text-xs text-destructive">{cadastroForm.formState.errors.bairro.message}</p>}
                       </div>
                     </div>
-
-                    {/* Subcategorias */}
-                    {categoriaSelecionada && (
-                      <div className="space-y-3">
-                        <label className="text-xs font-medium">Subcategorias * (escolha de 1 a 3)</label>
-                        <div className="grid md:grid-cols-2 gap-3 p-4 border rounded-lg bg-muted/30">
-                          {categoriasData.categorias
-                            .find(c => c.nome === categoriaSelecionada)
-                            ?.subcategorias.map((sub) => {
-                              const isSelected = subcategoriasSelecionadas.includes(sub);
-                              const canAdd = subcategoriasSelecionadas.length < 3;
-
-                              return (
-                                <div
-                                  key={sub}
-                                  onClick={() => {
-                                    if (isSelected) {
-                                      const novas = subcategoriasSelecionadas.filter(s => s !== sub);
-                                      setSubcategoriasSelecionadas(novas);
-                                      cadastroForm.setValue("subcategorias", novas);
-                                    } else if (canAdd) {
-                                      const novas = [...subcategoriasSelecionadas, sub];
-                                      setSubcategoriasSelecionadas(novas);
-                                      cadastroForm.setValue("subcategorias", novas);
-                                    }
-                                  }}
-                                  className={`p-3 rounded-md border-2 cursor-pointer transition-all text-sm ${isSelected
-                                    ? 'border-primary bg-primary/10 text-primary font-medium'
-                                    : canAdd
-                                      ? 'border-border hover:border-primary/50 hover:bg-accent/50'
-                                      : 'border-border/50 opacity-50 cursor-not-allowed'
-                                    }`}
-                                >
-                                  {sub}
-                                  {isSelected && <span className="ml-2 text-primary">✓</span>}
-                                </div>
-                              );
-                            })}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {subcategoriasSelecionadas.length} de 3 selecionadas
-                          </Badge>
-                          {subcategoriasSelecionadas.map(sub => (
-                            <Badge key={sub} variant="default" className="gap-1">
-                              {sub}
-                              <X
-                                className="h-3 w-3 cursor-pointer"
-                                onClick={() => {
-                                  const novas = subcategoriasSelecionadas.filter(s => s !== sub);
-                                  setSubcategoriasSelecionadas(novas);
-                                  cadastroForm.setValue("subcategorias", novas);
-                                }}
-                              />
-                            </Badge>
-                          ))}
-                        </div>
-                        {cadastroForm.formState.errors.subcategorias && (
-                          <p className="text-xs text-destructive">{cadastroForm.formState.errors.subcategorias.message}</p>
-                        )}
-                      </div>
-                    )}
-
                     <div className="space-y-2">
                       <label className="text-xs font-medium">Endereço Completo *</label>
-                      <Input {...cadastroForm.register("endereco")} placeholder="Rua / nº / complemento" />
-                      {cadastroForm.formState.errors.endereco && <p className="text-xs text-destructive">{cadastroForm.formState.errors.endereco.message}</p>}
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium">Logradouro *</label>
+                          <Input
+                            value={cadastroForm.watch("logradouro")}
+                            onChange={(e) => cadastroForm.setValue("logradouro", e.target.value)}
+                            placeholder="Rua / Avenida"
+                          />
+                          {cadastroForm.formState.errors.logradouro && <p className="text-xs text-destructive">{cadastroForm.formState.errors.logradouro.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium">Número *</label>
+                          <Input
+                            value={cadastroForm.watch("numero")}
+                            onChange={(e) => cadastroForm.setValue("numero", e.target.value)}
+                            placeholder="10 / 704"
+                          />
+                          {cadastroForm.formState.errors.numero && <p className="text-xs text-destructive">{cadastroForm.formState.errors.numero.message}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Cidade *</label>
+                        <Input
+                          value={cadastroForm.watch("cidade")}
+                          onChange={(e) => cadastroForm.setValue("cidade", e.target.value)}
+                          placeholder="Digite a cidade"
+                        />
+                        {cadastroForm.formState.errors.cidade && <p className="text-xs text-destructive">{cadastroForm.formState.errors.cidade.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">UF *</label>
+                        <Input
+                          value={cadastroForm.watch("estado")}
+                          onChange={(e) => cadastroForm.setValue("estado", e.target.value.toUpperCase())}
+                          placeholder="SP"
+                          maxLength={2}
+                        />
+                        {cadastroForm.formState.errors.estado && <p className="text-xs text-destructive">{cadastroForm.formState.errors.estado.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Categoria Principal *</label>
+                      <Select value={cadastroForm.watch("categoria")} onValueChange={(v) => cadastroForm.setValue("categoria", v)}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {categoriasData.categorias.map(c => (
+                            <SelectItem key={c.id} value={c.nome}>
+                              {c.icone} {c.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {cadastroForm.formState.errors.categoria && <p className="text-xs text-destructive">{cadastroForm.formState.errors.categoria.message}</p>}
                     </div>
                   </div>
 
@@ -528,9 +772,9 @@ const SuaEmpresa = () => {
                   <div className="space-y-8">
                     <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Mídia & Descrição</h3>
                     <div className="space-y-6">
-                      {/* Banner */}
+                      {/* Logo */}
                       <div className="space-y-2">
-                        <label className="text-xs font-medium flex items-center gap-2">Banner da Empresa <span className="text-muted-foreground">(largura grande, exibição h-40)</span></label>
+                        <label className="text-xs font-medium flex items-center gap-2">Logo da Empresa <span className="text-muted-foreground">(largura grande, exibição h-40)</span></label>
                         <div
                           className={`relative rounded-xl border-2 border-dashed overflow-hidden group transition-all cursor-pointer ${dragBanner ? 'border-primary bg-primary/5' : 'border-border/70 hover:border-primary/60 bg-muted/30 hover:bg-accent/30'}`}
                           onDragOver={(e) => { e.preventDefault(); setDragBanner(true); }}
@@ -556,7 +800,7 @@ const SuaEmpresa = () => {
                           )}
                         </div>
                       </div>
-                      {/* Logo & Descrição */}
+                      {/* Banner & Descrição */}
                       <div className="grid md:grid-cols-3 gap-6">
                         <div className="space-y-2 md:col-span-2">
                           <label className="text-xs font-medium">Descrição *</label>
@@ -564,7 +808,7 @@ const SuaEmpresa = () => {
                           {cadastroForm.formState.errors.descricao && <p className="text-xs text-destructive">{cadastroForm.formState.errors.descricao.message}</p>}
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-medium flex items-center gap-2">Logo <span className="text-muted-foreground">(quadrada)</span></label>
+                          <label className="text-xs font-medium flex items-center gap-2">Banner <span className="text-muted-foreground">(quadrada)</span></label>
                           <div
                             className={`relative border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${dragLogo ? 'border-primary bg-primary/5' : 'border-border/70 hover:border-primary/60 bg-muted/30 hover:bg-accent/30'}`}
                             onDragOver={(e) => { e.preventDefault(); setDragLogo(true); }}

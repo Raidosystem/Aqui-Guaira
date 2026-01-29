@@ -47,6 +47,8 @@ export interface Categoria {
 export interface Empresa {
   id: string
   cnpj?: string // ← CNPJ adicionado
+  cnae?: string
+  cnae_secundario?: string
   nome: string
   slug: string
   descricao: string
