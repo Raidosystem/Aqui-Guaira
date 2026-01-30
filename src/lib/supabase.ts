@@ -875,21 +875,29 @@ export async function criarOuLogarUsuario(
     let user;
 
     if (isRegistro) {
-      // Registro via RPC
-      const { data, error } = await supabase.rpc('cadastrar_usuario', {
+      // Registro via RPC - Enviar apenas parâmetros não nulos
+      const params: any = {
         u_email: email,
         u_senha: senha,
-        u_nome: nome || '',
-        u_cpf: cpf,
-        u_telefone: telefone,
-        u_endereco: endereco,
-        u_bairro: bairro,
-        u_cidade: cidade,
-        u_estado: estado,
-        u_cep: cep
-      });
+        u_nome: nome || email.split('@')[0] // Fallback para nome
+      };
+      
+      // Adicionar parâmetros opcionais apenas se tiverem valor
+      if (cpf) params.u_cpf = cpf;
+      if (telefone) params.u_telefone = telefone;
+      if (endereco) params.u_endereco = endereco;
+      if (bairro) params.u_bairro = bairro;
+      if (cidade) params.u_cidade = cidade;
+      if (estado) params.u_estado = estado;
+      if (cep) params.u_cep = cep;
 
-      if (error) throw error;
+      const { data, error } = await supabase.rpc('cadastrar_usuario', params);
+
+      if (error) {
+        console.error('Erro RPC cadastrar_usuario:', error);
+        throw error;
+      }
+      
       const result = data?.[0];
       if (!result?.sucesso) throw new Error(result?.erro || 'Erro ao criar conta');
       
@@ -901,7 +909,11 @@ export async function criarOuLogarUsuario(
         u_senha: senha
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro RPC verificar_usuario_login:', error);
+        throw error;
+      }
+      
       const result = data?.[0];
       if (!result || !result.sucesso) throw new Error('Email ou senha inválidos');
       
