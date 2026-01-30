@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/lib/supabase";
 
 interface Estatisticas {
   empresas_ativas: number;
@@ -212,28 +213,62 @@ export default function Admin() {
   };
 
   const carregarEstatisticas = async () => {
-    const res = await fetch('/api/admin?action=stats');
-    if (res.ok) setEstatisticas(await res.json());
+    try {
+        const { count: total_empresas } = await supabase.from('empresas').select('*', { count: 'exact', head: true });
+        const { count: empresas_ativas } = await supabase.from('empresas').select('*', { count: 'exact', head: true }).eq('ativa', true);
+        const { count: empresas_bloqueadas } = await supabase.from('empresas').select('*', { count: 'exact', head: true }).eq('ativa', false);
+        
+        const { count: total_posts } = await supabase.from('mural_posts').select('*', { count: 'exact', head: true });
+        const { count: posts_aprovados } = await supabase.from('mural_posts').select('*', { count: 'exact', head: true }).eq('aprovado', true);
+        
+        const { count: total_usuarios } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: total_admins } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_admin', true);
+        
+        setEstatisticas({
+            empresas_ativas: empresas_ativas || 0,
+            empresas_bloqueadas: empresas_bloqueadas || 0,
+            total_empresas: total_empresas || 0,
+            posts_pendentes: (total_posts || 0) - (posts_aprovados || 0),
+            posts_aprovados: posts_aprovados || 0,
+            total_posts: total_posts || 0,
+            total_usuarios: total_usuarios || 0,
+            total_admins: total_admins || 0
+        });
+    } catch(e) { console.error(e) }
   };
 
   const carregarEmpresas = async () => {
-    const res = await fetch('/api/empresas?admin=true');
-    if (res.ok) setEmpresas(await res.json());
+    const { data } = await supabase.from('empresas').select('*').order('created_at', { ascending: false });
+    if (data) setEmpresas(data as Empresa[]);
   };
 
   const carregarPosts = async () => {
-    const res = await fetch('/api/posts?admin=true');
-    if (res.ok) setPosts(await res.json());
+    const { data } = await supabase
+        .from('mural_posts')
+        .select(`
+            *,
+            comentarios:comentarios(count)
+        `)
+        .order('data_criacao', { ascending: false });
+
+    if (data) {
+        const formatted = data.map((post: any) => ({
+          ...post,
+          created_at: post.data_criacao,
+          // Outros mapeamentos se necessários
+        }));
+        setPosts(formatted as Post[]);
+    }
   };
 
   const carregarUsuarios = async () => {
-    const res = await fetch('/api/admin?action=usuarios');
-    if (res.ok) setUsuarios(await res.json());
+    const { data } = await supabase.from('users').select('*');
+    if (data) setUsuarios(data as any[]);
   };
 
   const carregarLogs = async () => {
-    const res = await fetch('/api/admin?action=logs');
-    if (res.ok) setLogs(await res.json());
+    const { data } = await supabase.from('admin_logs').select('*').order('data_acao', { ascending: false }).limit(50);
+    if(data) setLogs(data);
   };
 
   const carregarCategorias = async () => {
@@ -247,79 +282,156 @@ export default function Admin() {
     navigate("/admin");
   };
 
+  // Função auxiliar para logs
+  const logAcao = async (acao: string, detalhes: string, data?: any) => {
+    try {
+        await supabase.from('admin_logs').insert({
+            admin_id: adminData.id,
+            acao,
+            detalhes: detalhes + (data ? ' ' + JSON.stringify(data) : '')
+        });
+    } catch(e) { console.error('Falha ao logar', e); }
+  };
+
   // Açôes de Empresa
+  const handleAprovarEmpresa = async (id: string, nome?: string) => {
+      try {
+        const { error } = await supabase
+          .from('empresas')
+          .update({ 
+              status: 'aprovado', 
+              ativa: true,
+              motivo_bloqueio: null 
+          })
+          .eq('id', id);
+  
+        if (error) throw error;
+        
+        toast.success("Empresa aprovada!");
+        carregarEmpresas();
+        logAcao("aprovar_empresa", `Aprovou empresa "${nome || id}"`);
+      } catch (error) {
+         console.error(error);
+        toast.error("Erro ao aprovar");
+      }
+  };
+    
+  const handleRejeitarEmpresa = async (id: string, nome?: string) => {
+    try {
+       const { error } = await supabase.from('empresas').update({ status: 'rejeitado', ativa: false }).eq('id', id);
+       if (error) throw error;
+       toast.success("Empresa rejeitada");
+       carregarEmpresas();
+       logAcao("rejeitar_empresa", `Rejeitou empresa "${nome || id}"`);
+    } catch(e) {
+        toast.error("Erro ao rejeitar");
+    }
+  };
+
+
   const handleBloquearEmpresa = async () => {
     if (!empresaSelecionada || !motivoBloqueio.trim()) {
       toast.error("Informe o motivo do bloqueio");
       return;
     }
-    const res = await fetch(`/api/empresas?id=${empresaSelecionada.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ativa: false, status: 'bloqueado', motivo_bloqueio: motivoBloqueio })
-    });
-    if (res.ok) {
-      await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ admin_id: adminData.id, acao: "bloquear_empresa", entidade_tipo: "empresa", entidade_id: empresaSelecionada.id, detalhes: `Empresa "${empresaSelecionada.nome}" bloqueada: ${motivoBloqueio}` })
-      });
-      toast.success("Empresa bloqueada");
-      setShowBloqueioDialog(false);
-      await carregarDados();
+
+    try {
+        const { error } = await supabase.from('empresas').update({
+            ativa: false, 
+            status: 'rejeitado', // ou manter aprovado mas inativo? Vamos usar rejeitado/inativo
+            motivo_bloqueio: motivoBloqueio
+        }).eq('id', empresaSelecionada.id);
+
+        if (error) throw error;
+
+        await logAcao("bloquear_empresa", `Empresa "${empresaSelecionada.nome}" bloqueada: ${motivoBloqueio}`);
+
+        toast.success("Empresa bloqueada");
+        setShowBloqueioDialog(false);
+        setEmpresaSelecionada(null);
+        setMotivoBloqueio("");
+        carregarEmpresas();
+    } catch (e) {
+        toast.error("Erro ao bloquear");
     }
   };
 
-  const handleToggleAdmin = async (userId: string) => {
-    const res = await fetch(`/api/admin?action=toggle_admin&id=${userId}`, { method: 'PATCH' });
-    if (res.ok) {
-      toast.success("Status de admin alterado");
-      await carregarDados();
+  const handleAprovarPost = async (id: string) => {
+    try {
+      const { error } = await supabase.from('mural_posts').update({ aprovado: true, admin_aprovador_id: adminData.id }).eq('id', id);
+      if(error) throw error;
+
+      toast.success("Post aprovado!");
+      carregarPosts();
+      logAcao('aprovar_post', `Aprovou post ${id}`);
+    } catch (error) {
+      toast.error("Erro ao aprovar");
+    }
+  };
+
+  const handleRejeitarPost = async (id: string) => {
+    try {
+      const { error } = await supabase.from('mural_posts').update({ aprovado: false, motivo_rejeicao: 'Rejeitado por admin' }).eq('id', id);
+       if(error) throw error;
+
+      toast.success("Post rejeitado!");
+      carregarPosts();
+      logAcao('rejeitar_post', `Rejeitou post ${id}`);
+    } catch (error) {
+      toast.error("Erro ao rejeitar");
+    }
+  };
+
+  const handleToggleAdmin = async (userId: string, currentStatus: boolean) => {
+    try {
+        const { error } = await supabase.from('users').update({ is_admin: !currentStatus }).eq('id', userId);
+        if(error) throw error;
+        toast.success("Status de admin alterado");
+        carregarUsuarios();
+        logAcao("toggle_admin", `Alterou admin de ${userId}`);
+    } catch {
+        toast.error('Erro ao alterar admin');
     }
   };
 
   const handleExcluirUsuario = async (userId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este usuário?")) return;
-    const res = await fetch(`/api/admin?action=usuario&id=${userId}`, { method: 'DELETE' });
-    if (res.ok) {
-      toast.success("Usuário excluído");
-      await carregarDados();
+    try {
+        const { error } = await supabase.from('users').delete().eq('id', userId);
+        if(error) throw error;
+        toast.success("Usuário excluído");
+        carregarUsuarios();
+        logAcao("excluir_usuario", `Excluiu usuário ${userId}`);
+    } catch {
+        toast.error('Erro ao excluir usuário');
     }
   };
 
   const handleExcluirEmpresa = async (empresa: Empresa) => {
     if (!window.confirm(`Excluir permanentemente "${empresa.nome}"?`)) return;
-    const res = await fetch(`/api/empresas?id=${empresa.id}`, { method: 'DELETE' });
-    if (res.ok) {
-      await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ admin_id: adminData.id, acao: "excluir_empresa", entidade_tipo: "empresa", entidade_id: empresa.id, detalhes: `Empresa "${empresa.nome}" excluída` })
-      });
-      toast.success("Empresa excluída");
-      await carregarDados();
+    try {
+        const { error } = await supabase.from('empresas').delete().eq('id', empresa.id);
+        if(error) throw error;
+
+        toast.success("Empresa excluída");
+        carregarEmpresas();
+        logAcao("excluir_empresa", `Excluiu empresa ${empresa.nome} (${empresa.id})`);
+    } catch (e) {
+        toast.error('Erro ao excluir empresa');
     }
   };
+
   const handleExcluirPost = async (post: Post) => {
     if (!window.confirm(`Excluir permanentemente o post "${post.titulo}"?`)) return;
-    const res = await fetch(`/api/posts?id=${post.id}`, { method: 'DELETE' });
-    if (res.ok) {
-      await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          admin_id: adminData.id,
-          acao: "excluir_post",
-          entidade_tipo: "post",
-          entidade_id: post.id,
-          detalhes: `Post "${post.titulo}" excluído pelo administrador`
-        })
-      });
-      toast.success("Post excluído permanentemente");
-      setShowPostDetalhesDialog(false);
-      await carregarDados();
-    } else {
-      toast.error("Erro ao excluir post");
+    
+    try {
+        const { error } = await supabase.from('mural_posts').delete().eq('id', post.id);
+        if(error) throw error;
+        toast.success("Post excluído");
+        carregarPosts();
+        logAcao("excluir_post", `Excluiu post ${post.id}`);
+    } catch(e) {
+        toast.error('Erro ao excluir post');
     }
   };
 
@@ -691,7 +803,7 @@ export default function Admin() {
                                   size="sm"
                                   variant="ghost"
                                   className={`rounded-xl gap-2 ${u.is_admin ? 'text-rose-500 hover:bg-rose-50' : 'text-primary hover:bg-primary/10'}`}
-                                  onClick={() => handleToggleAdmin(u.id)}
+                                  onClick={() => handleToggleAdmin(u.id, u.is_admin)}
                                 >
                                   {u.is_admin ? <Shield className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                                   {u.is_admin ? 'Revogar Admin' : 'Tornar Admin'}

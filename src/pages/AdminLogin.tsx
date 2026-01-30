@@ -27,27 +27,31 @@ export default function AdminLogin() {
     try {
       console.log("🔐 Tentando login admin:", { email });
 
-      const response = await fetch('/api/auth?action=admin_login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha })
+      const { data, error } = await supabase.rpc('verificar_admin_login', {
+        admin_email: email,
+        admin_senha: senha
       });
 
-      const data = await response.json();
+      if (error) {
+        console.error("❌ Erro RPC:", error);
+        throw error;
+      }
 
-      if (!response.ok) {
-        console.error("❌ Erro ao verificar login:", data.message);
-        toast.error(data.message || "Erro ao fazer login");
+      const admin = data?.[0];
+
+      if (!admin || !admin.sucesso) {
+        console.error("❌ Login inválido ou admin inativo");
+        toast.error("Credenciais inválidas ou conta inativa");
         setLoading(false);
         return;
       }
 
-      console.log("✅ Admin encontrado:", data);
+      console.log("✅ Admin encontrado:", admin);
 
       // Salvar dados do admin no localStorage
       localStorage.setItem("admin", JSON.stringify({
-        id: data.id,
-        email: data.email,
+        id: admin.id,
+        email: admin.email,
         nome: data.nome,
         loginTime: new Date().toISOString()
       }));

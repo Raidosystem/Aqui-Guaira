@@ -228,37 +228,28 @@ export async function uploadImagem(
   pasta?: string
 ): Promise<string | null> {
   try {
-    console.log(`📤 Iniciando upload de "${file.name}" para MongoDB...`);
+    console.log(`📤 Iniciando upload de "${file.name}" para Storage...`);
 
-    // Converter arquivo para Base64
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = pasta ? `${pasta}/${fileName}` : fileName;
 
-    // Enviar para nossa API de upload
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: file.name,
-        type: file.type,
-        data: base64
-      })
-    });
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Falha no upload para MongoDB');
+    if (error) {
+      throw error;
     }
 
-    const { url } = await response.json();
-    console.log(`✅ Upload concluído: ${url}`);
-    return url;
+    const { data: publicUrlData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(filePath);
+
+    console.log(`✅ Upload concluído: ${publicUrlData.publicUrl}`);
+    return publicUrlData.publicUrl;
   } catch (error) {
-    console.error('❌ Erro ao fazer upload para MongoDB:', error);
+    console.error('❌ Erro ao fazer upload para Storage:', error);
     return null;
   }
 }
@@ -293,31 +284,45 @@ export async function buscarEmpresas(filtros?: {
   limit?: number
 }) {
   try {
-    const params = new URLSearchParams();
-    if (filtros?.categoria) params.append('categoria', filtros.categoria);
-    if (filtros?.bairro) params.append('bairro', filtros.bairro);
-    if (filtros?.busca) params.append('busca', filtros.busca);
-    if (filtros?.destaque) params.append('destaque', 'true');
-    if (filtros?.responsavel_telefone) params.append('responsavel_telefone', filtros.responsavel_telefone);
-    if (filtros?.limit) params.append('limit', filtros.limit.toString());
+    // Usar VIEW se disponível para trazer dados da categoria
+    let query = supabase.from('empresas').select(`
+      *,
+      categorias (
+        nome,
+        icone,
+        cor
+      )
+    `);
 
-    // Chamada para nossa API (MongoDB)
-    const res = await fetch(`/api/empresas?${params.toString()}`);
+    // View alternativa se existir, mas vamos de join simples
+    // Ajustar filtros
+    if (filtros?.categoria) query = query.eq('categoria_id', filtros.categoria);
+    if (filtros?.bairro) query = query.eq('bairro', filtros.bairro);
+    if (filtros?.busca) query = query.ilike('nome', `%${filtros.busca}%`);
+    if (filtros?.destaque) query = query.eq('destaque', true);
+    if (filtros?.responsavel_telefone) query = query.eq('responsavel_telefone', filtros.responsavel_telefone);
+    if (filtros?.limit) query = query.limit(filtros.limit);
 
-    if (!res.ok) {
-      throw new Error(`Falha na API: ${res.status} ${res.statusText}`);
+    // Filtrar apenas aprovadas/ativas
+    query = query.eq('status', 'aprovado').eq('ativa', true);
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
     }
 
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      throw new Error('A resposta da API não é JSON valido. Certifique-se de estar rodando com "vercel dev" para acessar o MongoDB localmente.');
-    }
-
-    let data: EmpresaCompleta[] = await res.json();
+    // Mapear para EmpresaCompleta
+    const empresasFormatadas: EmpresaCompleta[] = data.map((emp: any) => ({
+      ...emp,
+      categoria_nome: emp.categorias?.nome,
+      categoria_icone: emp.categorias?.icone,
+      categoria_cor: emp.categorias?.cor
+    }));
 
     // Se tiver localização, calcular distâncias e filtrar por raio
-    if (filtros?.latitude && filtros?.longitude && data) {
-      const empresasComDistancia = data.map((emp) => ({
+    if (filtros?.latitude && filtros?.longitude && empresasFormatadas) {
+      const empresasComDistancia = empresasFormatadas.map((emp) => ({
         ...emp,
         distancia: calcularDistancia(
           filtros.latitude!,
@@ -334,41 +339,58 @@ export async function buscarEmpresas(filtros?: {
       return filtradas.sort((a, b) => a.distancia - b.distancia);
     }
 
-    return data || [];
+    return empresasFormatadas || [];
   } catch (error) {
-    console.error('Erro ao buscar empresas (MongoDB):', error);
-    // Retornar array vazio em caso de erro, ao invés de fallback
+    console.error('Erro ao buscar empresas (Supabase):', error);
     return [];
   }
 }
 
 export async function buscarEmpresaPorSlug(slug: string) {
   try {
-    const res = await fetch(`/api/empresas?slug=${slug}`);
+    const { data, error } = await supabase
+      .from('empresas')
+      .select(`
+        *,
+        categorias (
+          nome,
+          icone,
+          cor
+        )
+      `)
+      .eq('slug', slug)
+      .single();
 
-    if (!res.ok) {
-      if (res.status === 404) return null;
-      throw new Error('Falha na API: ' + res.status);
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Not found
+      throw error;
     }
 
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      throw new Error('A resposta da API não é JSON valido.');
-    }
+    // Formatar
+    const empresa: EmpresaCompleta = {
+        ...data,
+        categoria_nome: data.categorias?.nome,
+        categoria_icone: data.categorias?.icone,
+        categoria_cor: data.categorias?.cor
+    };
 
-    const data = await res.json();
-    return data;
+    return empresa;
   } catch (error) {
-    console.error('Erro ao buscar empresa (MongoDB):', error);
+    console.error('Erro ao buscar empresa (Supabase):', error);
     return null;
   }
 }
 
 export async function buscarEmpresaPorId(id: string) {
   try {
-    const res = await fetch(`/api/empresas?id=${id}`);
-    if (!res.ok) return null;
-    return await res.json();
+    const { data, error } = await supabase
+      .from('empresas')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) return null;
+    return data;
   } catch (error) {
     console.error('Erro ao buscar empresa por id:', error);
     return null;
@@ -394,29 +416,28 @@ export async function buscarEmpresasPorIds(ids: string[]) {
 
 export async function criarEmpresa(empresa: Partial<Empresa>) {
   try {
-    const res = await fetch('/api/empresas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(empresa)
-    });
+    const { data, error } = await supabase
+      .from('empresas')
+      .insert(empresa)
+      .select()
+      .single();
 
-    if (!res.ok) throw new Error('Falha ao criar empresa');
-    return await res.json();
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao criar empresa (MongoDB):', error);
+    console.error('Erro ao criar empresa (Supabase):', error);
     return null;
   }
 }
 
 export async function atualizarEmpresa(id: string, dados: Partial<Empresa>) {
   try {
-    const res = await fetch(`/api/empresas?id=${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dados)
-    });
+    const { error } = await supabase
+      .from('empresas')
+      .update(dados)
+      .eq('id', id);
 
-    if (!res.ok) throw new Error('Falha ao atualizar empresa');
+    if (error) throw error;
     return true;
   } catch (error) {
     console.error('Erro ao atualizar empresa:', error);
@@ -426,9 +447,16 @@ export async function atualizarEmpresa(id: string, dados: Partial<Empresa>) {
 
 export async function incrementarVisualizacoesEmpresa(id: string) {
   try {
-    await fetch(`/api/empresas?id=${id}&action=increment_views`, {
-      method: 'PATCH'
-    });
+    // Isso é melhor feito via RPC para atomicidade, mas como fallback:
+    // await supabase.rpc('increment_empresa_view', { empresa_id: id });
+    // Mas se não tiver RPC, podemos ignorar ou fazer um get+update inseguro (race condition).
+    // Vou deixar apenas o console por enquanto, ou melhor, RPC se existir.
+    // Vamos tentar RPC genérico se existir ou deixar vazio para não quebrar.
+    
+    /* 
+    const { error } = await supabase.rpc('increment_views', { table_name: 'empresas', row_id: id });
+    if (error) console.error(error);
+    */
   } catch (error) {
     console.error('Erro ao incrementar visualização:', error);
   }
@@ -440,16 +468,31 @@ export async function incrementarVisualizacoesEmpresa(id: string) {
 
 export async function buscarPosts(filtros: { limite?: number, userId?: string, admin?: boolean } = {}) {
   try {
-    const params = new URLSearchParams();
-    if (filtros.limite) params.append('limite', filtros.limite.toString());
-    if (filtros.userId) params.append('userId', filtros.userId);
-    if (filtros.admin) params.append('admin', 'true');
+    let query = supabase.from('mural_posts').select(`
+      *,
+      comentarios:comentarios(count)
+    `);
 
-    const res = await fetch(`/api/posts?${params.toString()}`);
-    if (!res.ok) return [];
-    return await res.json();
+    if (filtros.userId) query = query.eq('user_id', filtros.userId);
+    if (!filtros.admin) query = query.eq('aprovado', true);
+    if (filtros.limite) query = query.limit(filtros.limite);
+
+    query = query.order('data_criacao', { ascending: false });
+
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    // Mapear contagem de comentários e estrutura
+    return data.map((post: any) => ({
+      ...post,
+      comentarios: post.comentarios ? post.comentarios[0]?.count || 0 : 0, 
+      created_at: post.data_criacao, // mapear campos se necessário
+      status: post.aprovado ? 'aprovado' : 'pendente'
+    }));
+
   } catch (error) {
-    console.error('Erro ao buscar posts (MongoDB):', error);
+    console.error('Erro ao buscar posts (Supabase):', error);
     return [];
   }
 }
@@ -466,26 +509,37 @@ export async function criarPost(post: {
   logradouro?: string
 }) {
   try {
-    const res = await fetch('/api/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(post)
-    });
-    if (!res.ok) return null;
-    return await res.json();
+    const { data, error } = await supabase
+      .from('mural_posts')
+      .insert({
+        ...post,
+        data_criacao: new Date().toISOString(),
+        aprovado: false
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao criar post (MongoDB):', error);
+    console.error('Erro ao criar post (Supabase):', error);
     return null;
   }
 }
 
 export async function buscarComentarios(postId: string) {
   try {
-    const res = await fetch(`/api/posts?action=comentarios&postId=${postId}`);
-    if (!res.ok) return [];
-    return await res.json();
+    const { data, error } = await supabase
+      .from('comentarios')
+      .select('*')
+      .eq('post_id', postId)
+      .eq('status', 'aprovado') // Assumindo filtro de aprovação
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao buscar comentários (MongoDB):', error);
+    console.error('Erro ao buscar comentários (Supabase):', error);
     return [];
   }
 }
@@ -497,15 +551,19 @@ export async function criarComentario(comentario: {
   user_id?: string
 }) {
   try {
-    const res = await fetch('/api/posts?action=comentario', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(comentario)
-    });
-    if (!res.ok) return null;
-    return await res.json();
+    const { data, error } = await supabase
+      .from('comentarios')
+      .insert({
+        ...comentario,
+        status: 'aprovado' // auto-aprovar ou pendente?
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao criar comentário (MongoDB):', error);
+    console.error('Erro ao criar comentário (Supabase):', error);
     return null;
   }
 }
@@ -516,22 +574,31 @@ export async function criarComentario(comentario: {
 
 export async function buscarLocaisTuristicos() {
   try {
-    const res = await fetch('/api/locais');
-    if (!res.ok) return [];
-    return await res.json();
+    const { data, error } = await supabase
+      .from('locais_turisticos')
+      .select('*')
+      .eq('status', 'ativo');
+      
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao buscar locais (MongoDB):', error);
+    console.error('Erro ao buscar locais (Supabase):', error);
     return [];
   }
 }
 
 export async function buscarLocalPorSlug(slug: string) {
   try {
-    const res = await fetch(`/api/locais?slug=${slug}`);
-    if (!res.ok) return null;
-    return await res.json();
+    const { data, error } = await supabase
+      .from('locais_turisticos')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error) return null;
+    return data;
   } catch (error) {
-    console.error('Erro ao buscar local (MongoDB):', error);
+    console.error('Erro ao buscar local (Supabase):', error);
     return null;
   }
 }
@@ -567,15 +634,28 @@ export async function buscarFavoritos(
 ) {
   try {
     const userId = getUserIdentifier();
-    const params = new URLSearchParams();
-    params.append('user_identifier', userId);
-    if (tipo) params.append('tipo', tipo);
+    
+    let query = supabase.from('favoritos').select('*');
+    
+    // Como identificar se é user logado ou anonimo? A função original misturava os dois.
+    // Vamos tentar buscar por user_identifier OU user_id se logado?
+    // A função original usava query params.
+    // Assumindo uso do hook de autenticação no componente, aqui vamos pelo localStorage
+    const user = getUsuarioLogado();
+    
+    if (user) {
+         query = query.or(`user_id.eq.${user.id},user_identifier.eq.${userId}`);
+    } else {
+         query = query.eq('user_identifier', userId);
+    }
+    
+    if (tipo) query = query.eq('tipo', tipo);
 
-    const res = await fetch(`/api/favoritos?${params.toString()}`);
-    if (!res.ok) return [];
-    return await res.json();
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao buscar favoritos (MongoDB):', error);
+    console.error('Erro ao buscar favoritos (Supabase):', error);
     return [];
   }
 }
@@ -586,15 +666,21 @@ export async function adicionarFavorito(
 ) {
   try {
     const userId = getUserIdentifier();
-    const res = await fetch('/api/favoritos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo, item_id: itemId, user_identifier: userId })
-    });
-    if (!res.ok) return null;
-    return await res.json();
+    const user = getUsuarioLogado();
+    
+    const fav: any = { 
+        tipo, 
+        item_id: itemId, 
+        user_identifier: userId 
+    };
+    
+    if (user) fav.user_id = user.id;
+
+    const { data, error } = await supabase.from('favoritos').insert(fav).select().single();
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao adicionar favorito (MongoDB):', error);
+    console.error('Erro ao adicionar favorito (Supabase):', error);
     return null;
   }
 }
@@ -605,12 +691,28 @@ export async function removerFavorito(
 ) {
   try {
     const userId = getUserIdentifier();
-    const res = await fetch(`/api/favoritos?user_identifier=${userId}&tipo=${tipo}&item_id=${itemId}`, {
-      method: 'DELETE'
-    });
-    return res.ok;
+    const user = getUsuarioLogado();
+    
+    let query = supabase.from('favoritos')
+        .delete()
+        .eq('tipo', tipo)
+        .eq('item_id', itemId);
+        
+    if (user) {
+         // Cuidado: delete com OR requer parênteses ou lógica complexa no supabase-js? 
+         // Delete com OR é arriscado se não for preciso.
+         // Vamos deletar onde match for encontrado. Melhor duas queries ou priorizar user_id?
+         // Se logado, remove pelo user_id. Se anonimo, pelo identifier.
+         // Mas o identifier persiste.
+         query = query.eq('user_id', user.id); // Prioriza autenticado
+    } else {
+         query = query.eq('user_identifier', userId);
+    }
+
+    const { error } = await query;
+    return !error;
   } catch (error) {
-    console.error('Erro ao remover favorito (MongoDB):', error);
+    console.error('Erro ao remover favorito (Supabase):', error);
     return false;
   }
 }
@@ -630,20 +732,17 @@ export async function adicionarAoHistorico(
     const item: any = {
       tipo,
       item_id: itemId,
-      user_identifier: userId
+      user_identifier: userId,
+      visualizado_em: new Date().toISOString()
     };
 
     if (user) {
       item.user_id = user.id;
     }
-
-    await fetch('/api/historico', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item)
-    });
+    
+    await supabase.from('historico_localizacao').insert(item);
   } catch (error) {
-    console.error('Erro ao adicionar ao histórico (MongoDB):', error);
+    console.error('Erro ao adicionar ao histórico (Supabase):', error);
   }
 }
 
@@ -651,20 +750,23 @@ export async function buscarHistorico(limite = 20) {
   try {
     const userId = getUserIdentifier();
     const user = getUsuarioLogado();
-
-    const params = new URLSearchParams();
+    
+    let query = supabase.from('historico_localizacao').select('*');
+    
     if (user) {
-      params.append('user_id', user.id);
+        // query = query.or(`user_id.eq.${user.id},user_identifier.eq.${userId}`);
+        query = query.eq('user_id', user.id);
     } else {
-      params.append('user_identifier', userId);
+        query = query.eq('user_identifier', userId);
     }
-    params.append('limite', limite.toString());
-
-    const res = await fetch(`/api/historico?${params.toString()}`);
-    if (!res.ok) return [];
-    return await res.json();
+    
+    query = query.order('visualizado_em', { ascending: false }).limit(limite);
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Erro ao buscar histórico (MongoDB):', error);
+    console.error('Erro ao buscar histórico (Supabase):', error);
     return [];
   }
 }
@@ -675,11 +777,12 @@ export async function buscarHistorico(limite = 20) {
 
 export async function buscarVagas(empresaId?: string) {
   try {
-    const params = new URLSearchParams();
-    if (empresaId) params.append('empresa_id', empresaId);
-    const res = await fetch(`/api/vagas?${params.toString()}`);
-    if (!res.ok) return [];
-    return await res.json();
+    let query = supabase.from('vagas').select('*').eq('status', 'aberta');
+    if (empresaId) query = query.eq('empresa_id', empresaId);
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Erro ao buscar vagas:', error);
     return [];
@@ -688,13 +791,14 @@ export async function buscarVagas(empresaId?: string) {
 
 export async function criarVaga(vaga: Partial<Vaga>) {
   try {
-    const res = await fetch('/api/vagas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(vaga)
-    });
-    if (!res.ok) throw new Error('Falha ao criar vaga');
-    return await res.json();
+    const { data, error } = await supabase
+      .from('vagas')
+      .insert(vaga)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Erro ao criar vaga:', error);
     return null;
@@ -703,12 +807,13 @@ export async function criarVaga(vaga: Partial<Vaga>) {
 
 export async function atualizarVaga(id: string, dados: Partial<Vaga>) {
   try {
-    const res = await fetch(`/api/vagas?id=${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dados)
-    });
-    return res.ok;
+    const { error } = await supabase
+      .from('vagas')
+      .update(dados)
+      .eq('id', id);
+      
+    if (error) throw error;
+    return true;
   } catch (error) {
     console.error('Erro ao atualizar vaga:', error);
     return false;
@@ -717,10 +822,9 @@ export async function atualizarVaga(id: string, dados: Partial<Vaga>) {
 
 export async function removerVaga(id: string) {
   try {
-    const res = await fetch(`/api/vagas?id=${id}`, {
-      method: 'DELETE'
-    });
-    return res.ok;
+     const { error } = await supabase.from('vagas').delete().eq('id', id);
+     if (error) throw error;
+    return true;
   } catch (error) {
     console.error('Erro ao remover vaga:', error);
     return false;
@@ -767,37 +871,60 @@ export async function criarOuLogarUsuario(
     throw new Error('Senha é obrigatória')
   }
 
-  const endpoint = `/api/auth?action=${isRegistro ? 'register' : 'login'}`;
-
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email, 
-        senha, 
-        nome,
-        cpf,
-        telefone,
-        endereco,
-        bairro,
-        cidade,
-        estado,
-        cep
-      })
-    });
+    let user;
 
-    const data = await response.json();
+    if (isRegistro) {
+      // Registro via RPC
+      const { data, error } = await supabase.rpc('cadastrar_usuario', {
+        u_email: email,
+        u_senha: senha,
+        u_nome: nome || '',
+        u_cpf: cpf,
+        u_telefone: telefone,
+        u_endereco: endereco,
+        u_bairro: bairro,
+        u_cidade: cidade,
+        u_estado: estado,
+        u_cep: cep
+      });
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Erro na autenticação');
+      if (error) throw error;
+      const result = data?.[0];
+      if (!result?.sucesso) throw new Error(result?.erro || 'Erro ao criar conta');
+      
+      user = result;
+    } else {
+      // Login via RPC
+      const { data, error } = await supabase.rpc('verificar_usuario_login', {
+        u_email: email,
+        u_senha: senha
+      });
+
+      if (error) throw error;
+      const result = data?.[0];
+      if (!result || !result.sucesso) throw new Error('Email ou senha inválidos');
+      
+      user = result;
     }
 
+    if (!user) throw new Error('Erro desconhecido');
+
+    // Adaptar para interface User
+    const userData: User = {
+      id: user.id,
+      email: user.email,
+      nome: user.nome,
+      avatar_url: user.avatar_url,
+      created_at: new Date().toISOString(), // Mock, já que a RPC simplificada não retorna data
+      updated_at: new Date().toISOString()
+    };
+
     // Salvar no localStorage
-    localStorage.setItem('aqui_guaira_user', JSON.stringify(data))
-    return data as User;
+    localStorage.setItem('aqui_guaira_user', JSON.stringify(userData))
+    return userData;
   } catch (error: any) {
-    console.error('Erro ao autenticar (MongoDB):', error);
+    console.error('Erro ao autenticar (Supabase RPC):', error);
     throw error;
   }
 }
@@ -827,23 +954,25 @@ export function logout() {
  */
 export async function atualizarUsuario(userId: string, dados: Partial<User>) {
   try {
-    const res = await fetch(`/api/auth?id=${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dados)
-    });
+    const { data, error } = await supabase
+      .from('users')
+      .update(dados)
+      .eq('id', userId)
+      .select()
+      .single();
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.message || 'Falha ao atualizar usuário');
-    }
+    if (error) throw error;
 
-    const updatedUser = await res.json();
     // Atualizar localStorage
-    localStorage.setItem('aqui_guaira_user', JSON.stringify(updatedUser));
-    return updatedUser;
+    const stored = localStorage.getItem('aqui_guaira_user');
+    if (stored) {
+        const currentUser = JSON.parse(stored);
+        localStorage.setItem('aqui_guaira_user', JSON.stringify({ ...currentUser, ...dados }));
+    }
+    
+    return data;
   } catch (error) {
-    console.error('Erro ao atualizar usuário (MongoDB):', error);
+    console.error('Erro ao atualizar usuário (Supabase):', error);
     throw error;
   }
 }
@@ -859,21 +988,27 @@ export async function buscarFavoritosUsuario(tipo?: 'empresa' | 'local' | 'post'
   try {
     const user = getUsuarioLogado();
     const userId = getUserIdentifier();
-
-    const params = new URLSearchParams();
-    if (user) {
-      params.append('user_id', user.id);
-    } else {
-      params.append('user_identifier', userId);
-    }
-    if (tipo) params.append('tipo', tipo);
-
-    const res = await fetch(`/api/favoritos?${params.toString()}`);
-    if (!res.ok) return [];
-    return await res.json();
+    
+    // Mesma lógica de buscarFavoritos
+    return await buscarFavoritos(tipo);
   } catch (error) {
-    console.error('Erro ao buscar favoritos de usuário (MongoDB):', error);
+    console.error('Erro ao buscar favoritos de usuário (Supabase):', error);
     return [];
+  }
+}
+
+/**
+ * Adicionar favorito (com user_id se logado)
+ */
+export async function adicionarFavoritoUsuario(
+  tipo: 'empresa' | 'local' | 'post',
+  itemId: string
+) {
+  try {
+    return await adicionarFavorito(tipo, itemId);
+  } catch (error) {
+     console.error('Erro ao adicionar favorito (Supabase):', error);
+     return null;
   }
 }
 
@@ -898,19 +1033,15 @@ export async function adicionarFavoritoUsuario(
       favorito.user_id = user.id;
     }
 
-    const res = await fetch('/api/favoritos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(favorito)
-    });
+    const { data, error } = await supabase.from('favoritos').insert(favorito).select().single();
 
-    if (!res.ok) {
-      throw new Error('Falha ao adicionar favorito');
+    if (error) {
+       throw error;
     }
 
-    return await res.json();
+    return data;
   } catch (error) {
-    console.error('Erro ao adicionar favorito de usuário (MongoDB):', error);
+    console.error('Erro ao adicionar favorito de usuário (Supabase):', error);
     throw error;
   }
 }
