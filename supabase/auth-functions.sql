@@ -1,6 +1,11 @@
 -- EXTENSION pgcrypto must be enabled
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- Deletar funções antigas se existirem (para evitar conflito de overload)
+DROP FUNCTION IF EXISTS cadastrar_usuario(text, text, text, text, text, text, text, text, text, text);
+DROP FUNCTION IF EXISTS cadastrar_usuario(text, text, text);
+DROP FUNCTION IF EXISTS verificar_usuario_login(text, text);
+
 -- 1. Função para verificar login de usuário (public.users)
 CREATE OR REPLACE FUNCTION verificar_usuario_login(
   u_email TEXT,
