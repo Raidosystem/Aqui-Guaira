@@ -184,7 +184,7 @@ const Header = () => {
               <Building2 className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Aqui Guaíra</h1>
+              <h1 className="text-xl font-bold text-foreground">Aqui Guaíra - SP</h1>
               <p className="text-xs text-muted-foreground">Portal da Cidade</p>
             </div>
           </button>
@@ -276,7 +276,7 @@ const Header = () => {
                     </div>
                     <div className="flex flex-col items-start leading-none">
                       <span className="text-xl font-bold">Menu Principal</span>
-                      <span className="text-xs text-muted-foreground font-medium">Aqui Guaíra</span>
+                      <span className="text-xs text-muted-foreground font-medium">Aqui Guaíra - SP</span>
                     </div>
                   </SheetTitle>
                 </SheetHeader>
@@ -320,7 +320,7 @@ const Header = () => {
                       <div className="p-2 bg-white/20 rounded-xl">
                         <ShoppingBag className="h-5 w-5" />
                       </div>
-                      <span className="text-base font-black">Marketplace Aqui Guaíra</span>
+                      <span className="text-base font-black">Marketplace Aqui Guaíra - SP</span>
                     </a>
 
                     <div className="my-4 border-t border-border/50" />
@@ -350,7 +350,7 @@ const Header = () => {
                 </div>
                 <div className="p-6 bg-muted/30 border-t">
                   <p className="text-[10px] text-center text-muted-foreground font-bold uppercase tracking-[0.2em]">
-                    © 2024 Aqui Guaíra • Portal da Cidade
+                    © 2024 Aqui Guaíra - SP • Portal da Cidade
                   </p>
                 </div>
               </SheetContent>
