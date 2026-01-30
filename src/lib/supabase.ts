@@ -1013,69 +1013,16 @@ export async function adicionarFavoritoUsuario(
 }
 
 /**
- * Adicionar favorito (com user_id se logado)
- */
-export async function adicionarFavoritoUsuario(
-  tipo: 'empresa' | 'local' | 'post',
-  itemId: string
-) {
-  try {
-    const user = getUsuarioLogado();
-    const userId = getUserIdentifier();
-
-    const favorito: any = {
-      tipo,
-      item_id: itemId,
-      user_identifier: userId,
-    };
-
-    if (user) {
-      favorito.user_id = user.id;
-    }
-
-    const { data, error } = await supabase.from('favoritos').insert(favorito).select().single();
-
-    if (error) {
-       throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Erro ao adicionar favorito de usuário (Supabase):', error);
-    throw error;
-  }
-}
-
-/**
- * Remover favorito
+ * Remover favorito de usuário
  */
 export async function removerFavoritoUsuario(
   tipo: 'empresa' | 'local' | 'post',
   itemId: string
 ) {
   try {
-    const user = getUsuarioLogado();
-    const userId = getUserIdentifier();
-
-    const params = new URLSearchParams();
-    if (user) {
-      params.append('user_id', user.id);
-    } else {
-      params.append('user_identifier', userId);
-    }
-    params.append('tipo', tipo);
-    params.append('item_id', itemId);
-
-    const res = await fetch(`/api/favoritos?${params.toString()}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) {
-      throw new Error('Falha ao remover favorito');
-    }
-    return true;
+    return await removerFavorito(tipo, itemId);
   } catch (error) {
-    console.error('Erro ao remover favorito de usuário (MongoDB):', error);
+    console.error('Erro ao remover favorito de usuário (Supabase):', error);
     throw error;
   }
 }
