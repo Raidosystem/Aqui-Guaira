@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, PlusCircle, MapPin, Calendar, Phone, CheckCircle, AlertCircle, Package, ArrowLeft, Home, Loader2, X, ImagePlus, User, Tag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
+import { getUsuarioLogado } from "@/lib/supabase";
 
 interface ItemAchadoPerdido {
   id: string;
@@ -79,8 +80,9 @@ export default function AchadosPerdidos() {
     carregarItens();
   }, []);
 
-  const carregarUsuario = async () => {
-    // setUser(usuarioLogado);
+  const carregarUsuario = () => {
+    const usuarioLogado = getUsuarioLogado();
+    setUser(usuarioLogado);
   };
 
   const carregarItens = async () => {
@@ -189,7 +191,16 @@ export default function AchadosPerdidos() {
             <div className="flex justify-center">
               <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogTrigger asChild>
-                  <Button size="lg" className="rounded-xl px-8 py-7 bg-primary hover:bg-primary/90 text-lg font-bold gap-2">
+                  <Button 
+                    size="lg" 
+                    className="rounded-xl px-8 py-7 bg-primary hover:bg-primary/90 text-lg font-bold gap-2"
+                    onClick={() => {
+                      if (!user) {
+                        setShowLogin(true);
+                        setOpenDialog(false);
+                      }
+                    }}
+                  >
                     <PlusCircle className="w-6 h-6" />
                     Cadastrar Item
                   </Button>
@@ -201,16 +212,11 @@ export default function AchadosPerdidos() {
                       Novo Cadastro
                     </DialogTitle>
                     <DialogDescription className="font-medium">
-                      {user ? "Preencha os detalhes do item para ajudar na identificação." : "Acesse sua conta para publicar um item."}
+                      Preencha os detalhes do item para ajudar na identificação.
                     </DialogDescription>
                   </DialogHeader>
 
-                  {!user ? (
-                    <div className="py-8 text-center bg-gray-50 rounded-2xl">
-                      <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+                  <form onSubmit={handleSubmit} className="space-y-6 mt-4">
                       <div className="space-y-2">
                         <Label className="font-bold">Este item foi... *</Label>
                         <Select value={tipo} onValueChange={(value: "perdido" | "encontrado") => setTipo(value)}>
