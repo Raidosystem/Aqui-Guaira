@@ -875,27 +875,17 @@ export async function criarOuLogarUsuario(
     let user;
 
     if (isRegistro) {
-      // Registro via RPC - Enviar apenas parâmetros não nulos
-      const params: any = {
+      // Registro via RPC - Apenas os 3 parâmetros obrigatórios
+      const { data, error } = await supabase.rpc('cadastrar_usuario', {
         u_email: email,
         u_senha: senha,
-        u_nome: nome || email.split('@')[0] // Fallback para nome
-      };
-      
-      // Adicionar parâmetros opcionais apenas se tiverem valor
-      if (cpf) params.u_cpf = cpf;
-      if (telefone) params.u_telefone = telefone;
-      if (endereco) params.u_endereco = endereco;
-      if (bairro) params.u_bairro = bairro;
-      if (cidade) params.u_cidade = cidade;
-      if (estado) params.u_estado = estado;
-      if (cep) params.u_cep = cep;
-
-      const { data, error } = await supabase.rpc('cadastrar_usuario', params);
+        u_nome: nome || email.split('@')[0]
+      });
 
       if (error) {
         console.error('Erro RPC cadastrar_usuario:', error);
-        throw error;
+        console.error('Detalhes do erro:', JSON.stringify(error, null, 2));
+        throw new Error(error.message || 'Erro ao cadastrar usuário');
       }
       
       const result = data?.[0];

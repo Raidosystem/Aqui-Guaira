@@ -28,18 +28,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Função para cadastrar usuário com senha hash
+-- 2. Função para cadastrar usuário com senha hash (SIMPLIFICADA)
 CREATE OR REPLACE FUNCTION cadastrar_usuario(
   u_email TEXT,
   u_senha TEXT,
-  u_nome TEXT,
-  u_cpf TEXT DEFAULT NULL,
-  u_telefone TEXT DEFAULT NULL,
-  u_endereco TEXT DEFAULT NULL,
-  u_bairro TEXT DEFAULT NULL,
-  u_cidade TEXT DEFAULT NULL,
-  u_estado TEXT DEFAULT NULL,
-  u_cep TEXT DEFAULT NULL
+  u_nome TEXT
 )
 RETURNS TABLE (
   id UUID,
@@ -52,25 +45,13 @@ DECLARE
   new_id UUID;
 BEGIN
   -- Verificar se já existe
-  IF EXISTS (SELECT 1 FROM public.users WHERE email = u_email) THEN
+  IF EXISTS (SELECT 1 FROM public.users WHERE users.email = u_email) THEN
     RETURN QUERY SELECT NULL::UUID, u_email::VARCHAR, NULL::VARCHAR, FALSE, 'Email já cadastrado'::TEXT;
     RETURN;
   END IF;
 
-  INSERT INTO public.users (
-    email, 
-    senha_hash, 
-    nome
-    -- Outros campos se a tabela suportar, verifique setup-completo.sql
-    -- A tabela users no setup tem apenas id, email, senha_hash, nome, avatar_url, is_admin
-    -- Vou assumir que cpf, telefone etc ficam em outra tabela ou precisamos alterar a tabela users?
-    -- No setup-completo.sql users é simples.
-    -- Vamos ignorar campos extras por enquanto se a tabela não tiver, ou adicionar jsonb metadata?
-    -- O código TypeScript enviava cpf, telefone, etc.
-    -- Vamos tentar inserir na tabela "users", se der erro de coluna, ajustamos.
-    -- Por segurança, vou inserir apenas os campos basicos e retornar.
-    -- Se precisar de endereço, etc, o frontend pode fazer update depois ou criamos tabela perfil.
-  )
+  -- Inserir novo usuário
+  INSERT INTO public.users (email, senha_hash, nome)
   VALUES (
     u_email,
     crypt(u_senha, gen_salt('bf')),
