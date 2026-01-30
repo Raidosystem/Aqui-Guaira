@@ -380,7 +380,6 @@ export default function AchadosPerdidos() {
                         </Button>
                       </DialogFooter>
                     </form>
-                  )}
                 </DialogContent>
               </Dialog>
             </div>
