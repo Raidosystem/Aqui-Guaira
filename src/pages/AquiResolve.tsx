@@ -240,7 +240,7 @@ const AquiResolve = () => {
       </section>
     </div>
     <Footer />
-  </>
+    </>
   );
 };
 
