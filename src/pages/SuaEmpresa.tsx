@@ -181,25 +181,25 @@ const findCategoriaByDescricao = (descricao?: string, options?: { includeSeconda
 
 // Schema de cadastro
 const cadastroSchema = z.object({
-  cnpj: z.string().min(18, "CNPJ incompleto"),
-  razaoSocial: z.string().min(3, "Mínimo 3 caracteres"),
-  nomeFantasia: z.string().min(2, "Mínimo 2 caracteres"),
-  celular: z.string().min(15, "Celular incompleto"),
-  email: z.string().email("Email inválido"),
+  cnpj: z.string().optional().default(""),
+  razaoSocial: z.string().optional().default(""),
+  nomeFantasia: z.string().optional().default(""),
+  celular: z.string().optional().default(""),
+  email: z.string().optional().default(""),
   cnae: z.string().optional().or(z.literal("")),
   cnaeDescricao: z.string().optional().or(z.literal("")),
   cnaeSecundario: z.string().optional().or(z.literal("")),
   cnaeSecundarioDescricao: z.string().optional().or(z.literal("")),
-  categoria: z.string().min(1, "Selecione uma categoria"),
-  bairro: z.string().min(1, "Informe o bairro"),
-  cep: z.string().min(9, "CEP incompleto"),
-  logradouro: z.string().min(3, "Informe o logradouro"),
-  numero: z.string().min(1, "Informe o número"),
-  cidade: z.string().min(2, "Informe a cidade"),
-  estado: z.string().min(2, "Informe o UF"),
-  whatsapp: z.string().min(15, "WhatsApp incompleto"),
+  categoria: z.string().optional().default(""),
+  bairro: z.string().optional().default(""),
+  cep: z.string().optional().default(""),
+  logradouro: z.string().optional().default(""),
+  numero: z.string().optional().default(""),
+  cidade: z.string().optional().default(""),
+  estado: z.string().optional().default(""),
+  whatsapp: z.string().optional().default(""),
   site: z.string().url("URL inválida").optional().or(z.literal("")),
-  descricao: z.string().min(10, "Descreva com mais detalhes (mín. 10)"),
+  descricao: z.string().optional().default(""),
   logoFile: z.instanceof(File).optional(),
   bannerFile: z.instanceof(File).optional(),
   instagram: z.string().optional(),
@@ -264,106 +264,135 @@ const SuaEmpresa = () => {
   });
 
   const handleCadastro = async (data: z.infer<typeof cadastroSchema>) => {
+    console.log("🔍 INICIANDO VALIDAÇÃO DO CADASTRO", data);
+    
     // ===== VALIDAÇÕES IMEDIATAS COM FEEDBACK VISUAL =====
     
     // 1. CNPJ
-    if (!isValidCNPJ(data.cnpj)) {
+    if (!data.cnpj || !isValidCNPJ(data.cnpj)) {
+      console.log("❌ ERRO: CNPJ inválido", data.cnpj);
       toast("❌ CNPJ Inválido", {
         description: "O CNPJ digitado não é válido. Verifique e tente novamente.",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 2. Nome Fantasia
     if (!data.nomeFantasia || data.nomeFantasia.trim().length < 3) {
+      console.log("❌ ERRO: Nome Fantasia inválido", data.nomeFantasia);
       toast("❌ Nome Fantasia Inválido", {
         description: "O nome fantasia deve ter pelo menos 3 caracteres.",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 3. Telefone/Celular
     if (!data.celular || data.celular.replace(/\D/g, '').length < 10) {
+      console.log("❌ ERRO: Telefone inválido", data.celular);
       toast("❌ Telefone Inválido", {
         description: "Digite um número de telefone válido com DDD (mínimo 10 dígitos).",
-        duration: 7000
+      console.log("❌ ERRO: Telefone inválido", data.celular);
+      toast("❌ Telefone Inválido", {
+        description: "Digite um número de telefone válido com DDD (mínimo 10 dígitos).",
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 4. WhatsApp
     if (!data.whatsapp || data.whatsapp.replace(/\D/g, '').length < 10) {
+      console.log("❌ ERRO: WhatsApp inválido", data.whatsapp);
       toast("❌ WhatsApp Inválido", {
         description: "Digite um número de WhatsApp válido com DDD (mínimo 10 dígitos).",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 5. E-mail
     if (!data.email || !data.email.includes('@') || !data.email.includes('.')) {
+      console.log("❌ ERRO: E-mail inválido", data.email);
       toast("❌ E-mail Inválido", {
         description: "Digite um e-mail válido (exemplo: seuemail@exemplo.com).",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 6. Categoria
     if (!data.categoria || data.categoria.trim() === '') {
+      console.log("❌ ERRO: Categoria não selecionada", data.categoria);
       toast("❌ Categoria Obrigatória", {
         description: "Selecione a categoria da sua empresa.",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 7. Bairro
     if (!data.bairro || data.bairro.trim() === '') {
+      console.log("❌ ERRO: Bairro não selecionado", data.bairro);
       toast("❌ Bairro Obrigatório", {
         description: "Selecione o bairro onde sua empresa está localizada.",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 8. CEP
     if (!data.cep || data.cep.replace(/\D/g, '').length !== 8) {
+      console.log("❌ ERRO: CEP inválido", data.cep);
       toast("❌ CEP Inválido", {
         description: "Digite um CEP válido com 8 dígitos.",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 9. Endereço (Logradouro)
     if (!data.logradouro || data.logradouro.trim().length < 3) {
+      console.log("❌ ERRO: Endereço inválido", data.logradouro);
       toast("❌ Endereço Inválido", {
         description: "Digite o nome da rua/avenida (mínimo 3 caracteres).",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 10. Número
     if (!data.numero || data.numero.trim() === '') {
+      console.log("❌ ERRO: Número não informado", data.numero);
       toast("❌ Número do Endereço Obrigatório", {
         description: "Digite o número do estabelecimento (ou 'S/N' se não houver).",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
 
     // 11. Descrição
     if (!data.descricao || data.descricao.trim().length < 20) {
+      console.log("❌ ERRO: Descrição muito curta", data.descricao);
       toast("❌ Descrição Muito Curta", {
         description: "A descrição deve ter pelo menos 20 caracteres. Conte mais sobre sua empresa!",
-        duration: 7000
+        duration: 7000,
+        className: "bg-red-50 border-red-500"
       });
       return;
     }
+
+    console.log("✅ TODAS VALIDAÇÕES PASSARAM! Iniciando cadastro...");
 
     // ===== FIM DAS VALIDAÇÕES =====
 
@@ -744,7 +773,11 @@ const SuaEmpresa = () => {
                 <CardDescription>Preencha os dados obrigatórios. Após análise, seu negócio poderá aparecer na listagem.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-8">
-                <form className="space-y-8" onSubmit={cadastroForm.handleSubmit(handleCadastro)}>
+                <form className="space-y-8" onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = cadastroForm.getValues();
+                  handleCadastro(data);
+                }}>
                   {/* Identificação */}
                   <div className="space-y-6">
                     <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Identificação</h3>
