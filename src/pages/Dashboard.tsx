@@ -100,10 +100,12 @@ const Dashboard = () => {
   const carregarPosts = async (empresaId: string) => {
     setLoadingPosts(true);
     try {
-      const res = await fetch(`/api/posts?empresaId=${empresaId}`);
-      if (res.ok) {
-        setPosts(await res.json());
-      }
+      // TODO: Migrar para Supabase quando implementar posts de empresas
+      // const res = await fetch(`/api/posts?empresaId=${empresaId}`);
+      // if (res.ok) {
+      //   setPosts(await res.json());
+      // }
+      setPosts([]); // Temporariamente vazio
     } catch (error) {
       console.error('Erro ao carregar posts:', error);
     } finally {
