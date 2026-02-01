@@ -332,6 +332,7 @@ const SuaEmpresa = () => {
     // 4. WhatsApp
     if (!data.whatsapp || data.whatsapp.replace(/\D/g, '').length < 10) {
       console.log("❌ ERRO: WhatsApp inválido", data.whatsapp);
+      setFieldErrors({ whatsapp: "Digite um número de WhatsApp válido com DDD (mínimo 10 dígitos)." });
       toast("WhatsApp Inválido", {
         description: (
           <div className="space-y-2">
@@ -368,6 +369,7 @@ const SuaEmpresa = () => {
     // 6. Categoria
     if (!data.categoria || data.categoria.trim() === '') {
       console.log("❌ ERRO: Categoria não selecionada", data.categoria);
+      setFieldErrors({ categoria: "Selecione a categoria da sua empresa." });
       toast("Categoria Obrigatória", {
         description: (
           <div className="space-y-2">
@@ -386,6 +388,7 @@ const SuaEmpresa = () => {
     // 7. Bairro
     if (!data.bairro || data.bairro.trim() === '') {
       console.log("❌ ERRO: Bairro não selecionado", data.bairro);
+      setFieldErrors({ bairro: "Selecione o bairro onde sua empresa está localizada." });
       toast("Bairro Obrigatório", {
         description: (
           <div className="space-y-2">
@@ -404,6 +407,7 @@ const SuaEmpresa = () => {
     // 8. CEP
     if (!data.cep || data.cep.replace(/\D/g, '').length !== 8) {
       console.log("❌ ERRO: CEP inválido", data.cep);
+      setFieldErrors({ cep: "Digite um CEP válido com 8 dígitos." });
       toast("CEP Inválido", {
         description: (
           <div className="space-y-2">
@@ -422,6 +426,7 @@ const SuaEmpresa = () => {
     // 9. Endereço (Logradouro)
     if (!data.logradouro || data.logradouro.trim().length < 3) {
       console.log("❌ ERRO: Endereço inválido", data.logradouro);
+      setFieldErrors({ logradouro: "Digite o nome da rua/avenida (mínimo 3 caracteres)." });
       toast("Endereço Inválido", {
         description: (
           <div className="space-y-2">
@@ -440,6 +445,7 @@ const SuaEmpresa = () => {
     // 10. Número
     if (!data.numero || data.numero.trim() === '') {
       console.log("❌ ERRO: Número não informado", data.numero);
+      setFieldErrors({ numero: "Digite o número do estabelecimento." });
       toast("Número Obrigatório", {
         description: (
           <div className="space-y-2">
@@ -458,6 +464,7 @@ const SuaEmpresa = () => {
     // 11. Descrição
     if (!data.descricao || data.descricao.trim().length < 20) {
       console.log("❌ ERRO: Descrição muito curta", data.descricao);
+      setFieldErrors({ descricao: "A descrição deve ter pelo menos 20 caracteres." });
       toast("Descrição Muito Curta", {
         description: (
           <div className="space-y-2">
