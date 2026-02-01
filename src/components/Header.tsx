@@ -54,6 +54,7 @@ const Header = () => {
   const quickLinks = [
     { label: "Painel da Cidade", sub: "Acesse", icon: Building2, path: "/painel-cidade", textColor: "text-blue-600" },
     { label: "Serviços por Bairro", sub: "Veja", icon: Map, path: "/servicos-por-bairro", textColor: "text-purple-600" },
+    { label: "Aqui Resolve", sub: "Encontre", icon: Search, path: "/aqui-resolve", textColor: "text-indigo-600" },
     { label: "Achados e Perdidos", sub: "Consulte", icon: Search, path: "/achados-perdidos", textColor: "text-orange-600" },
     { label: "Pets e Adoção", sub: "Ajude", icon: PawPrint, path: "/pets-perdidos", textColor: "text-pink-600" },
     { label: "Farmácia Plantão", sub: "Veja", icon: Pill, path: "/farmacia-plantao", textColor: "text-red-600" },
