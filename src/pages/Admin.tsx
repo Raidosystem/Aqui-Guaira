@@ -146,6 +146,13 @@ export default function Admin() {
   const [showRejeicaoDialog, setShowRejeicaoDialog] = useState(false);
   const [showDetalhesDialog, setShowDetalhesDialog] = useState(false);
   const [showPostDetalhesDialog, setShowPostDetalhesDialog] = useState(false);
+  const [showCriarAdminDialog, setShowCriarAdminDialog] = useState(false);
+  
+  // Criar Admin
+  const [novoAdminEmail, setNovoAdminEmail] = useState("");
+  const [novoAdminSenha, setNovoAdminSenha] = useState("");
+  const [novoAdminNome, setNovoAdminNome] = useState("");
+  const [criandoAdmin, setCriandoAdmin] = useState(false);
 
   // Filtros Empresas
   const [filtroNome, setFiltroNome] = useState("");
@@ -315,6 +322,53 @@ export default function Admin() {
         toast.error("Erro ao aprovar");
       }
   };
+
+  const handleCriarAdmin = async () => {
+    if (!novoAdminEmail || !novoAdminSenha || !novoAdminNome) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    if (novoAdminSenha.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres");
+      return;
+    }
+
+    setCriandoAdmin(true);
+    try {
+      const { data, error } = await supabase.rpc('criar_admin', {
+        p_super_admin_id: adminData.id,
+        p_email: novoAdminEmail,
+        p_senha: novoAdminSenha,
+        p_nome: novoAdminNome
+      });
+
+      if (error) {
+        console.error(error);
+        toast.error("Erro ao criar admin");
+        return;
+      }
+
+      const result = data?.[0];
+
+      if (!result || !result.success) {
+        toast.error(result?.message || "Erro ao criar admin");
+        return;
+      }
+
+      toast.success("Admin criado com sucesso!");
+      setShowCriarAdminDialog(false);
+      setNovoAdminEmail("");
+      setNovoAdminSenha("");
+      setNovoAdminNome("");
+      logAcao("criar_admin", `Criou novo admin: ${novoAdminEmail}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao criar admin");
+    } finally {
+      setCriandoAdmin(false);
+    }
+  };
     
   const handleRejeitarEmpresa = async (id: string, nome?: string) => {
     try {
@@ -459,6 +513,7 @@ export default function Admin() {
     { id: "empresas", label: "Empresas", icon: Building2 },
     { id: "posts", label: "Posts do Mural", icon: FileText, badge: estatisticas?.posts_pendentes },
     { id: "usuarios", label: "Usuários", icon: Users },
+    ...(adminData?.super_admin ? [{ id: "admins", label: "Administradores", icon: Shield }] : []),
     { id: "logs", label: "Auditoria", icon: History },
   ];
 
@@ -822,7 +877,37 @@ export default function Admin() {
               </div>
             )}
 
-            {/* 5. LOGS */}
+            {/* 5. ADMINISTRADORES (apenas super admin) */}
+            {activeTab === "admins" && adminData?.super_admin && (
+              <div className="space-y-4">
+                <Card className="rounded-3xl shadow-sm border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                  <CardHeader className="bg-zinc-50 dark:bg-zinc-800/50 p-6 border-b dark:border-zinc-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Administradores</CardTitle>
+                        <CardDescription>Gerenciar equipe de administração</CardDescription>
+                      </div>
+                      <Button onClick={() => setShowCriarAdminDialog(true)} className="rounded-xl gap-2">
+                        <Plus className="w-4 h-4" /> Novo Admin
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <Alert className="mb-4">
+                      <Shield className="h-4 w-4" />
+                      <AlertDescription>
+                        Apenas você (Super Admin) pode criar e gerenciar outros administradores. Novos admins NÃO terão privilégios de super admin.
+                      </AlertDescription>
+                    </Alert>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      Sistema de gerenciamento de admins será implementado em breve.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* 6. LOGS */}
             {activeTab === "logs" && (
               <div className="space-y-4">
                 <Card className="rounded-3xl shadow-sm border-zinc-200 dark:border-zinc-800 overflow-hidden">
@@ -1126,6 +1211,61 @@ export default function Admin() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para criar novo admin */}
+      <Dialog open={showCriarAdminDialog} onOpenChange={setShowCriarAdminDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Administrador</DialogTitle>
+            <DialogDescription>
+              Preencha os dados do novo administrador. A senha deve ter pelo menos 8 caracteres.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome Completo</Label>
+              <Input
+                id="nome"
+                value={novoAdminNome}
+                onChange={(e) => setNovoAdminNome(e.target.value)}
+                placeholder="Ex: João Silva"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={novoAdminEmail}
+                onChange={(e) => setNovoAdminEmail(e.target.value)}
+                placeholder="admin@exemplo.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="senha">Senha</Label>
+              <Input
+                id="senha"
+                type="password"
+                value={novoAdminSenha}
+                onChange={(e) => setNovoAdminSenha(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+              />
+            </div>
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertDescription>
+                Novos admins NÃO terão privilégios de super admin e não poderão criar outros administradores.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCriarAdminDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCriarAdmin} disabled={criandoAdmin}>
+              {criandoAdmin ? "Criando..." : "Criar Admin"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

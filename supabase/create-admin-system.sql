@@ -85,6 +85,59 @@ USING (false);
 -- 6. Dar permissão para executar a função de login
 GRANT EXECUTE ON FUNCTION public.admin_login(TEXT, TEXT) TO anon, authenticated;
 
--- 7. Comentários
+-- 7. Criar função para adicionar novos admins (apenas super admin)
+CREATE OR REPLACE FUNCTION public.criar_admin(
+  p_super_admin_id UUID,
+  p_email TEXT,
+  p_senha TEXT,
+  p_nome TEXT
+)
+RETURNS TABLE (
+  success BOOLEAN,
+  message TEXT,
+  admin_id UUID
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_is_super_admin BOOLEAN;
+  v_new_admin_id UUID;
+BEGIN
+  -- Verificar se quem está criando é super admin
+  SELECT super_admin INTO v_is_super_admin
+  FROM public.admins
+  WHERE id = p_super_admin_id AND ativo = TRUE;
+
+  IF NOT FOUND OR NOT v_is_super_admin THEN
+    RETURN QUERY SELECT FALSE, 'Apenas super admins podem criar novos administradores'::TEXT, NULL::UUID;
+    RETURN;
+  END IF;
+
+  -- Verificar se email já existe
+  IF EXISTS (SELECT 1 FROM public.admins WHERE email = p_email) THEN
+    RETURN QUERY SELECT FALSE, 'Email já cadastrado'::TEXT, NULL::UUID;
+    RETURN;
+  END IF;
+
+  -- Criar novo admin
+  INSERT INTO public.admins (email, senha_hash, nome, super_admin, ativo)
+  VALUES (
+    p_email,
+    crypt(p_senha, gen_salt('bf')),
+    p_nome,
+    FALSE, -- Novos admins não são super admins
+    TRUE
+  )
+  RETURNING id INTO v_new_admin_id;
+
+  RETURN QUERY SELECT TRUE, 'Admin criado com sucesso'::TEXT, v_new_admin_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.criar_admin(UUID, TEXT, TEXT, TEXT) TO anon, authenticated;
+
+-- 8. Comentários
 COMMENT ON TABLE public.admins IS 'Tabela de administradores do sistema - protegida por RLS';
 COMMENT ON FUNCTION public.admin_login IS 'Função segura para autenticação de administradores - não expõe hashes de senha';
+COMMENT ON FUNCTION public.criar_admin IS 'Função para super admins criarem novos administradores';
