@@ -278,7 +278,7 @@ export default function Admin() {
   };
 
   const carregarUsuarios = async () => {
-    const { data } = await supabase.from('users').select('*');
+    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (data) setUsuarios(data as any[]);
   };
 
@@ -307,6 +307,118 @@ export default function Admin() {
             detalhes: detalhes + (data ? ' ' + JSON.stringify(data) : '')
         });
     } catch(e) { console.error('Falha ao logar', e); }
+  };
+
+  const handleAprovarUsuario = async (userId: string, userName: string) => {
+    try {
+      const { data, error } = await supabase.rpc('aprovar_usuario', {
+        p_admin_id: adminData.id,
+        p_user_id: userId
+      });
+
+      if (error) throw error;
+
+      const result = data?.[0];
+      if (!result || !result.success) {
+        toast.error(result?.message || "Erro ao aprovar usuário");
+        return;
+      }
+
+      toast.success("Usuário aprovado com sucesso!");
+      carregarUsuarios();
+      logAcao("aprovar_usuario", `Aprovou usuário "${userName}"`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao aprovar usuário");
+    }
+  };
+
+  const handleBloquearUsuario = async (userId: string, userName: string, motivo: string) => {
+    if (!motivo.trim()) {
+      toast.error("Informe o motivo do bloqueio");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('bloquear_usuario', {
+        p_admin_id: adminData.id,
+        p_user_id: userId,
+        p_motivo: motivo
+      });
+
+      if (error) throw error;
+
+      const result = data?.[0];
+      if (!result || !result.success) {
+        toast.error(result?.message || "Erro ao bloquear usuário");
+        return;
+      }
+
+      toast.success("Usuário bloqueado com sucesso!");
+      carregarUsuarios();
+      logAcao("bloquear_usuario", `Bloqueou usuário "${userName}" - Motivo: ${motivo}`);
+      setShowBloqueioDialog(false);
+      setMotivoBloqueio("");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao bloquear usuário");
+    }
+  };
+
+  const handleAprovarPost = async (postId: string, postTitulo: string) => {
+    try {
+      const { data, error } = await supabase.rpc('aprovar_post', {
+        p_admin_id: adminData.id,
+        p_post_id: postId
+      });
+
+      if (error) throw error;
+
+      const result = data?.[0];
+      if (!result || !result.success) {
+        toast.error(result?.message || "Erro ao aprovar post");
+        return;
+      }
+
+      toast.success("Post aprovado com sucesso!");
+      carregarPosts();
+      logAcao("aprovar_post", `Aprovou post "${postTitulo}"`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao aprovar post");
+    }
+  };
+
+  const handleRejeitarPost = async (postId: string, postTitulo: string, motivo: string) => {
+    if (!motivo.trim()) {
+      toast.error("Informe o motivo da rejeição");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('rejeitar_post', {
+        p_admin_id: adminData.id,
+        p_post_id: postId,
+        p_motivo: motivo
+      });
+
+      if (error) throw error;
+
+      const result = data?.[0];
+      if (!result || !result.success) {
+        toast.error(result?.message || "Erro ao rejeitar post");
+        return;
+      }
+
+      toast.success("Post rejeitado com sucesso!");
+      carregarPosts();
+      logAcao("rejeitar_post", `Rejeitou post "${postTitulo}" - Motivo: ${motivo}`);
+      setShowRejeicaoDialog(false);
+      setMotivoRejeicao("");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao rejeitar post");
+    }
   };
 
   // Açôes de Empresa
@@ -808,13 +920,17 @@ export default function Admin() {
                       <div className="flex gap-2">
                         {post.status === 'pendente' && (
                           <>
-                            <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 rounded-xl gap-2 h-10 shadow-lg shadow-emerald-500/20" onClick={async () => {
-                              const res = await fetch(`/api/posts?id=${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'aprovado', data_aprovacao: new Date().toISOString(), admin_aprovador_id: adminData.id }) });
-                              if (res.ok) { toast.success("Post aprovado!"); await carregarDados(); }
-                            }}>
+                            <Button 
+                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 rounded-xl gap-2 h-10 shadow-lg shadow-emerald-500/20" 
+                              onClick={() => handleAprovarPost(post.id, post.titulo)}
+                            >
                               <CheckCircle2 className="w-4 h-4" /> Aprovar
                             </Button>
-                            <Button variant="outline" className="flex-1 border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl h-10" onClick={() => { setPostSelecionado(post); setShowRejeicaoDialog(true); }}>
+                            <Button 
+                              variant="outline" 
+                              className="flex-1 border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl h-10" 
+                              onClick={() => { setPostSelecionado(post); setShowRejeicaoDialog(true); }}
+                            >
                               Rejeitar
                             </Button>
                           </>
@@ -849,36 +965,69 @@ export default function Admin() {
                           <tr key={u.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${u.is_admin ? 'bg-primary text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'}`}>
-                                  {u.nome?.[0] || 'U'}
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                  u.status === 'aprovado' ? 'bg-emerald-100 text-emerald-700' : 
+                                  u.status === 'bloqueado' ? 'bg-rose-100 text-rose-700' : 
+                                  'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {u.nome?.[0]?.toUpperCase() || 'U'}
                                 </div>
                                 <div>
                                   <p className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">{u.nome || 'Sem nome'}</p>
                                   <p className="text-xs text-zinc-500">{u.email}</p>
+                                  {u.motivo_bloqueio && (
+                                    <p className="text-xs text-rose-500 mt-1">Motivo: {u.motivo_bloqueio}</p>
+                                  )}
                                 </div>
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              {u.is_admin ? (
-                                <Badge className="bg-primary shadow-sm">Administrador</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-zinc-400 border-zinc-200">Visitante</Badge>
+                              {u.status === 'aprovado' && (
+                                <Badge className="bg-emerald-500 text-white shadow-sm">Aprovado</Badge>
+                              )}
+                              {u.status === 'pendente' && (
+                                <Badge className="bg-amber-500 text-white shadow-sm">Pendente</Badge>
+                              )}
+                              {u.status === 'bloqueado' && (
+                                <Badge className="bg-rose-500 text-white shadow-sm">Bloqueado</Badge>
                               )}
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className={`rounded-xl gap-2 ${u.is_admin ? 'text-rose-500 hover:bg-rose-50' : 'text-primary hover:bg-primary/10'}`}
-                                  onClick={() => handleToggleAdmin(u.id, u.is_admin)}
-                                >
-                                  {u.is_admin ? <Shield className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                                  {u.is_admin ? 'Revogar Admin' : 'Tornar Admin'}
-                                </Button>
-                                <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl" onClick={() => handleExcluirUsuario(u.id)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                {u.status === 'pendente' && (
+                                  <Button
+                                    size="sm"
+                                    className="rounded-xl gap-2 bg-emerald-500 hover:bg-emerald-600 text-white"
+                                    onClick={() => handleAprovarUsuario(u.id, u.nome || u.email)}
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Aprovar
+                                  </Button>
+                                )}
+                                {u.status === 'aprovado' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="rounded-xl gap-2 text-rose-500 border-rose-200 hover:bg-rose-50"
+                                    onClick={() => {
+                                      setEmpresaSelecionada({ id: u.id, nome: u.nome || u.email } as any);
+                                      setShowBloqueioDialog(true);
+                                    }}
+                                  >
+                                    <Ban className="w-4 h-4" />
+                                    Bloquear
+                                  </Button>
+                                )}
+                                {u.status === 'bloqueado' && (
+                                  <Button
+                                    size="sm"
+                                    className="rounded-xl gap-2 bg-emerald-500 hover:bg-emerald-600 text-white"
+                                    onClick={() => handleAprovarUsuario(u.id, u.nome || u.email)}
+                                  >
+                                    <Unlock className="w-4 h-4" />
+                                    Desbloquear
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -957,25 +1106,41 @@ export default function Admin() {
       <Dialog open={showBloqueioDialog} onOpenChange={setShowBloqueioDialog}>
         <DialogContent className="rounded-3xl border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Bloquear Empresa</DialogTitle>
-            <DialogDescription>A empresa não aparecerá mais no site. Informe o motivo:</DialogDescription>
+            <DialogTitle>Bloquear {empresaSelecionada?.razaoSocial ? 'Empresa' : 'Usuário'}</DialogTitle>
+            <DialogDescription>
+              {empresaSelecionada?.razaoSocial 
+                ? 'A empresa não aparecerá mais no site. Informe o motivo:' 
+                : 'O usuário não poderá mais acessar o sistema. Informe o motivo:'}
+            </DialogDescription>
           </DialogHeader>
           <Textarea
             className="rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
-            placeholder="Ex: Informações falsas, fotos impróprias..."
+            placeholder="Ex: Informações falsas, comportamento inadequado..."
             value={motivoBloqueio}
             onChange={(e) => setMotivoBloqueio(e.target.value)}
           />
           <DialogFooter className="gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setShowBloqueioDialog(false)}>Manter Ativa</Button>
-            <Button variant="destructive" className="rounded-xl shadow-lg shadow-rose-500/20" onClick={handleBloquearEmpresa}>Confirmar Bloqueio</Button>
+            <Button variant="ghost" onClick={() => setShowBloqueioDialog(false)}>Cancelar</Button>
+            <Button 
+              variant="destructive" 
+              className="rounded-xl shadow-lg shadow-rose-500/20" 
+              onClick={() => {
+                if (empresaSelecionada?.razaoSocial) {
+                  handleBloquearEmpresa();
+                } else {
+                  handleBloquearUsuario(empresaSelecionada?.id || '', empresaSelecionada?.nome || '', motivoBloqueio);
+                }
+              }}
+            >
+              Confirmar Bloqueio
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showRejeicaoDialog} onOpenChange={setShowRejeicaoDialog}>
         <DialogContent className="rounded-3xl">
-          <DialogHeader><DialogTitle>Rejeitar Conteúdo</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Rejeitar Post</DialogTitle></DialogHeader>
           <Textarea
             className="rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 min-h-[100px]"
             value={motivoRejeicao}
@@ -983,10 +1148,17 @@ export default function Admin() {
             placeholder="Motivo da rejeição para o usuário..."
           />
           <DialogFooter>
-            <Button variant="destructive" onClick={async () => {
-              const res = await fetch(`/api/posts?id=${postSelecionado?.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'rejeitado', motivo_rejeicao: motivoRejeicao }) });
-              if (res.ok) { toast.success("Post rejeitado"); setShowRejeicaoDialog(false); await carregarDados(); }
-            }}>Rejeitar Post</Button>
+            <Button variant="ghost" onClick={() => setShowRejeicaoDialog(false)}>Cancelar</Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (postSelecionado) {
+                  handleRejeitarPost(postSelecionado.id, postSelecionado.titulo, motivoRejeicao);
+                }
+              }}
+            >
+              Rejeitar Post
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
