@@ -513,11 +513,36 @@ const SuaEmpresa = () => {
         }
       }
 
+      // Mapeamento de IDs do JSON local para nomes no Supabase
+      const categoriasMap: Record<string, string> = {
+        'alimentacao-bebidas': 'Alimentação',
+        'varejo-alimentar': 'Supermercado',
+        'saude-bem-estar': 'Saúde',
+        'beleza-estetica': 'Salão de Beleza',
+        'moda-vestuario': 'Loja de Roupas',
+        'calcados-acessorios': 'Calçados',
+        'servicos-gerais': 'Serviços',
+        'construcao-reformas': 'Construção',
+        'automotivo': 'Automotivo',
+        'educacao': 'Educação',
+        'tecnologia': 'Tecnologia',
+        'pet-shop': 'Pet Shop',
+        'entretenimento-lazer': 'Entretenimento',
+        'esportes-fitness': 'Academia',
+        'turismo-hospedagem': 'Turismo',
+        'imoveis': 'Imóveis',
+        'financeiro-seguros': 'Outros',
+        'profissionais-liberais': 'Serviços',
+        'agro-rural': 'Outros'
+      };
+
+      const nomeCategoriaBanco = categoriasMap[data.categoria] || 'Outros';
+
       // Buscar ID da categoria no Supabase
       const { data: categoriaData, error: categoriaError } = await supabase
         .from('categorias')
         .select('id')
-        .eq('nome', data.categoria)
+        .eq('nome', nomeCategoriaBanco)
         .single();
 
       if (categoriaError || !categoriaData) {
@@ -1144,7 +1169,7 @@ const SuaEmpresa = () => {
                         <SelectTrigger className={`w-full ${fieldErrors.categoria ? 'border-orange-500 border-2' : ''}`}><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
                         <SelectContent className="max-h-[300px]">
                           {categoriasData.categorias.map(c => (
-                            <SelectItem key={c.id} value={c.nome}>
+                            <SelectItem key={c.id} value={c.id}>
                               {c.icone} {c.nome}
                             </SelectItem>
                           ))}
