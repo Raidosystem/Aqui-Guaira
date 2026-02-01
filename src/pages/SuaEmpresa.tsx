@@ -223,6 +223,7 @@ const SuaEmpresa = () => {
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [lastCnpjBuscado, setLastCnpjBuscado] = useState<string>("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Verificar se já está logado
   useEffect(() => {
@@ -266,11 +267,15 @@ const SuaEmpresa = () => {
   const handleCadastro = async (data: z.infer<typeof cadastroSchema>) => {
     console.log("🔍 INICIANDO VALIDAÇÃO DO CADASTRO", data);
     
+    // Limpar erros anteriores
+    setFieldErrors({});
+    
     // ===== VALIDAÇÕES IMEDIATAS COM FEEDBACK VISUAL =====
     
     // 1. CNPJ
     if (!data.cnpj || !isValidCNPJ(data.cnpj)) {
       console.log("❌ ERRO: CNPJ inválido", data.cnpj);
+      setFieldErrors({ cnpj: "CNPJ inválido. Verifique se digitou todos os 14 dígitos corretamente." });
       toast("CNPJ Inválido", {
         description: (
           <div className="space-y-2">
@@ -289,6 +294,7 @@ const SuaEmpresa = () => {
     // 2. Nome Fantasia
     if (!data.nomeFantasia || data.nomeFantasia.trim().length < 3) {
       console.log("❌ ERRO: Nome Fantasia inválido", data.nomeFantasia);
+      setFieldErrors({ nomeFantasia: "O nome fantasia deve ter pelo menos 3 caracteres." });
       toast("Nome Fantasia Inválido", {
         description: (
           <div className="space-y-2">
@@ -307,6 +313,7 @@ const SuaEmpresa = () => {
     // 3. Telefone/Celular
     if (!data.celular || data.celular.replace(/\D/g, '').length < 10) {
       console.log("❌ ERRO: Telefone inválido", data.celular);
+      setFieldErrors({ celular: "Digite um número de telefone válido com DDD (mínimo 10 dígitos)." });
       toast("Telefone Inválido", {
         description: (
           <div className="space-y-2">
@@ -863,6 +870,12 @@ const SuaEmpresa = () => {
                         </div>
                         <p className="text-[11px] text-muted-foreground">Ao completar o CNPJ, os dados serão preenchidos automaticamente.</p>
                         {cadastroForm.formState.errors.cnpj && <p className="text-xs text-destructive">{cadastroForm.formState.errors.cnpj.message}</p>}
+                        {fieldErrors.cnpj && (
+                          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <span className="text-red-600 text-sm">⚠️</span>
+                            <p className="text-xs text-red-600 font-medium">{fieldErrors.cnpj}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Razão Social *</label>
@@ -873,11 +886,23 @@ const SuaEmpresa = () => {
                         <label className="text-xs font-medium">Nome Fantasia *</label>
                         <Input {...cadastroForm.register("nomeFantasia")} />
                         {cadastroForm.formState.errors.nomeFantasia && <p className="text-xs text-destructive">{cadastroForm.formState.errors.nomeFantasia.message}</p>}
+                        {fieldErrors.nomeFantasia && (
+                          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                            <span className="text-amber-600 text-sm">📝</span>
+                            <p className="text-xs text-amber-700 font-medium">{fieldErrors.nomeFantasia}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Email *</label>
                         <Input type="email" {...cadastroForm.register("email")} />
                         {cadastroForm.formState.errors.email && <p className="text-xs text-destructive">{cadastroForm.formState.errors.email.message}</p>}
+                        {fieldErrors.email && (
+                          <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-md">
+                            <span className="text-purple-600 text-sm">📧</span>
+                            <p className="text-xs text-purple-700 font-medium">{fieldErrors.email}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">CNAE</label>
@@ -924,11 +949,23 @@ const SuaEmpresa = () => {
                         <label className="text-xs font-medium">Celular (login) *</label>
                         <Input value={cadastroForm.watch("celular")} onChange={(e) => onMaskPhone(e, "celular", "cadastro")} placeholder="(11) 90000-0000" />
                         {cadastroForm.formState.errors.celular && <p className="text-xs text-destructive">{cadastroForm.formState.errors.celular.message}</p>}
+                        {fieldErrors.celular && (
+                          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <span className="text-blue-600 text-sm">📱</span>
+                            <p className="text-xs text-blue-700 font-medium">{fieldErrors.celular}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">WhatsApp *</label>
                         <Input value={cadastroForm.watch("whatsapp")} onChange={(e) => onMaskPhone(e, "whatsapp", "cadastro")} placeholder="(11) 90000-0000" />
                         {cadastroForm.formState.errors.whatsapp && <p className="text-xs text-destructive">{cadastroForm.formState.errors.whatsapp.message}</p>}
+                        {fieldErrors.whatsapp && (
+                          <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                            <span className="text-green-600 text-sm">💬</span>
+                            <p className="text-xs text-green-700 font-medium">{fieldErrors.whatsapp}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Site</label>
@@ -971,6 +1008,12 @@ const SuaEmpresa = () => {
                           )}
                         </div>
                         {cadastroForm.formState.errors.cep && <p className="text-xs text-destructive">{cadastroForm.formState.errors.cep.message}</p>}
+                        {fieldErrors.cep && (
+                          <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-md">
+                            <span className="text-rose-600 text-sm">🏠</span>
+                            <p className="text-xs text-rose-700 font-medium">{fieldErrors.cep}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Bairro *</label>
@@ -980,6 +1023,12 @@ const SuaEmpresa = () => {
                           placeholder="Digite o bairro"
                         />
                         {cadastroForm.formState.errors.bairro && <p className="text-xs text-destructive">{cadastroForm.formState.errors.bairro.message}</p>}
+                        {fieldErrors.bairro && (
+                          <div className="flex items-start gap-2 p-3 bg-indigo-50 border border-indigo-200 rounded-md">
+                            <span className="text-indigo-600 text-sm">📍</span>
+                            <p className="text-xs text-indigo-700 font-medium">{fieldErrors.bairro}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -993,15 +1042,27 @@ const SuaEmpresa = () => {
                             placeholder="Rua / Avenida"
                           />
                           {cadastroForm.formState.errors.logradouro && <p className="text-xs text-destructive">{cadastroForm.formState.errors.logradouro.message}</p>}
+                          {fieldErrors.logradouro && (
+                            <div className="flex items-start gap-2 p-3 bg-teal-50 border border-teal-200 rounded-md">
+                              <span className="text-teal-600 text-sm">🛣️</span>
+                              <p className="text-xs text-teal-700 font-medium">{fieldErrors.logradouro}</p>
+                            </div>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <label className="text-xs font-medium">Número *</label>
                           <Input
                             value={cadastroForm.watch("numero")}
                             onChange={(e) => cadastroForm.setValue("numero", e.target.value)}
-                            placeholder="10 / 704"
+                            placeholder=""
                           />
                           {cadastroForm.formState.errors.numero && <p className="text-xs text-destructive">{cadastroForm.formState.errors.numero.message}</p>}
+                          {fieldErrors.numero && (
+                            <div className="flex items-start gap-2 p-3 bg-cyan-50 border border-cyan-200 rounded-md">
+                              <span className="text-cyan-600 text-sm">🔢</span>
+                              <p className="text-xs text-cyan-700 font-medium">{fieldErrors.numero}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1041,6 +1102,12 @@ const SuaEmpresa = () => {
                         </SelectContent>
                       </Select>
                       {cadastroForm.formState.errors.categoria && <p className="text-xs text-destructive">{cadastroForm.formState.errors.categoria.message}</p>}
+                      {fieldErrors.categoria && (
+                        <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                          <span className="text-orange-600 text-sm">🏷️</span>
+                          <p className="text-xs text-orange-700 font-medium">{fieldErrors.categoria}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1082,6 +1149,12 @@ const SuaEmpresa = () => {
                           <label className="text-xs font-medium">Descrição *</label>
                           <Textarea {...cadastroForm.register("descricao")} rows={6} placeholder="Fale sobre produtos, diferenciais, horário, formas de pagamento..." />
                           {cadastroForm.formState.errors.descricao && <p className="text-xs text-destructive">{cadastroForm.formState.errors.descricao.message}</p>}
+                          {fieldErrors.descricao && (
+                            <div className="flex items-start gap-2 p-3 bg-pink-50 border border-pink-200 rounded-md">
+                              <span className="text-pink-600 text-sm">✍️</span>
+                              <p className="text-xs text-pink-700 font-medium">{fieldErrors.descricao}</p>
+                            </div>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <label className="text-xs font-medium flex items-center gap-2">Banner <span className="text-muted-foreground">(quadrada)</span></label>
