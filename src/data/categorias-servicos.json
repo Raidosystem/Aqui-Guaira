@@ -1,0 +1,27 @@
+{
+  "section": {
+    "menuName": "Guaíra Serviços",
+    "slug": "servicos",
+    "title": "Serviços em Guaíra-SP",
+    "subtitle": "Pedreiros, encanadores, eletricistas, ar-condicionado e muito mais."
+  },
+  "categories": [
+    { "id": "pedreiro", "name": "Pedreiro", "slug": "pedreiro", "tags": ["obra", "reforma", "construcao", "alvenaria"] },
+    { "id": "encanador", "name": "Encanador", "slug": "encanador", "tags": ["hidraulica", "vazamento", "cano", "registro"] },
+    { "id": "eletricista", "name": "Eletricista", "slug": "eletricista", "tags": ["energia", "tomada", "disjuntor", "curto"] },
+    { "id": "pintor", "name": "Pintor", "slug": "pintor", "tags": ["pintura", "parede", "acabamento"] },
+    { "id": "marceneiro", "name": "Marceneiro", "slug": "marceneiro", "tags": ["madeira", "moveis", "armario"] },
+    { "id": "cabelereiro", "name": "Cabeleireiro", "slug": "cabelereiro", "tags": ["cabelo", "corte", "barba"] },
+    { "id": "costureira", "name": "Costureira", "slug": "costureira", "tags": ["costura", "ajuste", "roupa"] },
+    { "id": "cozinheiro", "name": "Cozinheiro", "slug": "cozinheiro", "tags": ["comida", "evento", "buffet"] },
+    { "id": "climatizacao", "name": "Climatização", "slug": "climatizacao", "tags": ["ar-condicionado", "instalacao", "limpeza", "manutencao", "split"] },
+    { "id": "diarista", "name": "Diarista", "slug": "diarista", "tags": ["limpeza", "faxina", "domestica"] },
+    { "id": "marido_de_aluguel", "name": "Marido de Aluguel", "slug": "marido-de-aluguel", "tags": ["pequenos-reparos", "instalacao", "manutencao"] },
+    { "id": "serralheiro", "name": "Serralheiro", "slug": "serralheiro", "tags": ["ferro", "portao", "solda"] },
+    { "id": "vidraceiro", "name": "Vidraceiro", "slug": "vidraceiro", "tags": ["vidro", "box", "janela"] },
+    { "id": "gesseiro", "name": "Gesseiro", "slug": "gesseiro", "tags": ["gesso", "forro", "sanca"] },
+    { "id": "refrigeracao", "name": "Refrigeração", "slug": "refrigeracao", "tags": ["geladeira", "freezer", "conserto"] },
+    { "id": "chaveiro", "name": "Chaveiro", "slug": "chaveiro", "tags": ["chave", "fechadura", "emergencia"] },
+    { "id": "desentupidor", "name": "Desentupidor", "slug": "desentupidor", "tags": ["entupimento", "ralo", "esgoto"] }
+  ]
+}
