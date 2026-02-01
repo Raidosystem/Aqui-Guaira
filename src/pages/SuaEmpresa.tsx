@@ -861,7 +861,12 @@ const SuaEmpresa = () => {
                       <div className="space-y-2">
                         <label className="text-xs font-medium">CNPJ *</label>
                         <div className="relative">
-                          <Input value={cadastroForm.watch("cnpj")} onChange={(e) => onMaskCNPJ(e, "cadastro")} placeholder="00.000.000/0000-00" />
+                          <Input 
+                            value={cadastroForm.watch("cnpj")} 
+                            onChange={(e) => onMaskCNPJ(e, "cadastro")} 
+                            placeholder="00.000.000/0000-00"
+                            className={fieldErrors.cnpj ? 'border-red-500 border-2' : ''}
+                          />
                           {loadingCnpj && (
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
                               <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -884,7 +889,10 @@ const SuaEmpresa = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Nome Fantasia *</label>
-                        <Input {...cadastroForm.register("nomeFantasia")} />
+                        <Input 
+                          {...cadastroForm.register("nomeFantasia")}
+                          className={fieldErrors.nomeFantasia ? 'border-amber-500 border-2' : ''}
+                        />
                         {cadastroForm.formState.errors.nomeFantasia && <p className="text-xs text-destructive">{cadastroForm.formState.errors.nomeFantasia.message}</p>}
                         {fieldErrors.nomeFantasia && (
                           <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
@@ -895,7 +903,11 @@ const SuaEmpresa = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Email *</label>
-                        <Input type="email" {...cadastroForm.register("email")} />
+                        <Input 
+                          type="email" 
+                          {...cadastroForm.register("email")}
+                          className={fieldErrors.email ? 'border-purple-500 border-2' : ''}
+                        />
                         {cadastroForm.formState.errors.email && <p className="text-xs text-destructive">{cadastroForm.formState.errors.email.message}</p>}
                         {fieldErrors.email && (
                           <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-md">
@@ -947,7 +959,12 @@ const SuaEmpresa = () => {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Celular (login) *</label>
-                        <Input value={cadastroForm.watch("celular")} onChange={(e) => onMaskPhone(e, "celular", "cadastro")} placeholder="(11) 90000-0000" />
+                        <Input 
+                          value={cadastroForm.watch("celular")} 
+                          onChange={(e) => onMaskPhone(e, "celular", "cadastro")} 
+                          placeholder="(11) 90000-0000"
+                          className={fieldErrors.celular ? 'border-blue-500 border-2' : ''}
+                        />
                         {cadastroForm.formState.errors.celular && <p className="text-xs text-destructive">{cadastroForm.formState.errors.celular.message}</p>}
                         {fieldErrors.celular && (
                           <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -958,7 +975,12 @@ const SuaEmpresa = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">WhatsApp *</label>
-                        <Input value={cadastroForm.watch("whatsapp")} onChange={(e) => onMaskPhone(e, "whatsapp", "cadastro")} placeholder="(11) 90000-0000" />
+                        <Input 
+                          value={cadastroForm.watch("whatsapp")} 
+                          onChange={(e) => onMaskPhone(e, "whatsapp", "cadastro")} 
+                          placeholder="(11) 90000-0000"
+                          className={fieldErrors.whatsapp ? 'border-green-500 border-2' : ''}
+                        />
                         {cadastroForm.formState.errors.whatsapp && <p className="text-xs text-destructive">{cadastroForm.formState.errors.whatsapp.message}</p>}
                         {fieldErrors.whatsapp && (
                           <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
@@ -1000,6 +1022,7 @@ const SuaEmpresa = () => {
                               }
                             }}
                             placeholder="00000-000"
+                            className={fieldErrors.cep ? 'border-rose-500 border-2' : ''}
                           />
                           {loadingCep && (
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1021,6 +1044,7 @@ const SuaEmpresa = () => {
                           value={cadastroForm.watch("bairro")}
                           onChange={(e) => cadastroForm.setValue("bairro", e.target.value)}
                           placeholder="Digite o bairro"
+                          className={fieldErrors.bairro ? 'border-indigo-500 border-2' : ''}
                         />
                         {cadastroForm.formState.errors.bairro && <p className="text-xs text-destructive">{cadastroForm.formState.errors.bairro.message}</p>}
                         {fieldErrors.bairro && (
@@ -1040,6 +1064,7 @@ const SuaEmpresa = () => {
                             value={cadastroForm.watch("logradouro")}
                             onChange={(e) => cadastroForm.setValue("logradouro", e.target.value)}
                             placeholder="Rua / Avenida"
+                            className={fieldErrors.logradouro ? 'border-teal-500 border-2' : ''}
                           />
                           {cadastroForm.formState.errors.logradouro && <p className="text-xs text-destructive">{cadastroForm.formState.errors.logradouro.message}</p>}
                           {fieldErrors.logradouro && (
@@ -1055,6 +1080,7 @@ const SuaEmpresa = () => {
                             value={cadastroForm.watch("numero")}
                             onChange={(e) => cadastroForm.setValue("numero", e.target.value)}
                             placeholder=""
+                            className={fieldErrors.numero ? 'border-cyan-500 border-2' : ''}
                           />
                           {cadastroForm.formState.errors.numero && <p className="text-xs text-destructive">{cadastroForm.formState.errors.numero.message}</p>}
                           {fieldErrors.numero && (
@@ -1092,7 +1118,7 @@ const SuaEmpresa = () => {
                     <div className="space-y-2">
                       <label className="text-xs font-medium">Categoria Principal *</label>
                       <Select value={cadastroForm.watch("categoria")} onValueChange={(v) => cadastroForm.setValue("categoria", v)}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                        <SelectTrigger className={`w-full ${fieldErrors.categoria ? 'border-orange-500 border-2' : ''}`}><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
                         <SelectContent className="max-h-[300px]">
                           {categoriasData.categorias.map(c => (
                             <SelectItem key={c.id} value={c.nome}>
@@ -1147,7 +1173,12 @@ const SuaEmpresa = () => {
                       <div className="grid md:grid-cols-3 gap-6">
                         <div className="space-y-2 md:col-span-2">
                           <label className="text-xs font-medium">Descrição *</label>
-                          <Textarea {...cadastroForm.register("descricao")} rows={6} placeholder="Fale sobre produtos, diferenciais, horário, formas de pagamento..." />
+                          <Textarea 
+                            {...cadastroForm.register("descricao")} 
+                            rows={6} 
+                            placeholder="Fale sobre produtos, diferenciais, horário, formas de pagamento..."
+                            className={fieldErrors.descricao ? 'border-pink-500 border-2' : ''}
+                          />
                           {cadastroForm.formState.errors.descricao && <p className="text-xs text-destructive">{cadastroForm.formState.errors.descricao.message}</p>}
                           {fieldErrors.descricao && (
                             <div className="flex items-start gap-2 p-3 bg-pink-50 border border-pink-200 rounded-md">
