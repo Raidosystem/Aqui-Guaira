@@ -1,6 +1,10 @@
 -- Sistema de Administração Seguro
 
--- 1. Criar tabela de administradores
+-- 1. Adicionar colunas faltantes na tabela admins (se já existir)
+ALTER TABLE public.admins ADD COLUMN IF NOT EXISTS super_admin BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.admins ADD COLUMN IF NOT EXISTS ativo BOOLEAN DEFAULT TRUE;
+
+-- 1b. Criar tabela de administradores (se não existir)
 CREATE TABLE IF NOT EXISTS public.admins (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
