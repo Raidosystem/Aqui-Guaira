@@ -538,6 +538,9 @@ const SuaEmpresa = () => {
 
       const nomeCategoriaBanco = categoriasMap[data.categoria] || 'Outros';
 
+      console.log('🔍 Categoria selecionada:', data.categoria);
+      console.log('📝 Nome mapeado para banco:', nomeCategoriaBanco);
+
       // Buscar ID da categoria no Supabase
       const { data: categoriaData, error: categoriaError } = await supabase
         .from('categorias')
@@ -545,10 +548,12 @@ const SuaEmpresa = () => {
         .eq('nome', nomeCategoriaBanco)
         .single();
 
+      console.log('🔎 Resultado busca Supabase:', { categoriaData, categoriaError });
+
       if (categoriaError || !categoriaData) {
         console.error('❌ Erro ao buscar categoria:', categoriaError);
         toast("Erro ao buscar categoria", {
-          description: "Não foi possível encontrar a categoria selecionada no banco de dados.",
+          description: `Não foi possível encontrar a categoria "${nomeCategoriaBanco}" no banco de dados.`,
           duration: 5000,
         });
         setLoading(false);
@@ -556,6 +561,7 @@ const SuaEmpresa = () => {
       }
 
       const categoriaId = categoriaData.id;
+      console.log('✅ UUID da categoria encontrado:', categoriaId);
 
       // Criar slug
       const slug = data.nomeFantasia
@@ -598,7 +604,7 @@ const SuaEmpresa = () => {
         destaque: false,
         responsavel_nome: data.razaoSocial,
         responsavel_email: data.email,
-        responsavel_telefone: data.celular,
+        responsavel_telefone: data.celular.replace(/\D/g, ''), // Remove máscara
       };
 
       console.log('🚀 Enviando para Supabase:', JSON.stringify(empresaData, null, 2));
