@@ -177,11 +177,43 @@ const Dashboard = () => {
 
     setSalvando(true);
     try {
-      // Mapear nome da categoria de volta para ID
+      // Mapear categoria para UUID do Supabase
       let categoriaId = empresa.categoria_id;
       if (categoria) {
-        const cat = categoriasData.categorias.find(c => c.nome === categoria);
-        if (cat) categoriaId = cat.id;
+        // Mapeamento de IDs do JSON local para nomes no Supabase
+        const categoriasMap: Record<string, string> = {
+          'alimentacao-bebidas': 'Alimentação',
+          'varejo-alimentar': 'Supermercado',
+          'saude-bem-estar': 'Saúde',
+          'beleza-estetica': 'Salão de Beleza',
+          'moda-vestuario': 'Loja de Roupas',
+          'calcados-acessorios': 'Calçados',
+          'servicos-gerais': 'Serviços',
+          'construcao-reformas': 'Construção',
+          'automotivo': 'Automotivo',
+          'educacao': 'Educação',
+          'tecnologia': 'Tecnologia',
+          'pet-shop': 'Pet Shop',
+          'entretenimento-lazer': 'Entretenimento',
+          'esportes-fitness': 'Academia',
+          'turismo-hospedagem': 'Turismo',
+          'imoveis': 'Imóveis',
+          'financeiro-seguros': 'Outros',
+          'profissionais-liberais': 'Serviços',
+          'agro-rural': 'Outros'
+        };
+
+        const nomeCategoriaBanco = categoriasMap[categoria] || 'Outros';
+
+        const { data: categoriaData } = await supabase
+          .from('categorias')
+          .select('id')
+          .eq('nome', nomeCategoriaBanco)
+          .single();
+
+        if (categoriaData) {
+          categoriaId = categoriaData.id;
+        }
       }
 
       const sucesso = await atualizarEmpresa(empresa.id, {
@@ -195,7 +227,7 @@ const Dashboard = () => {
         site: site || null,
         instagram: instagram || null,
         facebook: facebook || null,
-        link_google_maps: linkGoogleMaps || null,
+        google_maps_link: linkGoogleMaps || null,
       });
 
       if (!sucesso) throw new Error('Falha ao salvar');
