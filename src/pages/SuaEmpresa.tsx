@@ -19,6 +19,86 @@ import { BAIRROS_GUAIRA } from "@/data/bairros";
 import categoriasData from "@/data/categorias-empresas.json";
 import cnaeCodes from "@/data/cnae-codes.json";
 
+// Função para traduzir erros do banco em mensagens específicas
+const obterMensagemErroEspecifica = (error: any): string => {
+  const message = error?.message || '';
+  const details = error?.details || '';
+  
+  // Erros de colunas
+  if (message.includes("'telefone'") || message.includes('telefone')) {
+    return "❌ Erro no campo TELEFONE. Verifique se o número está no formato correto (DDD + número).";
+  }
+  
+  if (message.includes("'whatsapp'") || message.includes('whatsapp')) {
+    return "❌ Erro no campo WHATSAPP. Verifique se o número está no formato correto.";
+  }
+  
+  if (message.includes("'email'") || message.includes('email')) {
+    return "❌ Erro no campo EMAIL. Verifique se o e-mail está no formato correto.";
+  }
+  
+  if (message.includes("'cnpj'") || message.includes('cnpj')) {
+    return "❌ Erro no campo CNPJ. Verifique se o CNPJ é válido ou se já está cadastrado.";
+  }
+  
+  if (message.includes("'cep'") || message.includes('cep')) {
+    return "❌ Erro no campo CEP. Verifique se o CEP está correto (apenas números).";
+  }
+  
+  if (message.includes("'endereco'") || message.includes('logradouro')) {
+    return "❌ Erro no campo ENDEREÇO. Verifique se o endereço foi preenchido corretamente.";
+  }
+  
+  if (message.includes("'bairro'")) {
+    return "❌ Erro no campo BAIRRO. Verifique se o bairro foi selecionado.";
+  }
+  
+  if (message.includes("'categoria_id'") || message.includes('categoria')) {
+    return "❌ Erro no campo CATEGORIA. Verifique se a categoria foi selecionada corretamente.";
+  }
+  
+  if (message.includes("'nome'")) {
+    return "❌ Erro no campo NOME FANTASIA. Verifique se o nome da empresa está correto.";
+  }
+  
+  if (message.includes("'descricao'")) {
+    return "❌ Erro no campo DESCRIÇÃO. Verifique se a descrição foi preenchida.";
+  }
+  
+  if (message.includes("'slug'") || message.includes('duplicate') || message.includes('unique')) {
+    return "❌ Já existe uma empresa com este nome. Por favor, escolha um nome diferente.";
+  }
+  
+  if (message.includes("'logo'") || message.includes('imagens')) {
+    return "❌ Erro ao salvar as imagens. Tente fazer upload novamente.";
+  }
+  
+  // Erros de constraint/validação
+  if (message.includes('violates check constraint')) {
+    return "❌ Um dos campos não atende aos requisitos. Verifique todos os campos obrigatórios.";
+  }
+  
+  if (message.includes('violates foreign key')) {
+    return "❌ Categoria selecionada é inválida. Por favor, selecione uma categoria da lista.";
+  }
+  
+  if (message.includes('not-null constraint')) {
+    return "❌ Campos obrigatórios não preenchidos. Verifique se todos os campos marcados com * foram preenchidos.";
+  }
+  
+  if (message.includes('value too long')) {
+    return "❌ Um dos campos excedeu o tamanho máximo permitido. Reduza o texto.";
+  }
+  
+  // Erro genérico com detalhes se disponível
+  if (details) {
+    return `❌ Erro: ${details}`;
+  }
+  
+  return `❌ Erro ao cadastrar empresa: ${message || 'Erro desconhecido. Tente novamente.'}`;
+};
+
+
 type CnpjApiResponse = {
   razao_social?: string;
   nome_fantasia?: string;
@@ -269,10 +349,11 @@ const SuaEmpresa = () => {
 
       const resultado = await criarEmpresa(empresaData);
 
-      if (!resultado || !resultado.id) {
+      if (!resultado.success) {
+        const mensagemErro = obterMensagemErroEspecifica(resultado.error);
         toast("Erro ao cadastrar empresa", {
-          description: "Não foi possível criar o cadastro. Verifique os dados e tente novamente.",
-          duration: 5000,
+          description: mensagemErro,
+          duration: 7000,
         });
         setLoading(false);
         return;
@@ -282,7 +363,7 @@ const SuaEmpresa = () => {
       localStorage.setItem('empresa_auth', JSON.stringify({
         cnpj: data.cnpj,
         celular: data.celular,
-        empresaId: resultado.id
+        empresaId: resultado.data.id
       }));
 
       toast("Cadastro realizado!", {
@@ -295,24 +376,10 @@ const SuaEmpresa = () => {
     } catch (error: unknown) {
       console.error('Erro ao cadastrar:', error);
 
-      // Mensagem de erro mais específica
-      let mensagem = "Tente novamente mais tarde";
-
-      if (error instanceof Error && error.message.includes('row-level security')) {
-        mensagem = "❌ Permissão negada. Execute o arquivo 'supabase/fix-rls.sql' no Supabase SQL Editor.";
-      } else if (error instanceof Error && error.message.includes('Bucket not found')) {
-        mensagem = "❌ Buckets de storage não configurados. Veja SETUP_RAPIDO.md";
-      } else if (error instanceof Error && error.message.includes('relation') && error.message.includes('does not exist')) {
-        mensagem = "❌ Tabela não existe. Execute o arquivo 'supabase/schema.sql' no Supabase SQL Editor primeiro.";
-      } else if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505') {
-        mensagem = "❌ Esta empresa já está cadastrada (CNPJ duplicado).";
-      } else if (error instanceof Error) {
-        mensagem = `❌ Erro: ${error.message}`;
-      }
-
+      const mensagemErro = obterMensagemErroEspecifica(error);
       toast("Erro ao cadastrar", {
-        description: mensagem,
-        duration: 5000
+        description: mensagemErro,
+        duration: 7000
       });
     } finally {
       setLoading(false);

@@ -435,10 +435,10 @@ export async function criarEmpresa(empresa: Partial<Empresa>) {
     }
     
     console.log('✅ Empresa criada com sucesso:', data);
-    return data;
-  } catch (error) {
+    return { success: true, data };
+  } catch (error: any) {
     console.error('Erro ao criar empresa (Supabase):', error);
-    return null;
+    return { success: false, error };
   }
 }
 
