@@ -16,10 +16,9 @@ SELECT
     email, 
     nome, 
     super_admin, 
-    ativo,
-    created_at
+    ativo
 FROM public.admins
-ORDER BY created_at DESC;
+ORDER BY email;
 
 -- 3. Testar a função admin_login diretamente
 SELECT * FROM public.admin_login(
