@@ -271,7 +271,7 @@ const SuaEmpresa = () => {
     // 1. CNPJ
     if (!data.cnpj || !isValidCNPJ(data.cnpj)) {
       console.log("❌ ERRO: CNPJ inválido", data.cnpj);
-      toast.error("CNPJ Inválido", {
+      toast("CNPJ Inválido", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-red-600">⚠️ O CNPJ digitado não é válido</p>
@@ -289,7 +289,7 @@ const SuaEmpresa = () => {
     // 2. Nome Fantasia
     if (!data.nomeFantasia || data.nomeFantasia.trim().length < 3) {
       console.log("❌ ERRO: Nome Fantasia inválido", data.nomeFantasia);
-      toast.error("Nome Fantasia Inválido", {
+      toast("Nome Fantasia Inválido", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-amber-600">📝 Campo obrigatório</p>
@@ -307,7 +307,7 @@ const SuaEmpresa = () => {
     // 3. Telefone/Celular
     if (!data.celular || data.celular.replace(/\D/g, '').length < 10) {
       console.log("❌ ERRO: Telefone inválido", data.celular);
-      toast.error("Telefone Inválido", {
+      toast("Telefone Inválido", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-blue-600">📱 Número de telefone obrigatório</p>
@@ -325,7 +325,7 @@ const SuaEmpresa = () => {
     // 4. WhatsApp
     if (!data.whatsapp || data.whatsapp.replace(/\D/g, '').length < 10) {
       console.log("❌ ERRO: WhatsApp inválido", data.whatsapp);
-      toast.error("WhatsApp Inválido", {
+      toast("WhatsApp Inválido", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-green-600">💬 WhatsApp obrigatório</p>
@@ -343,7 +343,7 @@ const SuaEmpresa = () => {
     // 5. E-mail
     if (!data.email || !data.email.includes('@') || !data.email.includes('.')) {
       console.log("❌ ERRO: E-mail inválido", data.email);
-      toast.error("E-mail Inválido", {
+      toast("E-mail Inválido", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-purple-600">📧 E-mail obrigatório</p>
@@ -361,7 +361,7 @@ const SuaEmpresa = () => {
     // 6. Categoria
     if (!data.categoria || data.categoria.trim() === '') {
       console.log("❌ ERRO: Categoria não selecionada", data.categoria);
-      toast.error("Categoria Obrigatória", {
+      toast("Categoria Obrigatória", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-orange-600">🏷️ Selecione uma categoria</p>
@@ -379,7 +379,7 @@ const SuaEmpresa = () => {
     // 7. Bairro
     if (!data.bairro || data.bairro.trim() === '') {
       console.log("❌ ERRO: Bairro não selecionado", data.bairro);
-      toast.error("Bairro Obrigatório", {
+      toast("Bairro Obrigatório", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-indigo-600">📍 Bairro obrigatório</p>
@@ -397,7 +397,7 @@ const SuaEmpresa = () => {
     // 8. CEP
     if (!data.cep || data.cep.replace(/\D/g, '').length !== 8) {
       console.log("❌ ERRO: CEP inválido", data.cep);
-      toast.error("CEP Inválido", {
+      toast("CEP Inválido", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-rose-600">🏠 CEP obrigatório</p>
@@ -415,7 +415,7 @@ const SuaEmpresa = () => {
     // 9. Endereço (Logradouro)
     if (!data.logradouro || data.logradouro.trim().length < 3) {
       console.log("❌ ERRO: Endereço inválido", data.logradouro);
-      toast.error("Endereço Inválido", {
+      toast("Endereço Inválido", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-teal-600">🛣️ Logradouro obrigatório</p>
@@ -433,7 +433,7 @@ const SuaEmpresa = () => {
     // 10. Número
     if (!data.numero || data.numero.trim() === '') {
       console.log("❌ ERRO: Número não informado", data.numero);
-      toast.error("Número Obrigatório", {
+      toast("Número Obrigatório", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-cyan-600">🔢 Número do endereço obrigatório</p>
@@ -451,7 +451,7 @@ const SuaEmpresa = () => {
     // 11. Descrição
     if (!data.descricao || data.descricao.trim().length < 20) {
       console.log("❌ ERRO: Descrição muito curta", data.descricao);
-      toast.error("Descrição Muito Curta", {
+      toast("Descrição Muito Curta", {
         description: (
           <div className="space-y-2">
             <p className="font-semibold text-pink-600">✍️ Descrição insuficiente</p>
@@ -540,7 +540,7 @@ const SuaEmpresa = () => {
         imagens,
         logo: logoUrl || null,
         banner: imagens[0] || null,
-        status: 'pendente',
+        status: 'pendente' as 'pendente' | 'aprovado' | 'rejeitado' | 'inativo',
         verificado: false,
         destaque: false,
         responsavel_nome: data.razaoSocial,
