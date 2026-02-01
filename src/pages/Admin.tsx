@@ -187,6 +187,9 @@ export default function Admin() {
         return;
       }
       const admin = JSON.parse(adminStr);
+      console.log("👤 Admin carregado do localStorage:", admin);
+      console.log("🔑 É super admin?", admin.super_admin);
+      
       const loginTime = new Date(admin.loginTime);
       const now = new Date();
       const diffHours = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
@@ -245,8 +248,14 @@ export default function Admin() {
   };
 
   const carregarEmpresas = async () => {
-    const { data } = await supabase.from('empresas').select('*').order('created_at', { ascending: false });
-    if (data) setEmpresas(data as Empresa[]);
+    console.log("📊 Carregando empresas...");
+    const { data, error } = await supabase.from('empresas').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.error("❌ Erro ao carregar empresas:", error);
+    } else {
+      console.log(`✅ ${data?.length || 0} empresas carregadas`);
+      if (data) setEmpresas(data as Empresa[]);
+    }
   };
 
   const carregarPosts = async () => {
@@ -303,22 +312,28 @@ export default function Admin() {
   // Açôes de Empresa
   const handleAprovarEmpresa = async (id: string, nome?: string) => {
       try {
-        const { error } = await supabase
+        console.log("🔄 Aprovando empresa:", { id, nome });
+        const { error, data } = await supabase
           .from('empresas')
           .update({ 
               status: 'aprovado', 
               ativa: true,
               motivo_bloqueio: null 
           })
-          .eq('id', id);
+          .eq('id', id)
+          .select();
   
-        if (error) throw error;
+        if (error) {
+          console.error("❌ Erro ao aprovar empresa:", error);
+          throw error;
+        }
         
+        console.log("✅ Empresa aprovada:", data);
         toast.success("Empresa aprovada!");
         carregarEmpresas();
         logAcao("aprovar_empresa", `Aprovou empresa "${nome || id}"`);
       } catch (error) {
-         console.error(error);
+         console.error("❌ Erro completo:", error);
         toast.error("Erro ao aprovar");
       }
   };
