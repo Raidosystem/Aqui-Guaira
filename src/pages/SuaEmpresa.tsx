@@ -271,10 +271,17 @@ const SuaEmpresa = () => {
     // 1. CNPJ
     if (!data.cnpj || !isValidCNPJ(data.cnpj)) {
       console.log("❌ ERRO: CNPJ inválido", data.cnpj);
-      toast("❌ CNPJ Inválido", {
-        description: "O CNPJ digitado não é válido. Verifique e tente novamente.",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("CNPJ Inválido", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-red-600">⚠️ O CNPJ digitado não é válido</p>
+            <p className="text-sm">Verifique se digitou todos os 14 dígitos corretamente.</p>
+            <div className="mt-2 p-2 bg-red-100 rounded text-xs">
+              <strong>Formato:</strong> 00.000.000/0000-00
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -282,10 +289,17 @@ const SuaEmpresa = () => {
     // 2. Nome Fantasia
     if (!data.nomeFantasia || data.nomeFantasia.trim().length < 3) {
       console.log("❌ ERRO: Nome Fantasia inválido", data.nomeFantasia);
-      toast("❌ Nome Fantasia Inválido", {
-        description: "O nome fantasia deve ter pelo menos 3 caracteres.",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("Nome Fantasia Inválido", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-amber-600">📝 Campo obrigatório</p>
+            <p className="text-sm">O nome fantasia deve ter pelo menos 3 caracteres.</p>
+            <div className="mt-2 p-2 bg-amber-50 rounded text-xs text-amber-800">
+              <strong>Exemplo:</strong> Bar do João, Farmácia Central
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -293,10 +307,17 @@ const SuaEmpresa = () => {
     // 3. Telefone/Celular
     if (!data.celular || data.celular.replace(/\D/g, '').length < 10) {
       console.log("❌ ERRO: Telefone inválido", data.celular);
-      toast("❌ Telefone Inválido", {
-        description: "Digite um número de telefone válido com DDD (mínimo 10 dígitos).",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("Telefone Inválido", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-blue-600">📱 Número de telefone obrigatório</p>
+            <p className="text-sm">Digite um número válido com DDD (mínimo 10 dígitos).</p>
+            <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-800">
+              <strong>Exemplo:</strong> (17) 99999-9999
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -304,10 +325,17 @@ const SuaEmpresa = () => {
     // 4. WhatsApp
     if (!data.whatsapp || data.whatsapp.replace(/\D/g, '').length < 10) {
       console.log("❌ ERRO: WhatsApp inválido", data.whatsapp);
-      toast("❌ WhatsApp Inválido", {
-        description: "Digite um número de WhatsApp válido com DDD (mínimo 10 dígitos).",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("WhatsApp Inválido", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-green-600">💬 WhatsApp obrigatório</p>
+            <p className="text-sm">Clientes usarão este número para entrar em contato.</p>
+            <div className="mt-2 p-2 bg-green-50 rounded text-xs text-green-800">
+              <strong>Formato:</strong> (17) 99999-9999
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -315,10 +343,17 @@ const SuaEmpresa = () => {
     // 5. E-mail
     if (!data.email || !data.email.includes('@') || !data.email.includes('.')) {
       console.log("❌ ERRO: E-mail inválido", data.email);
-      toast("❌ E-mail Inválido", {
-        description: "Digite um e-mail válido (exemplo: seuemail@exemplo.com).",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("E-mail Inválido", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-purple-600">📧 E-mail obrigatório</p>
+            <p className="text-sm">Digite um endereço de e-mail válido.</p>
+            <div className="mt-2 p-2 bg-purple-50 rounded text-xs text-purple-800">
+              <strong>Exemplo:</strong> contato@suaempresa.com
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -326,10 +361,17 @@ const SuaEmpresa = () => {
     // 6. Categoria
     if (!data.categoria || data.categoria.trim() === '') {
       console.log("❌ ERRO: Categoria não selecionada", data.categoria);
-      toast("❌ Categoria Obrigatória", {
-        description: "Selecione a categoria da sua empresa.",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("Categoria Obrigatória", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-orange-600">🏷️ Selecione uma categoria</p>
+            <p className="text-sm">A categoria ajuda clientes a encontrar sua empresa.</p>
+            <div className="mt-2 p-2 bg-orange-50 rounded text-xs text-orange-800">
+              Role a página e escolha a categoria que melhor representa seu negócio.
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -337,10 +379,17 @@ const SuaEmpresa = () => {
     // 7. Bairro
     if (!data.bairro || data.bairro.trim() === '') {
       console.log("❌ ERRO: Bairro não selecionado", data.bairro);
-      toast("❌ Bairro Obrigatório", {
-        description: "Selecione o bairro onde sua empresa está localizada.",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("Bairro Obrigatório", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-indigo-600">📍 Bairro obrigatório</p>
+            <p className="text-sm">Informe o bairro onde sua empresa está localizada em Guaíra-SP.</p>
+            <div className="mt-2 p-2 bg-indigo-50 rounded text-xs text-indigo-800">
+              O bairro será preenchido automaticamente ao digitar o CEP.
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -348,10 +397,17 @@ const SuaEmpresa = () => {
     // 8. CEP
     if (!data.cep || data.cep.replace(/\D/g, '').length !== 8) {
       console.log("❌ ERRO: CEP inválido", data.cep);
-      toast("❌ CEP Inválido", {
-        description: "Digite um CEP válido com 8 dígitos.",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("CEP Inválido", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-rose-600">🏠 CEP obrigatório</p>
+            <p className="text-sm">Digite o CEP completo com 8 dígitos.</p>
+            <div className="mt-2 p-2 bg-rose-50 rounded text-xs text-rose-800">
+              <strong>Formato:</strong> 14790-000 | O endereço será preenchido automaticamente
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -359,10 +415,17 @@ const SuaEmpresa = () => {
     // 9. Endereço (Logradouro)
     if (!data.logradouro || data.logradouro.trim().length < 3) {
       console.log("❌ ERRO: Endereço inválido", data.logradouro);
-      toast("❌ Endereço Inválido", {
-        description: "Digite o nome da rua/avenida (mínimo 3 caracteres).",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("Endereço Inválido", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-teal-600">🛣️ Logradouro obrigatório</p>
+            <p className="text-sm">Digite o nome da rua/avenida (mínimo 3 caracteres).</p>
+            <div className="mt-2 p-2 bg-teal-50 rounded text-xs text-teal-800">
+              <strong>Exemplo:</strong> Rua das Flores, Avenida Brasil
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -370,10 +433,17 @@ const SuaEmpresa = () => {
     // 10. Número
     if (!data.numero || data.numero.trim() === '') {
       console.log("❌ ERRO: Número não informado", data.numero);
-      toast("❌ Número do Endereço Obrigatório", {
-        description: "Digite o número do estabelecimento (ou 'S/N' se não houver).",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("Número Obrigatório", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-cyan-600">🔢 Número do endereço obrigatório</p>
+            <p className="text-sm">Digite o número do estabelecimento.</p>
+            <div className="mt-2 p-2 bg-cyan-50 rounded text-xs text-cyan-800">
+              <strong>Dica:</strong> Se não houver número, digite "S/N"
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -381,10 +451,17 @@ const SuaEmpresa = () => {
     // 11. Descrição
     if (!data.descricao || data.descricao.trim().length < 20) {
       console.log("❌ ERRO: Descrição muito curta", data.descricao);
-      toast("❌ Descrição Muito Curta", {
-        description: "A descrição deve ter pelo menos 20 caracteres. Conte mais sobre sua empresa!",
-        duration: 7000,
-        className: "bg-red-50 border-red-500"
+      toast.error("Descrição Muito Curta", {
+        description: (
+          <div className="space-y-2">
+            <p className="font-semibold text-pink-600">✍️ Descrição insuficiente</p>
+            <p className="text-sm">A descrição deve ter pelo menos 20 caracteres.</p>
+            <div className="mt-2 p-2 bg-pink-50 rounded text-xs text-pink-800">
+              <strong>Dica:</strong> Conte sobre seus produtos, serviços e diferenciais!
+            </div>
+          </div>
+        ),
+        duration: 8000,
       });
       return;
     }
@@ -597,12 +674,7 @@ const SuaEmpresa = () => {
       const cnaeSecundarioApi = data.cnaes_secundarios?.[0]?.codigo;
       if (cnaeSecundarioApi) setIfEmpty("cnaeSecundario", String(cnaeSecundarioApi));
       if (cnaeSecundarioApi) setIfEmpty("cnaeSecundarioDescricao", cnaeCodes[String(cnaeSecundarioApi)]);
-      setIfEmpty("logradouro", data.logradouro);
-      setIfEmpty("numero", data.numero);
-      setIfEmpty("cidade", data.municipio);
-      setIfEmpty("estado", data.uf);
-      if (bairroValido) setIfEmpty("bairro", bairroValido);
-      if (data.cep) setIfEmpty("cep", data.cep);
+      // ENDEREÇO NÃO É MAIS PREENCHIDO PELO CNPJ - apenas pelo CEP
 
 
       if (data.ddd_telefone_1) {
