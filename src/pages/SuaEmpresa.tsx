@@ -463,7 +463,7 @@ const SuaEmpresa = () => {
         imagens,
         logo: logoUrl || null,
         banner: imagens[0] || null,
-        status: 'pendente' as const,
+        status: 'pendente',
         verificado: false,
         destaque: false,
         responsavel_nome: data.razaoSocial,

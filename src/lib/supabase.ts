@@ -71,6 +71,7 @@ export interface Empresa {
   horarios?: Array<{ dia: string; abertura: string; fechamento: string }>
   imagens: string[]
   logo?: string
+  banner?: string
   status: 'pendente' | 'aprovado' | 'rejeitado' | 'inativo'
   verificado: boolean
   destaque: boolean
