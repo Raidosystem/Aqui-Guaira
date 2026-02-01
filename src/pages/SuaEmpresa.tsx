@@ -295,9 +295,6 @@ const SuaEmpresa = () => {
       console.log("❌ ERRO: Telefone inválido", data.celular);
       toast("❌ Telefone Inválido", {
         description: "Digite um número de telefone válido com DDD (mínimo 10 dígitos).",
-      console.log("❌ ERRO: Telefone inválido", data.celular);
-      toast("❌ Telefone Inválido", {
-        description: "Digite um número de telefone válido com DDD (mínimo 10 dígitos).",
         duration: 7000,
         className: "bg-red-50 border-red-500"
       });
