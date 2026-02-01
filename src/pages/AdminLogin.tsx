@@ -25,38 +25,43 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      console.log("🔐 Tentando login admin:", { email });
+      console.log("🔐 Tentando login admin via Supabase Function");
 
-      const { data, error } = await supabase.rpc('verificar_admin_login', {
-        admin_email: email,
-        admin_senha: senha
+      const { data, error } = await supabase.rpc('admin_login', {
+        p_email: email,
+        p_senha: senha
       });
 
       if (error) {
-        console.error("❌ Erro RPC:", error);
-        throw error;
-      }
-
-      const admin = data?.[0];
-
-      if (!admin || !admin.sucesso) {
-        console.error("❌ Login inválido ou admin inativo");
-        toast.error("Credenciais inválidas ou conta inativa");
+        console.error("❌ Erro ao chamar função:", error);
+        toast.error("Erro ao validar credenciais");
         setLoading(false);
         return;
       }
 
-      console.log("✅ Admin encontrado:", admin);
+      console.log("📦 Resposta da função:", data);
 
-      // Salvar dados do admin no localStorage
+      const result = data?.[0];
+
+      if (!result || !result.success) {
+        console.error("❌ Login inválido");
+        toast.error("Email ou senha incorretos");
+        setLoading(false);
+        return;
+      }
+
+      console.log("✅ Login bem-sucedido:", result);
+
+      // Salvar dados do admin no localStorage (sem senha!)
       localStorage.setItem("admin", JSON.stringify({
-        id: admin.id,
-        email: admin.email,
-        nome: data.nome,
+        id: result.admin_id,
+        email: email,
+        nome: result.nome,
+        super_admin: result.super_admin,
         loginTime: new Date().toISOString()
       }));
 
-      toast.success(`Bem-vindo, ${data.nome}!`);
+      toast.success(`Bem-vindo, ${result.nome}!`);
       navigate("/admin/dashboard");
     } catch (error) {
       console.error("Erro no login:", error);
