@@ -493,7 +493,7 @@ const SuaEmpresa = () => {
       // Tentar upload, mas não falhar se bucket não existir
       if (data.bannerFile) {
         try {
-          const [bannerUrl] = await uploadImagens('empresas-images', [data.bannerFile], 'logos');
+          const [bannerUrl] = await uploadImagens('empresas-images', [data.bannerFile], 'banners');
           if (bannerUrl) imagens.push(bannerUrl);
         } catch (error) {
           console.warn('Upload de banner falhou, continuando sem imagem', error);
@@ -504,7 +504,7 @@ const SuaEmpresa = () => {
 
       if (data.logoFile) {
         try {
-          const [url] = await uploadImagens('empresas-images', [data.logoFile], 'banners');
+          const [url] = await uploadImagens('empresas-images', [data.logoFile], 'logos');
           logoUrl = url;
         } catch (error) {
           console.warn('Upload de logo falhou, continuando sem logo', error);
@@ -561,6 +561,8 @@ const SuaEmpresa = () => {
         responsavel_email: data.email,
         responsavel_telefone: data.celular,
       };
+
+      console.log('🚀 Enviando para Supabase:', JSON.stringify(empresaData, null, 2));
 
       const resultado = await criarEmpresa(empresaData);
 
