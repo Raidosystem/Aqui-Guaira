@@ -264,10 +264,108 @@ const SuaEmpresa = () => {
   });
 
   const handleCadastro = async (data: z.infer<typeof cadastroSchema>) => {
+    // ===== VALIDAÇÕES IMEDIATAS COM FEEDBACK VISUAL =====
+    
+    // 1. CNPJ
     if (!isValidCNPJ(data.cnpj)) {
-      toast("CNPJ inválido", { description: "Verifique o CNPJ digitado", duration: 2000 });
+      toast("❌ CNPJ Inválido", {
+        description: "O CNPJ digitado não é válido. Verifique e tente novamente.",
+        duration: 7000
+      });
       return;
     }
+
+    // 2. Nome Fantasia
+    if (!data.nomeFantasia || data.nomeFantasia.trim().length < 3) {
+      toast("❌ Nome Fantasia Inválido", {
+        description: "O nome fantasia deve ter pelo menos 3 caracteres.",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 3. Telefone/Celular
+    if (!data.celular || data.celular.replace(/\D/g, '').length < 10) {
+      toast("❌ Telefone Inválido", {
+        description: "Digite um número de telefone válido com DDD (mínimo 10 dígitos).",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 4. WhatsApp
+    if (!data.whatsapp || data.whatsapp.replace(/\D/g, '').length < 10) {
+      toast("❌ WhatsApp Inválido", {
+        description: "Digite um número de WhatsApp válido com DDD (mínimo 10 dígitos).",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 5. E-mail
+    if (!data.email || !data.email.includes('@') || !data.email.includes('.')) {
+      toast("❌ E-mail Inválido", {
+        description: "Digite um e-mail válido (exemplo: seuemail@exemplo.com).",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 6. Categoria
+    if (!data.categoria || data.categoria.trim() === '') {
+      toast("❌ Categoria Obrigatória", {
+        description: "Selecione a categoria da sua empresa.",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 7. Bairro
+    if (!data.bairro || data.bairro.trim() === '') {
+      toast("❌ Bairro Obrigatório", {
+        description: "Selecione o bairro onde sua empresa está localizada.",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 8. CEP
+    if (!data.cep || data.cep.replace(/\D/g, '').length !== 8) {
+      toast("❌ CEP Inválido", {
+        description: "Digite um CEP válido com 8 dígitos.",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 9. Endereço (Logradouro)
+    if (!data.logradouro || data.logradouro.trim().length < 3) {
+      toast("❌ Endereço Inválido", {
+        description: "Digite o nome da rua/avenida (mínimo 3 caracteres).",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 10. Número
+    if (!data.numero || data.numero.trim() === '') {
+      toast("❌ Número do Endereço Obrigatório", {
+        description: "Digite o número do estabelecimento (ou 'S/N' se não houver).",
+        duration: 7000
+      });
+      return;
+    }
+
+    // 11. Descrição
+    if (!data.descricao || data.descricao.trim().length < 20) {
+      toast("❌ Descrição Muito Curta", {
+        description: "A descrição deve ter pelo menos 20 caracteres. Conte mais sobre sua empresa!",
+        duration: 7000
+      });
+      return;
+    }
+
+    // ===== FIM DAS VALIDAÇÕES =====
 
     setLoading(true);
     try {
