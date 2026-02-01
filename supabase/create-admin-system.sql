@@ -37,10 +37,10 @@ DECLARE
   v_admin RECORD;
 BEGIN
   -- Buscar admin pelo email
-  SELECT id, nome, senha_hash, super_admin, ativo
+  SELECT a.id, a.nome, a.senha_hash, a.super_admin, a.ativo
   INTO v_admin
-  FROM public.admins
-  WHERE email = p_email;
+  FROM public.admins a
+  WHERE a.email = p_email;
 
   -- Verificar se admin existe e está ativo
   IF NOT FOUND OR NOT v_admin.ativo THEN
@@ -105,9 +105,9 @@ DECLARE
   v_new_admin_id UUID;
 BEGIN
   -- Verificar se quem está criando é super admin
-  SELECT super_admin INTO v_is_super_admin
-  FROM public.admins
-  WHERE id = p_super_admin_id AND ativo = TRUE;
+  SELECT a.super_admin INTO v_is_super_admin
+  FROM public.admins a
+  WHERE a.id = p_super_admin_id AND a.ativo = TRUE;
 
   IF NOT FOUND OR NOT v_is_super_admin THEN
     RETURN QUERY SELECT FALSE, 'Apenas super admins podem criar novos administradores'::TEXT, NULL::UUID;
@@ -115,7 +115,7 @@ BEGIN
   END IF;
 
   -- Verificar se email já existe
-  IF EXISTS (SELECT 1 FROM public.admins WHERE email = p_email) THEN
+  IF EXISTS (SELECT 1 FROM public.admins a WHERE a.email = p_email) THEN
     RETURN QUERY SELECT FALSE, 'Email já cadastrado'::TEXT, NULL::UUID;
     RETURN;
   END IF;
