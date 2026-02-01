@@ -726,8 +726,7 @@ export default function Admin() {
                             <ActionBtn icon={Eye} label="Ver Detalhes" onClick={() => { setEmpresaSelecionada(empresa); setShowDetalhesDialog(true); }} />
                             {empresa.status === 'pendente' ? (
                               <ActionBtn icon={CheckCircle2} label="Aprovar" variant="success" onClick={async () => {
-                                const res = await fetch(`/api/empresas?id=${empresa.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'aprovado', ativa: true }) });
-                                if (res.ok) { toast.success("Empresa aprovada!"); await carregarDados(); }
+                                await handleAprovarEmpresa(empresa.id, empresa.nome);
                               }} />
                             ) : (
                               <ActionBtn
@@ -739,8 +738,7 @@ export default function Admin() {
                                     setEmpresaSelecionada(empresa);
                                     setShowBloqueioDialog(true);
                                   } else {
-                                    const res = await fetch(`/api/empresas?id=${empresa.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativa: true, motivo_bloqueio: null, status: 'aprovado' }) });
-                                    if (res.ok) { toast.success("Empresa ativada!"); await carregarDados(); }
+                                    await handleAprovarEmpresa(empresa.id, empresa.nome);
                                   }
                                 }}
                               />
@@ -1203,8 +1201,8 @@ export default function Admin() {
                     <div className="flex flex-col gap-3 relative z-10">
                       <Button className="w-full h-12 rounded-2xl bg-white text-zinc-900 hover:bg-zinc-200 font-black uppercase tracking-widest text-[10px]" onClick={async () => {
                         const novoDestaque = !empresaSelecionada.destaque;
-                        const res = await fetch(`/api/empresas?id=${empresaSelecionada.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ destaque: novoDestaque }) });
-                        if (res.ok) { toast.success(novoDestaque ? "Destaque ativado!" : "Destaque removido"); await carregarDados(); }
+                        const { error } = await supabase.from('empresas').update({ destaque: novoDestaque }).eq('id', empresaSelecionada.id);
+                        if (!error) { toast.success(novoDestaque ? "Destaque ativado!" : "Destaque removido"); await carregarDados(); }
                       }}>
                         {empresaSelecionada.destaque ? "Remover Destaque" : "⭐ Ativar Destaque"}
                       </Button>
@@ -1214,8 +1212,8 @@ export default function Admin() {
                         </Button>
                       ) : (
                         <Button className="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px]" onClick={async () => {
-                          const res = await fetch(`/api/empresas?id=${empresaSelecionada.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativa: true, motivo_bloqueio: null, status: 'aprovado' }) });
-                          if (res.ok) { toast.success("Empresa Reativada!"); await carregarDados(); setShowDetalhesDialog(false); }
+                          await handleAprovarEmpresa(empresaSelecionada.id, empresaSelecionada.nome);
+                          setShowDetalhesDialog(false);
                         }}>
                           Reativar Agora
                         </Button>
