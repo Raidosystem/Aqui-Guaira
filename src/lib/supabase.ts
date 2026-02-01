@@ -416,13 +416,25 @@ export async function buscarEmpresasPorIds(ids: string[]) {
 
 export async function criarEmpresa(empresa: Partial<Empresa>) {
   try {
+    console.log('📝 Dados da empresa a serem inseridos:', empresa);
+    
     const { data, error } = await supabase
       .from('empresas')
       .insert(empresa)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Erro detalhado do Supabase:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw error;
+    }
+    
+    console.log('✅ Empresa criada com sucesso:', data);
     return data;
   } catch (error) {
     console.error('Erro ao criar empresa (Supabase):', error);

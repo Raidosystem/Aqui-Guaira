@@ -234,32 +234,32 @@ const SuaEmpresa = () => {
 
       // Criar empresa no Supabase
       const empresaData = {
-        cnpj: data.cnpj, // ← CNPJ adicionado
+        cnpj: data.cnpj,
         nome: data.nomeFantasia,
         slug,
         descricao: data.descricao,
         categoria_id: categoriaId,
-        cnae: data.cnae || undefined,
-        cnae_secundario: data.cnaeSecundario || undefined,
+        cnae: data.cnae || null,
+        cnae_secundario: data.cnaeSecundario || null,
         subcategorias: [],
         endereco: enderecoCompleto,
         bairro: data.bairro,
         cidade: data.cidade,
         estado: data.estado,
         cep: data.cep.replace(/\D/g, ''),
-        latitude: -20.3167, // Coordenadas padrão de Guaíra
+        latitude: -20.3167,
         longitude: -48.3115,
         telefone: data.celular,
         whatsapp: data.whatsapp,
         email: data.email,
-        site: data.site || undefined,
-        instagram: data.instagram,
-        facebook: data.facebook,
-        link_google_maps: data.link_google_maps || undefined,
+        site: data.site || null,
+        instagram: data.instagram || null,
+        facebook: data.facebook || null,
+        link_google_maps: data.link_google_maps || null,
         imagens,
-        logo: logoUrl,
-        banner: imagens[0] || undefined, // ← Salva o banner explicitamente
-        status: 'pendente' as const, // ← Alterado para 'pendente' para aguardar aprovação do admin
+        logo: logoUrl || null,
+        banner: imagens[0] || null,
+        status: 'pendente' as const,
         verificado: false,
         destaque: false,
         responsavel_nome: data.razaoSocial,
@@ -268,6 +268,15 @@ const SuaEmpresa = () => {
       };
 
       const resultado = await criarEmpresa(empresaData);
+
+      if (!resultado || !resultado.id) {
+        toast("Erro ao cadastrar empresa", {
+          description: "Não foi possível criar o cadastro. Verifique os dados e tente novamente.",
+          duration: 5000,
+        });
+        setLoading(false);
+        return;
+      }
 
       // Salvar credenciais no localStorage para login
       localStorage.setItem('empresa_auth', JSON.stringify({
