@@ -1128,6 +1128,7 @@ const SuaEmpresa = () => {
                         </SelectContent>
                       </Select>
                       {cadastroForm.formState.errors.categoria && <p className="text-xs text-destructive">{cadastroForm.formState.errors.categoria.message}</p>}
+                      {fieldErrors.categoria && <p className="text-xs text-red-600 font-semibold mt-1">⚠️ Selecione uma categoria</p>}
                       {fieldErrors.categoria && (
                         <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
                           <span className="text-orange-600 text-sm">🏷️</span>
