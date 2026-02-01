@@ -513,9 +513,24 @@ const SuaEmpresa = () => {
         }
       }
 
-      // Buscar ID da categoria - Agora via JSON local
-      const categoriaEncontrada = categoriasData.categorias.find(c => c.nome === data.categoria);
-      const categoriaId = categoriaEncontrada?.id || 'outros';
+      // Buscar ID da categoria no Supabase
+      const { data: categoriaData, error: categoriaError } = await supabase
+        .from('categorias')
+        .select('id')
+        .eq('nome', data.categoria)
+        .single();
+
+      if (categoriaError || !categoriaData) {
+        console.error('❌ Erro ao buscar categoria:', categoriaError);
+        toast("Erro ao buscar categoria", {
+          description: "Não foi possível encontrar a categoria selecionada no banco de dados.",
+          duration: 5000,
+        });
+        setLoading(false);
+        return;
+      }
+
+      const categoriaId = categoriaData.id;
 
       // Criar slug
       const slug = data.nomeFantasia
@@ -529,7 +544,7 @@ const SuaEmpresa = () => {
 
       // Criar empresa no Supabase
       const empresaData = {
-        cnpj: data.cnpj,
+        cnpj: data.cnpj.replace(/\D/g, ''), // Remove caracteres especiais
         nome: data.nomeFantasia,
         slug,
         descricao: data.descricao,
@@ -542,18 +557,17 @@ const SuaEmpresa = () => {
         cidade: data.cidade,
         estado: data.estado,
         cep: data.cep.replace(/\D/g, ''),
-        latitude: -20.3167,
-        longitude: -48.3115,
-        telefone: data.celular,
-        whatsapp: data.whatsapp,
+        latitude: -20.31670000,
+        longitude: -48.31150000,
+        telefone: data.celular.replace(/\D/g, ''), // Remove máscara
+        whatsapp: data.whatsapp.replace(/\D/g, ''), // Remove máscara
         email: data.email,
         site: data.site || null,
         instagram: data.instagram || null,
         facebook: data.facebook || null,
-        link_google_maps: data.link_google_maps || null,
+        google_maps_link: data.link_google_maps || null,
         imagens,
         logo: logoUrl || null,
-        banner: imagens[0] || null,
         status: 'pendente' as 'pendente' | 'aprovado' | 'rejeitado' | 'inativo',
         verificado: false,
         destaque: false,
