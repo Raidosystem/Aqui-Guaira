@@ -141,6 +141,7 @@ export default function Admin() {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]);
 
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(null);
   const [postSelecionado, setPostSelecionado] = useState<Post | null>(null);
@@ -222,7 +223,8 @@ export default function Admin() {
       carregarPosts(),
       carregarUsuarios(),
       carregarLogs(),
-      carregarCategorias()
+      carregarCategorias(),
+      adminData?.super_admin ? carregarAdmins() : Promise.resolve()
     ]);
   };
 
@@ -284,6 +286,11 @@ export default function Admin() {
   const carregarUsuarios = async () => {
     const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (data) setUsuarios(data as any[]);
+  };
+
+  const carregarAdmins = async () => {
+    const { data } = await supabase.from('admins').select('*').order('email', { ascending: true });
+    if (data) setAdmins(data);
   };
 
   const carregarLogs = async () => {
@@ -492,6 +499,7 @@ export default function Admin() {
       setNovoAdminEmail("");
       setNovoAdminSenha("");
       setNovoAdminNome("");
+      await carregarAdmins();
       logAcao("criar_admin", `Criou novo admin: ${novoAdminEmail}`);
     } catch (error) {
       console.error(error);
@@ -1039,9 +1047,53 @@ export default function Admin() {
                         Apenas você (Super Admin) pode criar e gerenciar outros administradores. Novos admins NÃO terão privilégios de super admin.
                       </AlertDescription>
                     </Alert>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      Sistema de gerenciamento de admins será implementado em breve.
-                    </p>
+                    
+                    {admins.length === 0 ? (
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">
+                        Nenhum administrador cadastrado ainda.
+                      </p>
+                    ) : (
+                      <div className="w-full overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 uppercase text-[10px] font-bold tracking-widest border-b dark:border-zinc-800">
+                            <tr>
+                              <th className="px-6 py-4">Nome</th>
+                              <th className="px-6 py-4">Email</th>
+                              <th className="px-6 py-4">Tipo</th>
+                              <th className="px-6 py-4">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            {admins.map((admin) => (
+                              <tr key={admin.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                                <td className="px-6 py-4">
+                                  <p className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">{admin.nome}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{admin.email}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  {admin.super_admin ? (
+                                    <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
+                                      Super Admin
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-primary text-white">Admin</Badge>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4">
+                                  {admin.ativo ? (
+                                    <Badge className="bg-emerald-500 text-white">Ativo</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-zinc-400">Inativo</Badge>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
