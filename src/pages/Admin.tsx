@@ -93,6 +93,10 @@ interface User {
   email: string;
   is_admin: boolean;
   created_at: string;
+  status?: string; // 'pendente', 'aprovado', 'bloqueado'
+  motivo_bloqueio?: string;
+  aprovado_por?: string;
+  data_aprovacao?: string;
 }
 
 interface Post {
@@ -534,32 +538,6 @@ export default function Admin() {
         carregarEmpresas();
     } catch (e) {
         toast.error("Erro ao bloquear");
-    }
-  };
-
-  const handleAprovarPost = async (id: string) => {
-    try {
-      const { error } = await supabase.from('mural_posts').update({ aprovado: true, admin_aprovador_id: adminData.id }).eq('id', id);
-      if(error) throw error;
-
-      toast.success("Post aprovado!");
-      carregarPosts();
-      logAcao('aprovar_post', `Aprovou post ${id}`);
-    } catch (error) {
-      toast.error("Erro ao aprovar");
-    }
-  };
-
-  const handleRejeitarPost = async (id: string) => {
-    try {
-      const { error } = await supabase.from('mural_posts').update({ aprovado: false, motivo_rejeicao: 'Rejeitado por admin' }).eq('id', id);
-       if(error) throw error;
-
-      toast.success("Post rejeitado!");
-      carregarPosts();
-      logAcao('rejeitar_post', `Rejeitou post ${id}`);
-    } catch (error) {
-      toast.error("Erro ao rejeitar");
     }
   };
 
