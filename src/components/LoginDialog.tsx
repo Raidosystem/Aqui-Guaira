@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog'
-import { criarOuLogarUsuario, getUsuarioLogado, logout } from '@/lib/supabase'
+import { criarOuLogarUsuario, getUsuarioLogado, logout, reenviarEmailConfirmacao } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Loader2, LogIn, LogOut, User as UserIcon, UserPlus, Search } from 'lucide-react'
 import { getBuscaCepUrl } from '@/lib/ferramentas'
@@ -42,11 +42,17 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
   const [registerConfirmarSenha, setRegisterConfirmarSenha] = useState('')
   const [loadingRegister, setLoadingRegister] = useState(false)
 
+  // Estado Confirmação de Email
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false)
+  const [emailConfirmacao, setEmailConfirmacao] = useState('')
+  const [reenviandoEmail, setReenviandoEmail] = useState(false)
+
   // Estado para carregamento de CEP
   const [loadingCep, setLoadingCep] = useState(false)
 
   // Função para buscar CEP
   const buscarCep = async (cep: string) => {
+    // ... manter lógica existente (omitrada aqui para brevidade se não mudar)
     const cepLimpo = cep.replace(/\D/g, '')
     if (cepLimpo.length !== 8) return
 
@@ -60,7 +66,6 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
         return
       }
 
-      // Preencher automaticamente os campos
       setRegisterEndereco(data.logradouro || '')
       setRegisterBairro(data.bairro || '')
       setRegisterCidade(data.localidade || 'Guaíra')
@@ -74,9 +79,22 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
     }
   }
 
+  const handleReenviarEmail = async () => {
+    if (!emailConfirmacao) return;
+    setReenviandoEmail(true);
+    try {
+      await reenviarEmailConfirmacao(emailConfirmacao);
+      toast.success("Email de confirmação reenviado! Verifique sua caixa de entrada.");
+    } catch (error) {
+      toast.error("Erro ao reenviar email. Tente novamente mais tarde.");
+    } finally {
+      setReenviandoEmail(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!loginEmail.trim() || !loginSenha.trim()) {
       toast.error('Preencha email e senha')
       return
@@ -85,8 +103,9 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
     setLoadingLogin(true)
     try {
       const user = await criarOuLogarUsuario(loginEmail, undefined, loginSenha)
-      
+
       if (!user) {
+        // Se retornar null por algum motivo
         toast.error('Email ou senha incorretos')
         return
       }
@@ -94,12 +113,17 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
       toast.success('Login realizado!', {
         description: `Bem-vindo de volta, ${user.nome || user.email}!`
       })
-      
+
       setLoginEmail('')
       setLoginSenha('')
       onOpenChange(false)
       onLoginSuccess?.()
     } catch (error: any) {
+      if (error.message === 'VERIFICACAO_EMAIL_NECESSARIA' || error.message === 'EMAIL_NAO_CONFIRMADO') {
+        setEmailConfirmacao(loginEmail);
+        setShowEmailConfirm(true);
+        return;
+      }
       toast.error('Erro ao fazer login', {
         description: error.message || 'Verifique suas credenciais'
       })
@@ -116,6 +140,7 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
       toast.error('Digite seu email')
       return
     }
+    // ... manter validações existentes
     if (!registerNome.trim()) {
       toast.error('Digite seu nome completo')
       return
@@ -124,7 +149,6 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
       toast.error('Digite seu CPF')
       return
     }
-    // Validação simples de CPF (11 dígitos)
     const cpfLimpo = registerCpf.replace(/\D/g, '')
     if (cpfLimpo.length !== 11) {
       toast.error('CPF inválido. Digite 11 dígitos')
@@ -165,27 +189,26 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
 
     setLoadingRegister(true)
     try {
-      // Combinar logradouro e número
       const enderecoCompleto = `${registerEndereco}, ${registerNumero}`.trim()
-      
+
       await criarOuLogarUsuario(
-        registerEmail, 
-        registerNome, 
-        registerSenha, 
+        registerEmail,
+        registerNome,
+        registerSenha,
         true,
-        registerCpf.replace(/\D/g, ''), // Remove formatação do CPF
+        registerCpf.replace(/\D/g, ''),
         registerTelefone,
         enderecoCompleto,
         registerBairro,
         registerCidade,
         registerEstado,
-        registerCep.replace(/\D/g, '') // Remove formatação do CEP
+        registerCep.replace(/\D/g, '')
       )
-      
+
       toast.success('Conta criada com sucesso!', {
         description: 'Você já está logado e pode usar o sistema.'
       })
-      
+
       // Limpar todos os campos
       setRegisterEmail('')
       setRegisterNome('')
@@ -200,12 +223,52 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
       onOpenChange(false)
       onLoginSuccess?.()
     } catch (error: any) {
+      if (error.message === 'VERIFICACAO_EMAIL_NECESSARIA') {
+        setEmailConfirmacao(registerEmail);
+        setShowEmailConfirm(true);
+        toast.info("Confirme seu email para continuar!");
+        return;
+      }
       toast.error('Erro ao criar conta', {
         description: error.message || 'Tente novamente'
       })
     } finally {
       setLoadingRegister(false)
     }
+  }
+
+  if (showEmailConfirm) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md z-[9999]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogIn className="w-5 h-5 text-primary" />
+              Verifique seu Email
+            </DialogTitle>
+            <DialogDescription>
+              Enviamos um link de confirmação para: <br />
+              <span className="font-semibold text-foreground">{emailConfirmacao}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-md border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200">
+              <p>Por favor, acesse seu email e clique no link para ativar sua conta. Verifique também a pasta de SPAM.</p>
+            </div>
+
+            <Button onClick={handleReenviarEmail} disabled={reenviandoEmail} className="w-full" variant="secondary">
+              {reenviandoEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Reenviar Email de Confirmação
+            </Button>
+
+            <Button onClick={() => setShowEmailConfirm(false)} className="w-full" variant="outline">
+              Voltar para Login
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -338,9 +401,9 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="register-cep">CEP</Label>
-                  <a 
-                    href={getBuscaCepUrl()} 
-                    target="_blank" 
+                  <a
+                    href={getBuscaCepUrl()}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
                   >

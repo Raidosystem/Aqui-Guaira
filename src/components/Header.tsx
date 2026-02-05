@@ -44,7 +44,6 @@ const Header = () => {
 
   const mainNavItems = [
     { icon: Info, label: "Sobre Guaíra", href: "/#sobre-guaira" },
-    { icon: Sparkles, label: "Voz da Cidade", href: "/voz-da-cidade" },
     { icon: Image, label: "Mural", href: "/mural" },
     { icon: Building2, label: "Empresas", href: "/empresas" },
     { icon: Heart, label: "Meus Locais", href: "/meus-locais" },
@@ -172,7 +171,7 @@ const Header = () => {
     <header className="bg-background border-b border-border sticky top-0 z-[1000] shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
-          <button 
+          <button
             onClick={() => {
               navigate('/');
               setTimeout(() => {

@@ -152,7 +152,7 @@ export default function Admin() {
   const [showDetalhesDialog, setShowDetalhesDialog] = useState(false);
   const [showPostDetalhesDialog, setShowPostDetalhesDialog] = useState(false);
   const [showCriarAdminDialog, setShowCriarAdminDialog] = useState(false);
-  
+
   // Criar Admin
   const [novoAdminEmail, setNovoAdminEmail] = useState("");
   const [novoAdminSenha, setNovoAdminSenha] = useState("");
@@ -194,7 +194,7 @@ export default function Admin() {
       const admin = JSON.parse(adminStr);
       console.log("👤 Admin carregado do localStorage:", admin);
       console.log("🔑 É super admin?", admin.super_admin);
-      
+
       const loginTime = new Date(admin.loginTime);
       const now = new Date();
       const diffHours = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
@@ -230,27 +230,27 @@ export default function Admin() {
 
   const carregarEstatisticas = async () => {
     try {
-        const { count: total_empresas } = await supabase.from('empresas').select('*', { count: 'exact', head: true });
-        const { count: empresas_ativas } = await supabase.from('empresas').select('*', { count: 'exact', head: true }).eq('ativa', true);
-        const { count: empresas_bloqueadas } = await supabase.from('empresas').select('*', { count: 'exact', head: true }).eq('ativa', false);
-        
-        const { count: total_posts } = await supabase.from('mural_posts').select('*', { count: 'exact', head: true });
-        const { count: posts_aprovados } = await supabase.from('mural_posts').select('*', { count: 'exact', head: true }).eq('aprovado', true);
-        
-        const { count: total_usuarios } = await supabase.from('users').select('*', { count: 'exact', head: true });
-        const { count: total_admins } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_admin', true);
-        
-        setEstatisticas({
-            empresas_ativas: empresas_ativas || 0,
-            empresas_bloqueadas: empresas_bloqueadas || 0,
-            total_empresas: total_empresas || 0,
-            posts_pendentes: (total_posts || 0) - (posts_aprovados || 0),
-            posts_aprovados: posts_aprovados || 0,
-            total_posts: total_posts || 0,
-            total_usuarios: total_usuarios || 0,
-            total_admins: total_admins || 0
-        });
-    } catch(e) { console.error(e) }
+      const { count: total_empresas } = await supabase.from('empresas').select('*', { count: 'exact', head: true });
+      const { count: empresas_ativas } = await supabase.from('empresas').select('*', { count: 'exact', head: true }).eq('ativa', true);
+      const { count: empresas_bloqueadas } = await supabase.from('empresas').select('*', { count: 'exact', head: true }).eq('ativa', false);
+
+      const { count: total_posts } = await supabase.from('mural_posts').select('*', { count: 'exact', head: true });
+      const { count: posts_aprovados } = await supabase.from('mural_posts').select('*', { count: 'exact', head: true }).eq('aprovado', true);
+
+      const { count: total_usuarios } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const { count: total_admins } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_admin', true);
+
+      setEstatisticas({
+        empresas_ativas: empresas_ativas || 0,
+        empresas_bloqueadas: empresas_bloqueadas || 0,
+        total_empresas: total_empresas || 0,
+        posts_pendentes: (total_posts || 0) - (posts_aprovados || 0),
+        posts_aprovados: posts_aprovados || 0,
+        total_posts: total_posts || 0,
+        total_usuarios: total_usuarios || 0,
+        total_admins: total_admins || 0
+      });
+    } catch (e) { console.error(e) }
   };
 
   const carregarEmpresas = async () => {
@@ -265,21 +265,24 @@ export default function Admin() {
   };
 
   const carregarPosts = async () => {
-    const { data } = await supabase
-        .from('mural_posts')
-        .select(`
-            *,
-            comentarios:comentarios(count)
-        `)
-        .order('data_criacao', { ascending: false });
+    // Busca simplificada para evitar erros de relação
+    const { data, error } = await supabase
+      .from('mural_posts')
+      .select('*') // Simplificado para garantir carregamento
+      .order('data_criacao', { ascending: false });
+
+    if (error) {
+      console.error("Erro ao carregar posts no Admin:", error);
+      return;
+    }
 
     if (data) {
-        const formatted = data.map((post: any) => ({
-          ...post,
-          created_at: post.data_criacao,
-          // Outros mapeamentos se necessários
-        }));
-        setPosts(formatted as Post[]);
+      const formatted = data.map((post: any) => ({
+        ...post,
+        comentarios: 0, // Fallback
+        created_at: post.data_criacao,
+      }));
+      setPosts(formatted as Post[]);
     }
   };
 
@@ -295,7 +298,7 @@ export default function Admin() {
 
   const carregarLogs = async () => {
     const { data } = await supabase.from('admin_logs').select('*').order('data_acao', { ascending: false }).limit(50);
-    if(data) setLogs(data);
+    if (data) setLogs(data);
   };
 
   const carregarCategorias = async () => {
@@ -312,12 +315,12 @@ export default function Admin() {
   // Função auxiliar para logs
   const logAcao = async (acao: string, detalhes: string, data?: any) => {
     try {
-        await supabase.from('admin_logs').insert({
-            admin_id: adminData.id,
-            acao,
-            detalhes: detalhes + (data ? ' ' + JSON.stringify(data) : '')
-        });
-    } catch(e) { console.error('Falha ao logar', e); }
+      await supabase.from('admin_logs').insert({
+        admin_id: adminData.id,
+        acao,
+        detalhes: detalhes + (data ? ' ' + JSON.stringify(data) : '')
+      });
+    } catch (e) { console.error('Falha ao logar', e); }
   };
 
   const handleAprovarUsuario = async (userId: string, userName: string) => {
@@ -434,31 +437,31 @@ export default function Admin() {
 
   // Açôes de Empresa
   const handleAprovarEmpresa = async (id: string, nome?: string) => {
-      try {
-        console.log("🔄 Aprovando empresa:", { id, nome });
-        const { error, data } = await supabase
-          .from('empresas')
-          .update({ 
-              status: 'aprovado', 
-              ativa: true,
-              motivo_bloqueio: null 
-          })
-          .eq('id', id)
-          .select();
-  
-        if (error) {
-          console.error("❌ Erro ao aprovar empresa:", error);
-          throw error;
-        }
-        
-        console.log("✅ Empresa aprovada:", data);
-        toast.success("Empresa aprovada!");
-        carregarEmpresas();
-        logAcao("aprovar_empresa", `Aprovou empresa "${nome || id}"`);
-      } catch (error) {
-         console.error("❌ Erro completo:", error);
-        toast.error("Erro ao aprovar");
+    try {
+      console.log("🔄 Aprovando empresa:", { id, nome });
+      const { error, data } = await supabase
+        .from('empresas')
+        .update({
+          status: 'aprovado',
+          ativa: true,
+          motivo_bloqueio: null
+        })
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error("❌ Erro ao aprovar empresa:", error);
+        throw error;
       }
+
+      console.log("✅ Empresa aprovada:", data);
+      toast.success("Empresa aprovada!");
+      carregarEmpresas();
+      logAcao("aprovar_empresa", `Aprovou empresa "${nome || id}"`);
+    } catch (error) {
+      console.error("❌ Erro completo:", error);
+      toast.error("Erro ao aprovar");
+    }
   };
 
   const handleCriarAdmin = async () => {
@@ -508,16 +511,16 @@ export default function Admin() {
       setCriandoAdmin(false);
     }
   };
-    
+
   const handleRejeitarEmpresa = async (id: string, nome?: string) => {
     try {
-       const { error } = await supabase.from('empresas').update({ status: 'rejeitado', ativa: false }).eq('id', id);
-       if (error) throw error;
-       toast.success("Empresa rejeitada");
-       carregarEmpresas();
-       logAcao("rejeitar_empresa", `Rejeitou empresa "${nome || id}"`);
-    } catch(e) {
-        toast.error("Erro ao rejeitar");
+      const { error } = await supabase.from('empresas').update({ status: 'rejeitado', ativa: false }).eq('id', id);
+      if (error) throw error;
+      toast.success("Empresa rejeitada");
+      carregarEmpresas();
+      logAcao("rejeitar_empresa", `Rejeitou empresa "${nome || id}"`);
+    } catch (e) {
+      toast.error("Erro ao rejeitar");
     }
   };
 
@@ -529,76 +532,76 @@ export default function Admin() {
     }
 
     try {
-        const { error } = await supabase.from('empresas').update({
-            ativa: false, 
-            status: 'rejeitado', // ou manter aprovado mas inativo? Vamos usar rejeitado/inativo
-            motivo_bloqueio: motivoBloqueio
-        }).eq('id', empresaSelecionada.id);
+      const { error } = await supabase.from('empresas').update({
+        ativa: false,
+        status: 'rejeitado', // ou manter aprovado mas inativo? Vamos usar rejeitado/inativo
+        motivo_bloqueio: motivoBloqueio
+      }).eq('id', empresaSelecionada.id);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        await logAcao("bloquear_empresa", `Empresa "${empresaSelecionada.nome}" bloqueada: ${motivoBloqueio}`);
+      await logAcao("bloquear_empresa", `Empresa "${empresaSelecionada.nome}" bloqueada: ${motivoBloqueio}`);
 
-        toast.success("Empresa bloqueada");
-        setShowBloqueioDialog(false);
-        setEmpresaSelecionada(null);
-        setMotivoBloqueio("");
-        carregarEmpresas();
+      toast.success("Empresa bloqueada");
+      setShowBloqueioDialog(false);
+      setEmpresaSelecionada(null);
+      setMotivoBloqueio("");
+      carregarEmpresas();
     } catch (e) {
-        toast.error("Erro ao bloquear");
+      toast.error("Erro ao bloquear");
     }
   };
 
   const handleToggleAdmin = async (userId: string, currentStatus: boolean) => {
     try {
-        const { error } = await supabase.from('users').update({ is_admin: !currentStatus }).eq('id', userId);
-        if(error) throw error;
-        toast.success("Status de admin alterado");
-        carregarUsuarios();
-        logAcao("toggle_admin", `Alterou admin de ${userId}`);
+      const { error } = await supabase.from('users').update({ is_admin: !currentStatus }).eq('id', userId);
+      if (error) throw error;
+      toast.success("Status de admin alterado");
+      carregarUsuarios();
+      logAcao("toggle_admin", `Alterou admin de ${userId}`);
     } catch {
-        toast.error('Erro ao alterar admin');
+      toast.error('Erro ao alterar admin');
     }
   };
 
   const handleExcluirUsuario = async (userId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este usuário?")) return;
     try {
-        const { error } = await supabase.from('users').delete().eq('id', userId);
-        if(error) throw error;
-        toast.success("Usuário excluído");
-        carregarUsuarios();
-        logAcao("excluir_usuario", `Excluiu usuário ${userId}`);
+      const { error } = await supabase.from('users').delete().eq('id', userId);
+      if (error) throw error;
+      toast.success("Usuário excluído");
+      carregarUsuarios();
+      logAcao("excluir_usuario", `Excluiu usuário ${userId}`);
     } catch {
-        toast.error('Erro ao excluir usuário');
+      toast.error('Erro ao excluir usuário');
     }
   };
 
   const handleExcluirEmpresa = async (empresa: Empresa) => {
     if (!window.confirm(`Excluir permanentemente "${empresa.nome}"?`)) return;
     try {
-        const { error } = await supabase.from('empresas').delete().eq('id', empresa.id);
-        if(error) throw error;
+      const { error } = await supabase.from('empresas').delete().eq('id', empresa.id);
+      if (error) throw error;
 
-        toast.success("Empresa excluída");
-        carregarEmpresas();
-        logAcao("excluir_empresa", `Excluiu empresa ${empresa.nome} (${empresa.id})`);
+      toast.success("Empresa excluída");
+      carregarEmpresas();
+      logAcao("excluir_empresa", `Excluiu empresa ${empresa.nome} (${empresa.id})`);
     } catch (e) {
-        toast.error('Erro ao excluir empresa');
+      toast.error('Erro ao excluir empresa');
     }
   };
 
   const handleExcluirPost = async (post: Post) => {
     if (!window.confirm(`Excluir permanentemente o post "${post.titulo}"?`)) return;
-    
+
     try {
-        const { error } = await supabase.from('mural_posts').delete().eq('id', post.id);
-        if(error) throw error;
-        toast.success("Post excluído");
-        carregarPosts();
-        logAcao("excluir_post", `Excluiu post ${post.id}`);
-    } catch(e) {
-        toast.error('Erro ao excluir post');
+      const { error } = await supabase.from('mural_posts').delete().eq('id', post.id);
+      if (error) throw error;
+      toast.success("Post excluído");
+      carregarPosts();
+      logAcao("excluir_post", `Excluiu post ${post.id}`);
+    } catch (e) {
+      toast.error('Erro ao excluir post');
     }
   };
 
@@ -906,15 +909,15 @@ export default function Admin() {
                       <div className="flex gap-2">
                         {post.status === 'pendente' && (
                           <>
-                            <Button 
-                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 rounded-xl gap-2 h-10 shadow-lg shadow-emerald-500/20" 
+                            <Button
+                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 rounded-xl gap-2 h-10 shadow-lg shadow-emerald-500/20"
                               onClick={() => handleAprovarPost(post.id, post.titulo)}
                             >
                               <CheckCircle2 className="w-4 h-4" /> Aprovar
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              className="flex-1 border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl h-10" 
+                            <Button
+                              variant="outline"
+                              className="flex-1 border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl h-10"
                               onClick={() => { setPostSelecionado(post); setShowRejeicaoDialog(true); }}
                             >
                               Rejeitar
@@ -951,11 +954,10 @@ export default function Admin() {
                           <tr key={u.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                                  u.status === 'aprovado' ? 'bg-emerald-100 text-emerald-700' : 
-                                  u.status === 'bloqueado' ? 'bg-rose-100 text-rose-700' : 
-                                  'bg-amber-100 text-amber-700'
-                                }`}>
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${u.status === 'aprovado' ? 'bg-emerald-100 text-emerald-700' :
+                                  u.status === 'bloqueado' ? 'bg-rose-100 text-rose-700' :
+                                    'bg-amber-100 text-amber-700'
+                                  }`}>
                                   {u.nome?.[0]?.toUpperCase() || 'U'}
                                 </div>
                                 <div>
@@ -1047,7 +1049,7 @@ export default function Admin() {
                         Apenas você (Super Admin) pode criar e gerenciar outros administradores. Novos admins NÃO terão privilégios de super admin.
                       </AlertDescription>
                     </Alert>
-                    
+
                     {admins.length === 0 ? (
                       <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">
                         Nenhum administrador cadastrado ainda.
@@ -1138,8 +1140,8 @@ export default function Admin() {
           <DialogHeader>
             <DialogTitle>Bloquear {empresaSelecionada?.razaoSocial ? 'Empresa' : 'Usuário'}</DialogTitle>
             <DialogDescription>
-              {empresaSelecionada?.razaoSocial 
-                ? 'A empresa não aparecerá mais no site. Informe o motivo:' 
+              {empresaSelecionada?.razaoSocial
+                ? 'A empresa não aparecerá mais no site. Informe o motivo:'
                 : 'O usuário não poderá mais acessar o sistema. Informe o motivo:'}
             </DialogDescription>
           </DialogHeader>
@@ -1151,9 +1153,9 @@ export default function Admin() {
           />
           <DialogFooter className="gap-2 pt-4">
             <Button variant="ghost" onClick={() => setShowBloqueioDialog(false)}>Cancelar</Button>
-            <Button 
-              variant="destructive" 
-              className="rounded-xl shadow-lg shadow-rose-500/20" 
+            <Button
+              variant="destructive"
+              className="rounded-xl shadow-lg shadow-rose-500/20"
               onClick={() => {
                 if (empresaSelecionada?.razaoSocial) {
                   handleBloquearEmpresa();
@@ -1179,8 +1181,8 @@ export default function Admin() {
           />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowRejeicaoDialog(false)}>Cancelar</Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => {
                 if (postSelecionado) {
                   handleRejeitarPost(postSelecionado.id, postSelecionado.titulo, motivoRejeicao);
@@ -1262,8 +1264,8 @@ export default function Admin() {
                   )}
                   {postSelecionado.status === 'pendente' && (
                     <Button className="flex-1 rounded-2xl h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20" onClick={async () => {
-                      const res = await fetch(`/api/posts?id=${postSelecionado.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'aprovado', data_aprovacao: new Date().toISOString(), admin_aprovador_id: adminData.id }) });
-                      if (res.ok) { toast.success("Post aprovado!"); await carregarDados(); setShowPostDetalhesDialog(false); }
+                      await handleAprovarPost(postSelecionado.id, postSelecionado.titulo);
+                      setShowPostDetalhesDialog(false);
                     }}>
                       Aprovar Agora
                     </Button>

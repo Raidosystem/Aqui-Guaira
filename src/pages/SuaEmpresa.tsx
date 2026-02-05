@@ -23,78 +23,78 @@ import cnaeCodes from "@/data/cnae-codes.json";
 const obterMensagemErroEspecifica = (error: any): string => {
   const message = error?.message || '';
   const details = error?.details || '';
-  
+
   // Erros de colunas
   if (message.includes("'telefone'") || message.includes('telefone')) {
     return "❌ Erro no campo TELEFONE. Verifique se o número está no formato correto (DDD + número).";
   }
-  
+
   if (message.includes("'whatsapp'") || message.includes('whatsapp')) {
     return "❌ Erro no campo WHATSAPP. Verifique se o número está no formato correto.";
   }
-  
+
   if (message.includes("'email'") || message.includes('email')) {
     return "❌ Erro no campo EMAIL. Verifique se o e-mail está no formato correto.";
   }
-  
+
   if (message.includes("'cnpj'") || message.includes('cnpj')) {
     return "❌ Erro no campo CNPJ. Verifique se o CNPJ é válido ou se já está cadastrado.";
   }
-  
+
   if (message.includes("'cep'") || message.includes('cep')) {
     return "❌ Erro no campo CEP. Verifique se o CEP está correto (apenas números).";
   }
-  
+
   if (message.includes("'endereco'") || message.includes('logradouro')) {
     return "❌ Erro no campo ENDEREÇO. Verifique se o endereço foi preenchido corretamente.";
   }
-  
+
   if (message.includes("'bairro'")) {
     return "❌ Erro no campo BAIRRO. Verifique se o bairro foi selecionado.";
   }
-  
+
   if (message.includes("'categoria_id'") || message.includes('categoria')) {
     return "❌ Erro no campo CATEGORIA. Verifique se a categoria foi selecionada corretamente.";
   }
-  
+
   if (message.includes("'nome'")) {
     return "❌ Erro no campo NOME FANTASIA. Verifique se o nome da empresa está correto.";
   }
-  
+
   if (message.includes("'descricao'")) {
     return "❌ Erro no campo DESCRIÇÃO. Verifique se a descrição foi preenchida.";
   }
-  
+
   if (message.includes("'slug'") || message.includes('duplicate') || message.includes('unique')) {
     return "❌ Já existe uma empresa com este nome. Por favor, escolha um nome diferente.";
   }
-  
+
   if (message.includes("'logo'") || message.includes('imagens')) {
     return "❌ Erro ao salvar as imagens. Tente fazer upload novamente.";
   }
-  
+
   // Erros de constraint/validação
   if (message.includes('violates check constraint')) {
     return "❌ Um dos campos não atende aos requisitos. Verifique todos os campos obrigatórios.";
   }
-  
+
   if (message.includes('violates foreign key')) {
     return "❌ Categoria selecionada é inválida. Por favor, selecione uma categoria da lista.";
   }
-  
+
   if (message.includes('not-null constraint')) {
     return "❌ Campos obrigatórios não preenchidos. Verifique se todos os campos marcados com * foram preenchidos.";
   }
-  
+
   if (message.includes('value too long')) {
     return "❌ Um dos campos excedeu o tamanho máximo permitido. Reduza o texto.";
   }
-  
+
   // Erro genérico com detalhes se disponível
   if (details) {
     return `❌ Erro: ${details}`;
   }
-  
+
   return `❌ Erro ao cadastrar empresa: ${message || 'Erro desconhecido. Tente novamente.'}`;
 };
 
@@ -266,12 +266,12 @@ const SuaEmpresa = () => {
 
   const handleCadastro = async (data: z.infer<typeof cadastroSchema>) => {
     console.log("🔍 INICIANDO VALIDAÇÃO DO CADASTRO", data);
-    
+
     // Limpar erros anteriores
     setFieldErrors({});
-    
+
     // ===== VALIDAÇÕES IMEDIATAS COM FEEDBACK VISUAL =====
-    
+
     // 1. CNPJ
     if (!data.cnpj || !isValidCNPJ(data.cnpj)) {
       console.log("❌ ERRO: CNPJ inválido", data.cnpj);
@@ -656,16 +656,22 @@ const SuaEmpresa = () => {
       const cnpjLimpo = data.cnpj.replace(/\D/g, '');
       const celularLimpo = data.celular.replace(/\D/g, '');
 
+      console.log("🔍 Tentando login com celular:", celularLimpo);
+
       const empresasEncontradas = await buscarEmpresas({
-        responsavel_telefone: data.celular
+        responsavel_telefone: celularLimpo,
+        ignorarStatus: true
       });
+
+      console.log("🔍 Resultado da busca:", empresasEncontradas);
 
       const empresa = empresasEncontradas[0];
 
       if (!empresa) {
+        console.error("❌ Nenhuma empresa encontrada.");
         toast("Login falhou", {
-          description: "Nenhuma empresa encontrada com este celular",
-          duration: 3000
+          description: `Nenhuma empresa encontrada com o celular ${celularLimpo}. Verifique se é o mesmo número cadastrado.`,
+          duration: 5000
         });
         return;
       }
@@ -915,9 +921,9 @@ const SuaEmpresa = () => {
                       <div className="space-y-2">
                         <label className="text-xs font-medium">CNPJ *</label>
                         <div className="relative">
-                          <Input 
-                            value={cadastroForm.watch("cnpj")} 
-                            onChange={(e) => onMaskCNPJ(e, "cadastro")} 
+                          <Input
+                            value={cadastroForm.watch("cnpj")}
+                            onChange={(e) => onMaskCNPJ(e, "cadastro")}
                             placeholder="00.000.000/0000-00"
                             className={fieldErrors.cnpj ? 'border-red-500 border-2' : ''}
                           />
@@ -943,7 +949,7 @@ const SuaEmpresa = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Nome Fantasia *</label>
-                        <Input 
+                        <Input
                           {...cadastroForm.register("nomeFantasia")}
                           className={fieldErrors.nomeFantasia ? 'border-amber-500 border-2' : ''}
                         />
@@ -957,8 +963,8 @@ const SuaEmpresa = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Email *</label>
-                        <Input 
-                          type="email" 
+                        <Input
+                          type="email"
                           {...cadastroForm.register("email")}
                           className={fieldErrors.email ? 'border-purple-500 border-2' : ''}
                         />
@@ -1013,9 +1019,9 @@ const SuaEmpresa = () => {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-xs font-medium">Celular (login) *</label>
-                        <Input 
-                          value={cadastroForm.watch("celular")} 
-                          onChange={(e) => onMaskPhone(e, "celular", "cadastro")} 
+                        <Input
+                          value={cadastroForm.watch("celular")}
+                          onChange={(e) => onMaskPhone(e, "celular", "cadastro")}
                           placeholder="(11) 90000-0000"
                           className={fieldErrors.celular ? 'border-blue-500 border-2' : ''}
                         />
@@ -1029,9 +1035,9 @@ const SuaEmpresa = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-medium">WhatsApp *</label>
-                        <Input 
-                          value={cadastroForm.watch("whatsapp")} 
-                          onChange={(e) => onMaskPhone(e, "whatsapp", "cadastro")} 
+                        <Input
+                          value={cadastroForm.watch("whatsapp")}
+                          onChange={(e) => onMaskPhone(e, "whatsapp", "cadastro")}
                           placeholder="(11) 90000-0000"
                           className={fieldErrors.whatsapp ? 'border-green-500 border-2' : ''}
                         />
@@ -1228,9 +1234,9 @@ const SuaEmpresa = () => {
                       <div className="grid md:grid-cols-3 gap-6">
                         <div className="space-y-2 md:col-span-2">
                           <label className="text-xs font-medium">Descrição *</label>
-                          <Textarea 
-                            {...cadastroForm.register("descricao")} 
-                            rows={6} 
+                          <Textarea
+                            {...cadastroForm.register("descricao")}
+                            rows={6}
                             placeholder="Fale sobre produtos, diferenciais, horário, formas de pagamento..."
                             className={fieldErrors.descricao ? 'border-pink-500 border-2' : ''}
                           />

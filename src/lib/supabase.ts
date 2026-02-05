@@ -283,6 +283,7 @@ export async function buscarEmpresas(filtros?: {
   destaque?: boolean
   responsavel_telefone?: string
   limit?: number
+  ignorarStatus?: boolean
 }) {
   try {
     // Usar VIEW se disponível para trazer dados da categoria
@@ -301,17 +302,24 @@ export async function buscarEmpresas(filtros?: {
     if (filtros?.bairro) query = query.eq('bairro', filtros.bairro);
     if (filtros?.busca) query = query.ilike('nome', `%${filtros.busca}%`);
     if (filtros?.destaque) query = query.eq('destaque', true);
-    if (filtros?.responsavel_telefone) query = query.eq('responsavel_telefone', filtros.responsavel_telefone);
+    if (filtros?.responsavel_telefone) {
+      query = query.or(`responsavel_telefone.eq.${filtros.responsavel_telefone},telefone.eq.${filtros.responsavel_telefone},whatsapp.eq.${filtros.responsavel_telefone}`);
+    }
     if (filtros?.limit) query = query.limit(filtros.limit);
 
-    // Filtrar apenas aprovadas/ativas
-    query = query.eq('status', 'aprovado').eq('ativa', true);
+    // Filtrar apenas aprovadas/ativas (exceto se solicitado ignorar)
+    if (!filtros?.ignorarStatus) {
+      query = query.eq('status', 'aprovado').eq('ativa', true);
+    }
 
     const { data, error } = await query;
 
     if (error) {
+      console.error("❌ ERRO NA BUSCA DE EMPRESAS:", error);
       throw error;
     }
+
+    console.log(`✅ Busca retornou ${data?.length || 0} resultados.`);
 
     // Mapear para EmpresaCompleta
     const empresasFormatadas: EmpresaCompleta[] = data.map((emp: any) => ({
@@ -369,10 +377,10 @@ export async function buscarEmpresaPorSlug(slug: string) {
 
     // Formatar
     const empresa: EmpresaCompleta = {
-        ...data,
-        categoria_nome: data.categorias?.nome,
-        categoria_icone: data.categorias?.icone,
-        categoria_cor: data.categorias?.cor
+      ...data,
+      categoria_nome: data.categorias?.nome,
+      categoria_icone: data.categorias?.icone,
+      categoria_cor: data.categorias?.cor
     };
 
     return empresa;
@@ -389,7 +397,7 @@ export async function buscarEmpresaPorId(id: string) {
       .select('*')
       .eq('id', id)
       .single();
-    
+
     if (error) return null;
     return data;
   } catch (error) {
@@ -418,7 +426,7 @@ export async function buscarEmpresasPorIds(ids: string[]) {
 export async function criarEmpresa(empresa: Partial<Empresa>) {
   try {
     console.log('📝 Dados da empresa a serem inseridos:', empresa);
-    
+
     const { data, error } = await supabase
       .from('empresas')
       .insert(empresa)
@@ -434,7 +442,7 @@ export async function criarEmpresa(empresa: Partial<Empresa>) {
       });
       throw error;
     }
-    
+
     console.log('✅ Empresa criada com sucesso:', data);
     return { success: true, data };
   } catch (error: any) {
@@ -465,7 +473,7 @@ export async function incrementarVisualizacoesEmpresa(id: string) {
     // Mas se não tiver RPC, podemos ignorar ou fazer um get+update inseguro (race condition).
     // Vou deixar apenas o console por enquanto, ou melhor, RPC se existir.
     // Vamos tentar RPC genérico se existir ou deixar vazio para não quebrar.
-    
+
     /* 
     const { error } = await supabase.rpc('increment_views', { table_name: 'empresas', row_id: id });
     if (error) console.error(error);
@@ -481,10 +489,7 @@ export async function incrementarVisualizacoesEmpresa(id: string) {
 
 export async function buscarPosts(filtros: { limite?: number, userId?: string, admin?: boolean } = {}) {
   try {
-    let query = supabase.from('mural_posts').select(`
-      *,
-      comentarios:comentarios(count)
-    `);
+    let query = supabase.from('mural_posts').select('*');
 
     if (filtros.userId) query = query.eq('user_id', filtros.userId);
     if (!filtros.admin) query = query.eq('aprovado', true);
@@ -493,19 +498,19 @@ export async function buscarPosts(filtros: { limite?: number, userId?: string, a
     query = query.order('data_criacao', { ascending: false });
 
     const { data, error } = await query;
-    
+
     if (error) throw error;
-    
+
     // Mapear contagem de comentários e estrutura
     return data.map((post: any) => ({
       ...post,
-      comentarios: post.comentarios ? post.comentarios[0]?.count || 0 : 0, 
-      created_at: post.data_criacao, // mapear campos se necessário
+      comentarios: 0, // Temporariamente desativado para evitar erros de relação
+      created_at: post.data_criacao,
       status: post.aprovado ? 'aprovado' : 'pendente'
     }));
 
   } catch (error) {
-    console.error('Erro ao buscar posts (Supabase):', error);
+    console.error('Erro ao buscar posts (Supabase):', JSON.stringify(error, null, 2));
     return [];
   }
 }
@@ -535,8 +540,9 @@ export async function criarPost(post: {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Erro ao criar post (Supabase):', error);
+    console.error('Erro ao criar post (Supabase):', JSON.stringify(error, null, 2));
     return null;
+
   }
 }
 
@@ -591,7 +597,7 @@ export async function buscarLocaisTuristicos() {
       .from('locais_turisticos')
       .select('*')
       .eq('status', 'ativo');
-      
+
     if (error) throw error;
     return data;
   } catch (error) {
@@ -647,21 +653,21 @@ export async function buscarFavoritos(
 ) {
   try {
     const userId = getUserIdentifier();
-    
+
     let query = supabase.from('favoritos').select('*');
-    
+
     // Como identificar se é user logado ou anonimo? A função original misturava os dois.
     // Vamos tentar buscar por user_identifier OU user_id se logado?
     // A função original usava query params.
     // Assumindo uso do hook de autenticação no componente, aqui vamos pelo localStorage
     const user = getUsuarioLogado();
-    
+
     if (user) {
-         query = query.or(`user_id.eq.${user.id},user_identifier.eq.${userId}`);
+      query = query.or(`user_id.eq.${user.id},user_identifier.eq.${userId}`);
     } else {
-         query = query.eq('user_identifier', userId);
+      query = query.eq('user_identifier', userId);
     }
-    
+
     if (tipo) query = query.eq('tipo', tipo);
 
     const { data, error } = await query;
@@ -680,13 +686,13 @@ export async function adicionarFavorito(
   try {
     const userId = getUserIdentifier();
     const user = getUsuarioLogado();
-    
-    const fav: any = { 
-        tipo, 
-        item_id: itemId, 
-        user_identifier: userId 
+
+    const fav: any = {
+      tipo,
+      item_id: itemId,
+      user_identifier: userId
     };
-    
+
     if (user) fav.user_id = user.id;
 
     const { data, error } = await supabase.from('favoritos').insert(fav).select().single();
@@ -705,21 +711,21 @@ export async function removerFavorito(
   try {
     const userId = getUserIdentifier();
     const user = getUsuarioLogado();
-    
+
     let query = supabase.from('favoritos')
-        .delete()
-        .eq('tipo', tipo)
-        .eq('item_id', itemId);
-        
+      .delete()
+      .eq('tipo', tipo)
+      .eq('item_id', itemId);
+
     if (user) {
-         // Cuidado: delete com OR requer parênteses ou lógica complexa no supabase-js? 
-         // Delete com OR é arriscado se não for preciso.
-         // Vamos deletar onde match for encontrado. Melhor duas queries ou priorizar user_id?
-         // Se logado, remove pelo user_id. Se anonimo, pelo identifier.
-         // Mas o identifier persiste.
-         query = query.eq('user_id', user.id); // Prioriza autenticado
+      // Cuidado: delete com OR requer parênteses ou lógica complexa no supabase-js? 
+      // Delete com OR é arriscado se não for preciso.
+      // Vamos deletar onde match for encontrado. Melhor duas queries ou priorizar user_id?
+      // Se logado, remove pelo user_id. Se anonimo, pelo identifier.
+      // Mas o identifier persiste.
+      query = query.eq('user_id', user.id); // Prioriza autenticado
     } else {
-         query = query.eq('user_identifier', userId);
+      query = query.eq('user_identifier', userId);
     }
 
     const { error } = await query;
@@ -752,7 +758,7 @@ export async function adicionarAoHistorico(
     if (user) {
       item.user_id = user.id;
     }
-    
+
     await supabase.from('historico_localizacao').insert(item);
   } catch (error) {
     console.error('Erro ao adicionar ao histórico (Supabase):', error);
@@ -763,18 +769,18 @@ export async function buscarHistorico(limite = 20) {
   try {
     const userId = getUserIdentifier();
     const user = getUsuarioLogado();
-    
+
     let query = supabase.from('historico_localizacao').select('*');
-    
+
     if (user) {
-        // query = query.or(`user_id.eq.${user.id},user_identifier.eq.${userId}`);
-        query = query.eq('user_id', user.id);
+      // query = query.or(`user_id.eq.${user.id},user_identifier.eq.${userId}`);
+      query = query.eq('user_id', user.id);
     } else {
-        query = query.eq('user_identifier', userId);
+      query = query.eq('user_identifier', userId);
     }
-    
+
     query = query.order('visualizado_em', { ascending: false }).limit(limite);
-    
+
     const { data, error } = await query;
     if (error) throw error;
     return data;
@@ -792,7 +798,7 @@ export async function buscarVagas(empresaId?: string) {
   try {
     let query = supabase.from('vagas').select('*').eq('status', 'aberta');
     if (empresaId) query = query.eq('empresa_id', empresaId);
-    
+
     const { data, error } = await query;
     if (error) throw error;
     return data;
@@ -824,7 +830,7 @@ export async function atualizarVaga(id: string, dados: Partial<Vaga>) {
       .from('vagas')
       .update(dados)
       .eq('id', id);
-      
+
     if (error) throw error;
     return true;
   } catch (error) {
@@ -835,8 +841,8 @@ export async function atualizarVaga(id: string, dados: Partial<Vaga>) {
 
 export async function removerVaga(id: string) {
   try {
-     const { error } = await supabase.from('vagas').delete().eq('id', id);
-     if (error) throw error;
+    const { error } = await supabase.from('vagas').delete().eq('id', id);
+    if (error) throw error;
     return true;
   } catch (error) {
     console.error('Erro ao remover vaga:', error);
@@ -888,60 +894,147 @@ export async function criarOuLogarUsuario(
     let user;
 
     if (isRegistro) {
-      // Registro via RPC - Apenas os 3 parâmetros obrigatórios
-      const { data, error } = await supabase.rpc('cadastrar_usuario', {
-        u_email: email,
-        u_senha: senha,
-        u_nome: nome || email.split('@')[0]
+      // Registro via Supabase Auth (com envio de email)
+      console.log('📧 Iniciando registro com Supabase Auth...');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: senha,
+        options: {
+          data: {
+            nome: nome || email.split('@')[0],
+            cpf: cpf || '',
+            telefone: telefone || '',
+            endereco: endereco || '',
+            bairro: bairro || '',
+            cidade: cidade || '',
+            estado: estado || '',
+            cep: cep || ''
+          }
+        }
       });
 
       if (error) {
-        console.error('Erro RPC cadastrar_usuario:', error);
-        console.error('Detalhes do erro:', JSON.stringify(error, null, 2));
-        throw new Error(error.message || 'Erro ao cadastrar usuário');
+        console.error('Erro Supabase Auth signUp:', error);
+        throw new Error(error.message || 'Erro ao criar conta');
       }
-      
-      const result = data?.[0];
-      if (!result?.sucesso) throw new Error(result?.erro || 'Erro ao criar conta');
-      
-      user = result;
+
+      // Se sucesso, mas sem sessão, requer confirmação de email
+      if (data.user && !data.session) {
+        console.log('✅ Registro iniciado! Verificação de email necessária.');
+        throw new Error('VERIFICACAO_EMAIL_NECESSARIA');
+      }
+
+      user = data.user;
     } else {
-      // Login via RPC
-      const { data, error } = await supabase.rpc('verificar_usuario_login', {
-        u_email: email,
-        u_senha: senha
+      // Login - Tenta primeiro via Supabase Auth
+      console.log('🔐 Tentando login via Supabase Auth...');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: senha
       });
 
       if (error) {
-        console.error('Erro RPC verificar_usuario_login:', error);
-        throw error;
+        console.warn('⚠️ Login Auth falhou, tentando RPC legado...', error.message);
+        // Se o erro for de email não confirmado
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('EMAIL_NAO_CONFIRMADO');
+        }
+
+        // Fallback para RPC (sistema legado)
+        const { data: rpcData, error: rpcError } = await supabase.rpc('verificar_usuario_login', {
+          u_email: email,
+          u_senha: senha
+        });
+
+        if (!rpcError && rpcData?.[0]?.sucesso) {
+          user = rpcData[0];
+          console.log('✅ Login via RPC com sucesso!');
+        } else {
+          // Fallback Manual
+          console.warn('⚠️ RPC falhou. Tentando fallback manual...');
+          const { data: usersData, error: usersError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .limit(1);
+
+          if (usersData && usersData.length > 0) {
+            const userRecord = usersData[0];
+            const passwordMatch = userRecord.senha_hash === senha;
+            if (passwordMatch) {
+              // Verificar Status
+              if (userRecord.status && userRecord.status !== 'aprovado') {
+                throw new Error(`Seu cadastro está com status: ${userRecord.status?.toUpperCase()}. Aguarde aprovação.`);
+              }
+              user = { ...userRecord, sucesso: true };
+            } else {
+              throw new Error('Senha incorreta.');
+            }
+          } else {
+            console.warn('❌ Usuário não encontrado em users. Tentando usuarios...');
+            const { data: usuariosData } = await supabase
+              .from('usuarios')
+              .select('*')
+              .eq('email', email)
+              .limit(1);
+
+            if (usuariosData && usuariosData.length > 0) {
+              const usuarioRecord = usuariosData[0];
+              if (usuarioRecord.senha === senha) {
+                user = { ...usuarioRecord, sucesso: true };
+              } else {
+                throw new Error('Senha incorreta.');
+              }
+            } else {
+              throw new Error('Credenciais inválidas ou usuário não encontrado.');
+            }
+          }
+        }
+      } else {
+        user = data.user;
+        console.log('✅ Login via Supabase Auth com sucesso!');
       }
-      
-      const result = data?.[0];
-      if (!result || !result.sucesso) throw new Error('Email ou senha inválidos');
-      
-      user = result;
     }
 
-    if (!user) throw new Error('Erro desconhecido');
+    if (!user) throw new Error('Erro desconhecido ao processar usuário');
 
     // Adaptar para interface User
     const userData: User = {
       id: user.id,
-      email: user.email,
-      nome: user.nome,
-      avatar_url: user.avatar_url,
-      created_at: new Date().toISOString(), // Mock, já que a RPC simplificada não retorna data
-      updated_at: new Date().toISOString()
+      email: user.email || email,
+      // Se vier do Auth, user_metadata tem o nome
+      nome: user.user_metadata?.nome || user.nome || email.split('@')[0],
+      avatar_url: user.user_metadata?.avatar_url || user.avatar_url,
+      created_at: user.created_at || new Date().toISOString(),
+      updated_at: user.updated_at || new Date().toISOString()
     };
 
     // Salvar no localStorage
     localStorage.setItem('aqui_guaira_user', JSON.stringify(userData))
     return userData;
   } catch (error: any) {
-    console.error('Erro ao autenticar (Supabase RPC):', error);
+    if (error.message === 'VERIFICACAO_EMAIL_NECESSARIA' || error.message === 'EMAIL_NAO_CONFIRMADO') {
+      throw error;
+    }
+    console.error('Erro ao autenticar:', error);
     throw error;
   }
+}
+
+/**
+ * Reenviar email de confirmação
+ */
+export async function reenviarEmailConfirmacao(email: string) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email
+  });
+
+  if (error) {
+    console.error('Erro ao reenviar email:', error);
+    throw error;
+  }
+  return true;
 }
 
 /**
@@ -981,10 +1074,10 @@ export async function atualizarUsuario(userId: string, dados: Partial<User>) {
     // Atualizar localStorage
     const stored = localStorage.getItem('aqui_guaira_user');
     if (stored) {
-        const currentUser = JSON.parse(stored);
-        localStorage.setItem('aqui_guaira_user', JSON.stringify({ ...currentUser, ...dados }));
+      const currentUser = JSON.parse(stored);
+      localStorage.setItem('aqui_guaira_user', JSON.stringify({ ...currentUser, ...dados }));
     }
-    
+
     return data;
   } catch (error) {
     console.error('Erro ao atualizar usuário (Supabase):', error);
@@ -1003,7 +1096,7 @@ export async function buscarFavoritosUsuario(tipo?: 'empresa' | 'local' | 'post'
   try {
     const user = getUsuarioLogado();
     const userId = getUserIdentifier();
-    
+
     // Mesma lógica de buscarFavoritos
     return await buscarFavoritos(tipo);
   } catch (error) {
@@ -1022,8 +1115,8 @@ export async function adicionarFavoritoUsuario(
   try {
     return await adicionarFavorito(tipo, itemId);
   } catch (error) {
-     console.error('Erro ao adicionar favorito (Supabase):', error);
-     return null;
+    console.error('Erro ao adicionar favorito (Supabase):', error);
+    return null;
   }
 }
 

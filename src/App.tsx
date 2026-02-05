@@ -27,6 +27,48 @@ import PainelCidade from "./pages/PainelCidade";
 import EscolasCreches from "./pages/EscolasCreches";
 import AquiResolve from "./pages/AquiResolve";
 
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+
+const AuthStateListener = () => {
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const localUser = localStorage.getItem('aqui_guaira_user');
+
+        if (!localUser) {
+          // Usuário acabou de confirmar email ou logar
+          console.log("🔄 Detectado login via Auth Listener (Link de Email ou OAuth)");
+
+          const userData = {
+            id: session.user.id,
+            email: session.user.email,
+            nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0],
+            avatar_url: session.user.user_metadata?.avatar_url,
+            created_at: session.user.created_at,
+            updated_at: session.user.updated_at
+          };
+
+          localStorage.setItem('aqui_guaira_user', JSON.stringify(userData));
+          toast.success("Email confirmado com sucesso!", {
+            description: "Você já está logado."
+          });
+
+          // Opcional: Recarregar suavemente se necessário para atualizar UI
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return null;
+};
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -40,7 +82,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/mural" element={<Mural />} />
-            <Route path="/voz-da-cidade" element={<XFeed />} />
             <Route path="/mural/meus-posts" element={<MeusPosts />} />
             <Route path="/empresas" element={<Empresas />} />
             <Route path="/meus-locais" element={<MeusLocais />} />
@@ -62,6 +103,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <AuthStateListener />
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
