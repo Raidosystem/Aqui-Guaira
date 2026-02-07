@@ -149,6 +149,29 @@ export interface LocalTuristico {
   updated_at: string
 }
 
+export interface Profissional {
+  id: string
+  user_id?: string
+  nome: string
+  cpf?: string
+  descricao: string
+  whatsapp: string
+  telefone?: string
+  categorias: string[]
+  bairros_atendidos: string[]
+  atende_24h: boolean
+  atende_hoje: boolean
+  orcamento_gratis: boolean
+  status: 'pendente' | 'aprovado' | 'rejeitado'
+  verificado: boolean
+  destaque: boolean
+  visualizacoes: number
+  avaliacao_media: number
+  total_avaliacoes: number
+  created_at: string
+  updated_at: string
+}
+
 export interface Vaga {
   id: string;
   empresa_id: string;
@@ -161,6 +184,11 @@ export interface Vaga {
   status: 'aberta' | 'cerrada';
   created_at: string;
   updated_at: string;
+  empresas?: {
+    nome: string;
+    logo?: string;
+    whatsapp?: string;
+  };
 }
 
 export interface Favorito {
@@ -492,7 +520,11 @@ export async function buscarPosts(filtros: { limite?: number, userId?: string, a
     let query = supabase.from('mural_posts').select('*');
 
     if (filtros.userId) query = query.eq('user_id', filtros.userId);
-    if (!filtros.admin) query = query.eq('aprovado', true);
+    if (!filtros.admin) {
+      // Tenta filtrar por status 'aprovado' OU booleano aprovado=true
+      // Importante: status é o campo principal controlado pelo Admin
+      query = query.or('status.eq.aprovado,aprovado.eq.true');
+    }
     if (filtros.limite) query = query.limit(filtros.limite);
 
     query = query.order('data_criacao', { ascending: false });
@@ -506,7 +538,8 @@ export async function buscarPosts(filtros: { limite?: number, userId?: string, a
       ...post,
       comentarios: 0, // Temporariamente desativado para evitar erros de relação
       created_at: post.data_criacao,
-      status: post.aprovado ? 'aprovado' : 'pendente'
+      // Prioriza o status textual se existir, senão usa o booleano
+      status: (post.status === 'aprovado' || post.aprovado) ? 'aprovado' : (post.status || 'pendente')
     }));
 
   } catch (error) {
@@ -796,7 +829,7 @@ export async function buscarHistorico(limite = 20) {
 
 export async function buscarVagas(empresaId?: string) {
   try {
-    let query = supabase.from('vagas').select('*').eq('status', 'aberta');
+    let query = supabase.from('vagas').select('*, empresas(nome, logo, whatsapp)').eq('status', 'aberta');
     if (empresaId) query = query.eq('empresa_id', empresaId);
 
     const { data, error } = await query;
@@ -1133,4 +1166,118 @@ export async function removerFavoritoUsuario(
     console.error('Erro ao remover favorito de usuário (Supabase):', error);
     throw error;
   }
+}
+
+// ============================================
+// FUNÇÕES DE API - PROFISSIONAIS (AQUI RESOLVE)
+// ============================================
+
+export async function buscarProfissionais(filtros?: {
+  categoria?: string
+  bairro?: string
+  busca?: string
+  status?: string // 'pendente' | 'aprovado'
+  userId?: string
+  verificado?: boolean
+  avaliacaoMinima?: number
+  destaque?: boolean
+  atendeHoje?: boolean
+  atende24h?: boolean
+  orcamentoGratis?: boolean
+  limit?: number
+}) {
+  try {
+    let query = supabase.from('profissionais').select('*');
+
+    if (filtros?.userId) query = query.eq('user_id', filtros.userId);
+
+    // Status: se não especificado e não for admin (userId), traz apenas aprovados
+    if (filtros?.status) {
+      query = query.eq('status', filtros.status);
+    } else if (!filtros?.userId) {
+      query = query.eq('status', 'aprovado');
+    }
+
+    // Filtros de Array (contains)
+    if (filtros?.categoria && filtros.categoria !== 'todas') {
+      query = query.contains('categorias', [filtros.categoria]);
+    }
+
+    if (filtros?.bairro && filtros.bairro !== 'todos') {
+      query = query.contains('bairros_atendidos', [filtros.bairro]);
+    }
+
+    if (filtros?.busca) query = query.ilike('nome', `%${filtros.busca}%`);
+    if (filtros?.verificado) query = query.eq('verificado', true);
+    if (filtros?.destaque) query = query.eq('destaque', true);
+    if (filtros?.atendeHoje) query = query.eq('atende_hoje', true);
+    if (filtros?.atende24h) query = query.eq('atende_24h', true);
+    if (filtros?.orcamentoGratis) query = query.eq('orcamento_gratis', true);
+
+    if (filtros?.avaliacaoMinima) {
+      query = query.gte('avaliacao_media', filtros.avaliacaoMinima);
+    }
+
+    if (filtros?.limit) query = query.limit(filtros.limit);
+
+    // Ordenação padrão: Destaques primeiro, depois avaliação
+    query = query.order('destaque', { ascending: false }).order('avaliacao_media', { ascending: false });
+
+    // Ordenação secundária por data para desempate
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("❌ ERRO NA BUSCA DE PROFISSIONAIS:", error);
+      throw error;
+    }
+
+    return data as Profissional[];
+  } catch (error) {
+    console.error('Erro ao buscar profissionais (Supabase):', error);
+    return [];
+  }
+}
+
+export async function criarProfissional(dados: Partial<Profissional>) {
+  try {
+    const { data, error } = await supabase
+      .from('profissionais')
+      .insert({
+        ...dados,
+        status: 'pendente'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Erro ao criar profissional:', error);
+    return { success: false, error };
+  }
+}
+
+export async function atualizarProfissional(id: string, dados: Partial<Profissional>) {
+  try {
+    const { error } = await supabase
+      .from('profissionais')
+      .update(dados)
+      .eq('id', id);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Erro ao atualizar profissional:', error);
+    return { success: false, error };
+  }
+}
+
+export async function aprovarProfissional(id: string) {
+  return atualizarProfissional(id, { status: 'aprovado' });
+}
+
+export async function rejeitarProfissional(id: string) {
+  return atualizarProfissional(id, { status: 'rejeitado' });
 }

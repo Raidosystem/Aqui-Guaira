@@ -26,6 +26,7 @@ import PetsPerdidos from "./pages/PetsPerdidos";
 import PainelCidade from "./pages/PainelCidade";
 import EscolasCreches from "./pages/EscolasCreches";
 import AquiResolve from "./pages/AquiResolve";
+import Vagas from "./pages/Vagas";
 
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
@@ -96,6 +97,7 @@ const App = () => (
             <Route path="/saude-na-pratica" element={<SaudeNaPratica />} />
             <Route path="/servicos-por-bairro" element={<ServicosPorBairro />} />
             <Route path="/aqui-resolve" element={<AquiResolve />} />
+            <Route path="/vagas-emprego" element={<Vagas />} />
             <Route path="/achados-perdidos" element={<AchadosPerdidos />} />
             <Route path="/pets-perdidos" element={<PetsPerdidos />} />
             <Route path="/painel-cidade" element={<PainelCidade />} />

@@ -87,7 +87,7 @@ const Mural = () => {
   const carregarMeusPostsPendentes = async () => {
     if (!user) return;
     try {
-      const data = await buscarPosts({ userId: user.id });
+      const data = await buscarPosts({ userId: user.id, admin: true });
       setMeusPostsPendentes(data.filter((p: Post) => p.status === 'pendente'));
     } catch (error) { }
   };
@@ -289,15 +289,7 @@ const Mural = () => {
                     Publicar Agora
                   </Button>
                 </DialogTrigger>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-xl px-10 py-8 border-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-lg font-bold gap-3 ml-4"
-                  onClick={() => window.open('/voz-da-cidade', '_blank')}
-                >
-                  <Sparkles className="w-6 h-6 text-primary" />
-                  Voz da Cidade (X)
-                </Button>
+
                 <DialogContent className="max-w-2xl rounded-3xl p-0 overflow-hidden">
                   <div className="bg-primary/5 p-6 border-b border-primary/10">
                     <DialogHeader>
@@ -433,10 +425,7 @@ const Mural = () => {
                           <TrendingUp className={`w-5 h-5 ${userApoios[post.id] ? 'animate-bounce' : ''}`} />
                           <span className="text-sm">Apoiar {(apoios[post.id] !== undefined ? apoios[post.id] : (post.curtidas || 0)) > 0 ? `(${(apoios[post.id] !== undefined ? apoios[post.id] : post.curtidas)})` : ''}</span>
                         </Button>
-                        <Button variant="ghost" className="rounded-2xl gap-2 text-zinc-400 hover:text-primary hover:bg-primary/5 dark:hover:bg-zinc-800 font-bold px-6 py-6" onClick={() => toggleComments(post.id)}>
-                          <MessageSquare className="w-5 h-5" />
-                          <span className="text-sm">Comentar</span>
-                        </Button>
+
                       </div>
                       <Button variant="ghost" className="rounded-2xl text-zinc-400 gap-2 font-bold hover:text-indigo-500 dark:hover:bg-zinc-800 px-6 py-6" onClick={() => {
                         if (navigator.share) {
@@ -451,52 +440,7 @@ const Mural = () => {
                       </Button>
                     </div>
 
-                    {expandedComments[post.id] && (
-                      <div className="px-8 py-8 bg-zinc-50/30 dark:bg-zinc-800/10 border-t border-zinc-100 dark:border-zinc-800 animate-in slide-in-from-top-4 duration-300">
-                        <div className="space-y-6 mb-6">
-                          <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest pl-1">Comentários da Comunidade</p>
-                          {(!comentarios[post.id] || comentarios[post.id].length === 0) ? (
-                            <div className="p-12 text-center bg-white/50 dark:bg-black/20 rounded-[2rem] border-2 border-dashed border-zinc-200 dark:border-zinc-800">
-                              <MessageSquare className="w-8 h-8 text-zinc-200 dark:text-zinc-800 mx-auto mb-2" />
-                              <p className="text-sm text-zinc-400 font-medium">Nenhum comentário por aqui ainda.</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {comentarios[post.id].map(comment => (
-                                <div key={comment.id} className="group relative bg-white dark:bg-zinc-800/40 p-5 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-[10px]">{comment.autor_nome.charAt(0).toUpperCase()}</div>
-                                      <span className="text-sm font-black text-zinc-700 dark:text-zinc-300">{comment.autor_nome}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <button onClick={() => handleApoiarComentario(comment)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${comentarioApoios[comment.id] ? 'bg-rose-50 text-rose-500' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
-                                        <TrendingUp className="w-3.5 h-3.5" />
-                                        <span className="text-[10px] font-black">{comment.curtidas || 0}</span>
-                                      </button>
-                                      {(user?.id && (user.id === comment.user_id || user.id === post.user_id)) && (
-                                        <button
-                                          onClick={() => handleExcluirComentario(post.id, comment.id)}
-                                          className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all"
-                                          title="Excluir comentário"
-                                        >
-                                          <Trash className="w-4 h-4" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed pl-9">{comment.conteudo}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-3 pt-4">
-                          <Input placeholder="Adicione um comentário..." className="rounded-2xl h-14 bg-white dark:bg-zinc-800 border-2" value={novoComentarioTexto[post.id] || ""} onChange={(e) => setNovoComentarioTexto(prev => ({ ...prev, [post.id]: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && handleEnviarComentario(post.id)} />
-                          <Button className="rounded-2xl h-14 w-14 p-0 shadow-lg" onClick={() => handleEnviarComentario(post.id)}><Send className="w-5 h-5" /></Button>
-                        </div>
-                      </div>
-                    )}
+
                   </Card>
                 ))}
               </div>

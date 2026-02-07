@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/lib/supabase";
+import { supabase, Profissional, aprovarProfissional, rejeitarProfissional } from "@/lib/supabase";
 
 interface Estatisticas {
   empresas_ativas: number;
@@ -139,6 +139,7 @@ export default function Admin() {
   const [empresasFiltradas, setEmpresasFiltradas] = useState<Empresa[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -222,6 +223,7 @@ export default function Admin() {
       carregarEmpresas(),
       carregarPosts(),
       carregarUsuarios(),
+      carregarProfissionais(),
       carregarLogs(),
       carregarCategorias(),
       adminData?.super_admin ? carregarAdmins() : Promise.resolve()
@@ -289,6 +291,11 @@ export default function Admin() {
   const carregarUsuarios = async () => {
     const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (data) setUsuarios(data as any[]);
+  };
+
+  const carregarProfissionais = async () => {
+    const { data } = await supabase.from('profissionais').select('*').order('created_at', { ascending: false });
+    if (data) setProfissionais(data as Profissional[]);
   };
 
   const carregarAdmins = async () => {
@@ -432,6 +439,29 @@ export default function Admin() {
     } catch (error) {
       console.error(error);
       toast.error("Erro ao rejeitar post");
+    }
+  };
+
+
+  const handleAprovarProfissional = async (id: string, nome: string) => {
+    try {
+      await aprovarProfissional(id);
+      toast.success("Profissional aprovado!");
+      carregarProfissionais();
+      logAcao("aprovar_profissional", `Aprovou profissional "${nome}"`);
+    } catch (e) {
+      toast.error("Erro ao aprovar");
+    }
+  };
+
+  const handleRejeitarProfissional = async (id: string, nome: string) => {
+    try {
+      await rejeitarProfissional(id);
+      toast.success("Profissional rejeitado/bloqueado");
+      carregarProfissionais();
+      logAcao("rejeitar_profissional", `Rejeitou profissional "${nome}"`);
+    } catch (e) {
+      toast.error("Erro ao rejeitar");
     }
   };
 
@@ -628,6 +658,7 @@ export default function Admin() {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "empresas", label: "Empresas", icon: Building2 },
     { id: "posts", label: "Posts do Mural", icon: FileText, badge: estatisticas?.posts_pendentes },
+    { id: "profissionais", label: "Profissionais", icon: UserCheck, badge: profissionais.filter(p => p.status === 'pendente').length },
     { id: "usuarios", label: "Usuários", icon: Users },
     ...(adminData?.super_admin ? [{ id: "admins", label: "Administradores", icon: Shield }] : []),
     { id: "logs", label: "Auditoria", icon: History },
@@ -1024,6 +1055,64 @@ export default function Admin() {
                     </table>
                   </div>
                 </Card>
+              </div>
+
+            )}
+
+            {/* 4.5 PROFISSIONAIS */}
+            {activeTab === "profissionais" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {profissionais.map((p) => (
+                    <Card key={p.id} className="rounded-3xl border-zinc-200 dark:border-zinc-800 hover:shadow-lg transition-all">
+                      <CardHeader className="p-6 pb-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-lg font-bold">{p.nome}</CardTitle>
+                            <CardDescription>{p.categorias?.join(', ')}</CardDescription>
+                          </div>
+                          <StatusBadge status={p.status} ativa={true} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-6 pt-2 space-y-4">
+                        <div className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
+                          <p className="flex items-center gap-2"><Phone className="w-3 h-3" /> {p.whatsapp}</p>
+                          <p className="flex items-center gap-2"><MapPin className="w-3 h-3" /> {p.bairros_atendidos?.join(', ')}</p>
+                          <p className="flex items-center gap-2"><FileText className="w-3 h-3" /> CPF: {p.cpf || 'N/A'}</p>
+                        </div>
+                        <p className="text-xs italic bg-zinc-50 dark:bg-zinc-900 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                          "{p.descricao}"
+                        </p>
+
+                        <div className="flex gap-2 pt-2">
+                          {p.status === 'pendente' ? (
+                            <>
+                              <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 h-8 text-xs font-bold" onClick={() => handleAprovarProfissional(p.id, p.nome)}>
+                                <CheckCircle2 className="w-3 h-3 mr-1" /> Aprovar
+                              </Button>
+                              <Button variant="outline" className="flex-1 text-rose-500 hover:bg-rose-50 border-rose-200 h-8 text-xs font-bold" onClick={() => handleRejeitarProfissional(p.id, p.nome)}>
+                                <XCircle className="w-3 h-3 mr-1" /> Rejeitar
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              className={`w-full h-8 text-xs font-bold ${p.status === 'aprovado' ? 'text-rose-500 hover:bg-rose-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
+                              onClick={() => p.status === 'aprovado' ? handleRejeitarProfissional(p.id, p.nome) : handleAprovarProfissional(p.id, p.nome)}
+                            >
+                              {p.status === 'aprovado' ? 'Bloquear / Rejeitar' : 'Reativar / Aprovar'}
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                {profissionais.length === 0 && (
+                  <div className="text-center py-12 text-zinc-500">
+                    Nenhum profissional cadastrado.
+                  </div>
+                )}
               </div>
             )}
 
@@ -1485,7 +1574,7 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }
 

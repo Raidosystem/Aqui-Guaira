@@ -2,7 +2,7 @@ import {
   Building2, Home, FileText, Settings, BarChart3, Heart,
   Image, Info, ChevronDown, User, LogOut, Shield,
   ClipboardList, Menu, X, Search, ShoppingBag,
-  Map, PawPrint, Pill, Stethoscope, AlertTriangle, GraduationCap,
+  Map, PawPrint, Pill, Stethoscope, AlertTriangle, GraduationCap, Briefcase,
   ChevronLeft, ChevronRight, Sun, Moon, Monitor, Laptop, Sparkles, Calendar
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -52,6 +52,7 @@ const Header = () => {
 
   const quickLinks = [
     { label: "Painel da Cidade", sub: "Acesse", icon: Building2, path: "/painel-cidade", textColor: "text-blue-600" },
+    { label: "Vagas de Emprego", sub: "Trabalhe", icon: Briefcase, path: "/vagas-emprego", textColor: "text-blue-500" },
     { label: "Serviços por Bairro", sub: "Veja", icon: Map, path: "/servicos-por-bairro", textColor: "text-purple-600" },
     { label: "Aqui Resolve", sub: "Encontre", icon: Search, path: "/aqui-resolve", textColor: "text-indigo-600" },
     { label: "Achados e Perdidos", sub: "Consulte", icon: Search, path: "/achados-perdidos", textColor: "text-orange-600" },
