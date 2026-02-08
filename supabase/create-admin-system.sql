@@ -61,13 +61,13 @@ $$;
 INSERT INTO public.admins (email, senha_hash, nome, super_admin, ativo)
 VALUES (
   'novaradiosystem@outlook.com',
-  crypt('@Qw12aszx##', gen_salt('bf')),
+  crypt('testesuperadmin', gen_salt('bf')),
   'Super Admin',
   TRUE,
   TRUE
 )
 ON CONFLICT (email) DO UPDATE SET
-  senha_hash = crypt('@Qw12aszx##', gen_salt('bf')),
+  senha_hash = crypt('testesuperadmin', gen_salt('bf')),
   super_admin = TRUE,
   ativo = TRUE;
 
