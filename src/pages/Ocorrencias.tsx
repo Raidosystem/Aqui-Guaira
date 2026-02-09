@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, MapPin, Calendar, Phone, AlertTriangle, ArrowLeft, Home, Loader2, X, ImagePlus, User, Tag, Clock, CheckCircle, XCircle, ShieldAlert, Zap, Droplets, TreePine, Car, Volume2, Trash2, Construction, HelpCircle } from "lucide-react";
+import { Search, PlusCircle, MapPin, Calendar, Phone, AlertTriangle, ArrowLeft, Home, Loader2, X, ImagePlus, User, Tag, Clock, CheckCircle, XCircle, ShieldAlert, Zap, Droplets, TreePine, Car, Volume2, Trash2, Construction, HelpCircle, LogIn, Shield, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
 import { getUsuarioLogado } from "@/lib/supabase";
@@ -285,18 +285,55 @@ export default function Ocorrencias() {
               </p>
             </div>
 
-            <div className="flex justify-center">
+            {/* Área de ação: Login ou Registrar */}
+            {!user ? (
+              <div className="max-w-lg mx-auto">
+                <Card className="bg-card/80 backdrop-blur-sm border border-amber-500/20 shadow-2xl rounded-[2rem] p-8 text-center space-y-5">
+                  <div className="inline-flex p-4 bg-amber-500/10 rounded-2xl mx-auto">
+                    <Shield className="w-10 h-10 text-amber-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-black text-foreground">Faça login para registrar</h3>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Para registrar uma ocorrência você precisa estar logado. Isso garante a veracidade das informações.
+                    </p>
+                  </div>
+                  <Button
+                    size="lg"
+                    className="rounded-xl px-10 py-7 bg-amber-500 hover:bg-amber-600 text-white text-lg font-bold gap-3 w-full"
+                    onClick={() => setShowLogin(true)}
+                  >
+                    <LogIn className="w-6 h-6" />
+                    Entrar na minha conta
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Não tem conta? Crie na hora, é rápido!</p>
+                </Card>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-6 py-3">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">Logado como</p>
+                    <p className="text-xs font-bold text-muted-foreground">{user.nome || user.email}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-red-500 ml-2"
+                    onClick={() => { localStorage.removeItem('aqui_guaira_user'); setUser(null); toast.info('Você saiu da conta'); }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+
               <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogTrigger asChild>
                   <Button 
                     size="lg" 
-                    className="rounded-xl px-8 py-7 bg-amber-500 hover:bg-amber-600 text-white text-lg font-bold gap-2"
-                    onClick={() => {
-                      if (!user) {
-                        setShowLogin(true);
-                        setOpenDialog(false);
-                      }
-                    }}
+                    className="rounded-xl px-8 py-7 bg-amber-500 hover:bg-amber-600 text-white text-lg font-bold gap-2 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all"
                   >
                     <PlusCircle className="w-6 h-6" />
                     Registrar Ocorrência
@@ -476,7 +513,8 @@ export default function Ocorrencias() {
                   </form>
                 </DialogContent>
               </Dialog>
-            </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -657,6 +695,9 @@ export default function Ocorrencias() {
           onLoginSuccess={() => {
             carregarUsuario();
             setShowLogin(false);
+            toast.success("Login realizado! 🎉", {
+              description: "Agora você pode registrar ocorrências."
+            });
           }}
         />
       )}
