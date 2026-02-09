@@ -4,8 +4,8 @@
  */
 
 export const FERRAMENTAS_URLS = {
-  BUSCA_CEP: 'https://busca-cep-raval.vercel.app/',
-  GERADOR_CURRICULO: 'https://cria-curriculo-raval.vercel.app/',
+  BUSCA_CEP: 'https://buscacep.aquiguaira.com.br/',
+  GERADOR_CURRICULO: 'https://criacurriculo.aquiguaira.com.br/',
 } as const
 
 /**
