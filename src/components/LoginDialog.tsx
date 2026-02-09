@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from './ui/dialog'
 import { criarOuLogarUsuario, getUsuarioLogado, logout, reenviarEmailConfirmacao } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { Loader2, LogIn, LogOut, User as UserIcon, UserPlus, Search } from 'lucide-react'
 import { getBuscaCepUrl } from '@/lib/ferramentas'
@@ -22,6 +23,8 @@ interface LoginDialogProps {
 }
 
 export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogProps) {
+  const { refreshUser } = useAuth();
+
   // Estado do formulário de Login
   const [loginEmail, setLoginEmail] = useState('')
   const [loginSenha, setLoginSenha] = useState('')
@@ -117,6 +120,7 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
       setLoginEmail('')
       setLoginSenha('')
       onOpenChange(false)
+      refreshUser()
       onLoginSuccess?.()
     } catch (error: any) {
       if (error.message === 'VERIFICACAO_EMAIL_NECESSARIA' || error.message === 'EMAIL_NAO_CONFIRMADO') {
@@ -221,6 +225,7 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
       setRegisterSenha('')
       setRegisterConfirmarSenha('')
       onOpenChange(false)
+      refreshUser()
       onLoginSuccess?.()
     } catch (error: any) {
       if (error.message === 'VERIFICACAO_EMAIL_NECESSARIA') {

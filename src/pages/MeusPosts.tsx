@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Clock, CheckCircle2, User2, ArrowLeft, XCircle, MapPin } from "lucide-react";
-import { getUsuarioLogado, supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Post {
   id: string;
@@ -39,7 +40,7 @@ const MeusPosts = () => {
   const [postSelecionado, setPostSelecionado] = useState<Post | null>(null);
   const [openDetalhes, setOpenDetalhes] = useState(false);
 
-  const user = getUsuarioLogado();
+  const { user } = useAuth();
 
   useEffect(() => {
     const carregarDados = async () => {

@@ -24,7 +24,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { LoginDialog } from "@/components/LoginDialog";
-import { getUsuarioLogado, logout, supabase } from "@/lib/supabase";
+import { logout } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getBuscaCepUrl, getGeradorCurriculoUrl } from "@/lib/ferramentas";
 
@@ -35,7 +36,7 @@ const Header = () => {
   const manualOverride = useRef(false);
   const [showLogin, setShowLogin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState(getUsuarioLogado());
+  const { user, logout: authLogout } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -154,13 +155,9 @@ const Header = () => {
 
   const handleLogout = () => {
     logout();
-    setUser(null);
+    authLogout();
     toast.success('Logout realizado');
     window.location.reload();
-  };
-
-  const handleLoginSuccess = () => {
-    setUser(getUsuarioLogado());
   };
 
   const getInitial = () => {
@@ -562,7 +559,6 @@ const Header = () => {
       <LoginDialog
         open={showLogin}
         onOpenChange={setShowLogin}
-        onLoginSuccess={handleLoginSuccess}
       />
     </header>
   );

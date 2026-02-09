@@ -19,9 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useRef } from "react";
-import { buscarEmpresas, type EmpresaCompleta, getUsuarioLogado } from "@/lib/supabase";
+import { buscarEmpresas, type EmpresaCompleta } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { LoginDialog } from "@/components/LoginDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import categoriasData from '@/data/categorias-empresas.json';
 import {
   DropdownMenu,
@@ -43,7 +44,7 @@ const SearchSection = () => {
   const [empresasDestaque, setEmpresasDestaque] = useState<EmpresaCompleta[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const user = getUsuarioLogado();
+  const { user } = useAuth();
 
   // Carregar empresas destaque
   useEffect(() => {

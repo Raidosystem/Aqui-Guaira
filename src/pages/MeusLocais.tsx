@@ -16,8 +16,8 @@ import {
   buscarEmpresasPorIds,
   EmpresaCompleta,
   LocalTuristico,
-  getUsuarioLogado
 } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Página refatorada: agora consome favoritos do Supabase (empresa + local) vinculados ao usuário logado (user_id) ou identificador anônimo.
 
@@ -46,7 +46,7 @@ const MeusLocais = () => {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [itens, setItens] = useState<ItemFavorito[]>([]);
-  const usuario = getUsuarioLogado();
+  const { user: usuario } = useAuth();
 
   const carregarFavoritos = async () => {
     setLoading(true); setErro(null);

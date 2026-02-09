@@ -42,9 +42,9 @@ import {
   removerFavoritoUsuario,
   buscarFavoritosUsuario,
   incrementarVisualizacoesEmpresa,
-  getUsuarioLogado,
   type EmpresaCompleta
 } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371; // km
@@ -61,6 +61,7 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 
 const Empresas = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<string>("todas");
@@ -233,8 +234,6 @@ const Empresas = () => {
   };
 
   const toggleFavorito = async (id: string) => {
-    const user = getUsuarioLogado();
-
     // Se não estiver logado, pedir login
     if (!user) {
       setEmpresaPendente(id);

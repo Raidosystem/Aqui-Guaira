@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, PlusCircle, MapPin, Calendar, Phone, CheckCircle, AlertCircle, Package, ArrowLeft, Home, Loader2, X, ImagePlus, User, Tag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
-import { getUsuarioLogado } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ItemAchadoPerdido {
   id: string;
@@ -49,7 +49,7 @@ const categorias = [
 
 export default function AchadosPerdidos() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [itens, setItens] = useState<ItemAchadoPerdido[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -76,14 +76,8 @@ export default function AchadosPerdidos() {
   const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
-    carregarUsuario();
     carregarItens();
   }, []);
-
-  const carregarUsuario = () => {
-    const usuarioLogado = getUsuarioLogado();
-    setUser(usuarioLogado);
-  };
 
   const carregarItens = async () => {
     setLoading(true);
@@ -568,6 +562,13 @@ export default function AchadosPerdidos() {
       </main>
 
       <Footer />
+
+      {showLogin && (
+        <LoginDialog
+          open={showLogin}
+          onOpenChange={setShowLogin}
+        />
+      )}
     </div>
   );
 }

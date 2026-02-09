@@ -17,10 +17,10 @@ import {
     buscarVagas,
     buscarEmpresaPorSlug,
     buscarEmpresaPorId,
-    getUsuarioLogado,
     type EmpresaCompleta,
     type Vaga
 } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -37,6 +37,7 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 
 const PerfilEmpresa = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { slug } = useParams();
     const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(true);
@@ -112,7 +113,6 @@ const PerfilEmpresa = () => {
     };
 
     const toggleFavorito = async (id: string) => {
-        const user = getUsuarioLogado();
         if (!user) {
             setShowLogin(true);
             return;

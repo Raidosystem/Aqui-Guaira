@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Pet {
   id: string;
@@ -73,7 +74,7 @@ const cores = [
 
 export default function PetsPerdidos() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -106,13 +107,8 @@ export default function PetsPerdidos() {
   const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
-    carregarUsuario();
     carregarPets();
   }, []);
-
-  const carregarUsuario = async () => {
-    // setUser(usuarioLogado);
-  };
 
   const carregarPets = async () => {
     setLoading(true);
@@ -257,8 +253,15 @@ export default function PetsPerdidos() {
                   </DialogHeader>
 
                   {!user ? (
-                    <div className="py-8 text-center bg-gray-50 rounded-2xl">
-                      <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
+                    <div className="py-8 text-center bg-muted/20 rounded-2xl space-y-4 px-6">
+                      <p className="text-lg font-bold text-foreground">Faça login para cadastrar</p>
+                      <p className="text-sm text-muted-foreground">Você precisa estar logado para publicar um anuncio de pet.</p>
+                      <Button
+                        className="rounded-xl px-8 py-5 font-bold"
+                        onClick={() => { setOpenDialog(false); setShowLogin(true); }}
+                      >
+                        Entrar na conta
+                      </Button>
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit} className="space-y-6 mt-4">
@@ -679,6 +682,13 @@ export default function PetsPerdidos() {
       </main>
 
       <Footer />
+
+      {showLogin && (
+        <LoginDialog
+          open={showLogin}
+          onOpenChange={setShowLogin}
+        />
+      )}
     </div>
   );
 }

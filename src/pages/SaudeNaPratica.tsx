@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoginDialog } from "@/components/LoginDialog";
-import { getUsuarioLogado, supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import saudeData from "@/data/saude-guaira.json";
 
@@ -70,7 +71,7 @@ export default function SaudeNaPratica() {
   const [busca, setBusca] = useState("");
 
   // Documentos de Saúde
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [showDocumentos, setShowDocumentos] = useState(false);
   const [documentos, setDocumentos] = useState<DocumentoSaude[]>([]);
@@ -79,11 +80,6 @@ export default function SaudeNaPratica() {
   const [tipoDoc, setTipoDoc] = useState("atestado");
   const [nomeDoc, setNomeDoc] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const usuarioLogado = getUsuarioLogado();
-    setUser(usuarioLogado);
-  }, []);
 
   useEffect(() => {
     if (user && showDocumentos) {
@@ -801,8 +797,6 @@ export default function SaudeNaPratica() {
           open={showLogin}
           onOpenChange={setShowLogin}
           onLoginSuccess={() => {
-            const usuarioLogado = getUsuarioLogado();
-            setUser(usuarioLogado);
             setShowLogin(false);
             toast.success("Login realizado! 🎉", {
               description: "Agora você pode acessar seus documentos de saúde."

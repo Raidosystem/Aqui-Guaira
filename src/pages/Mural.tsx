@@ -12,7 +12,8 @@ import { ImagePlus, PlusCircle, Send, Loader2, X, Clock, CheckCircle2, MapPin, A
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
 import { useNavigate } from "react-router-dom";
-import { getUsuarioLogado, buscarPosts, criarPost, uploadImagem, buscarComentarios, criarComentario } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { buscarPosts, criarPost, uploadImagem, buscarComentarios, criarComentario } from "@/lib/supabase";
 
 interface Post {
   id: string;
@@ -56,7 +57,7 @@ const Mural = () => {
   const [novoComentarioTexto, setNovoComentarioTexto] = useState<Record<string, string>>({});
   const [comentarioApoios, setComentarioApoios] = useState<Record<string, boolean>>({});
 
-  const user = getUsuarioLogado();
+  const { user } = useAuth();
 
   const [titulo, setTitulo] = useState("");
   const [conteudo, setConteudo] = useState("");

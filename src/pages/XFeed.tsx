@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { getUsuarioLogado, buscarPosts, criarPost, uploadImagem, buscarComentarios, criarComentario } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { buscarPosts, criarPost, uploadImagem, buscarComentarios, criarComentario } from "@/lib/supabase";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { LoginDialog } from "@/components/LoginDialog";
@@ -51,7 +52,7 @@ interface Comentario {
 
 const XFeed = () => {
     const navigate = useNavigate();
-    const user = getUsuarioLogado();
+    const { user } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const editFileInputRef = useRef<HTMLInputElement>(null);
 

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, PlusCircle, MapPin, Calendar, Phone, AlertTriangle, ArrowLeft, Home, Loader2, X, ImagePlus, User, Tag, Clock, CheckCircle, XCircle, ShieldAlert, Zap, Droplets, TreePine, Car, Volume2, Trash2, Construction, HelpCircle, LogIn, Shield, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
-import { getUsuarioLogado } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
 interface Ocorrencia {
@@ -60,7 +60,7 @@ const tiposOcorrencia = [
 
 export default function Ocorrencias() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const { user, logout: authLogout } = useAuth();
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -87,14 +87,8 @@ export default function Ocorrencias() {
   const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
-    carregarUsuario();
     carregarOcorrencias();
   }, []);
-
-  const carregarUsuario = () => {
-    const usuarioLogado = getUsuarioLogado();
-    setUser(usuarioLogado);
-  };
 
   const carregarOcorrencias = async () => {
     setLoading(true);
@@ -323,7 +317,7 @@ export default function Ocorrencias() {
                     variant="ghost"
                     size="sm"
                     className="text-muted-foreground hover:text-red-500 ml-2"
-                    onClick={() => { localStorage.removeItem('aqui_guaira_user'); setUser(null); toast.info('Você saiu da conta'); }}
+                    onClick={() => { authLogout(); toast.info('Você saiu da conta'); }}
                   >
                     <LogOut className="w-4 h-4" />
                   </Button>
@@ -693,7 +687,6 @@ export default function Ocorrencias() {
           open={showLogin}
           onOpenChange={setShowLogin}
           onLoginSuccess={() => {
-            carregarUsuario();
             setShowLogin(false);
             toast.success("Login realizado! 🎉", {
               description: "Agora você pode registrar ocorrências."

@@ -57,11 +57,13 @@ import {
   FileText
 } from "lucide-react";
 import categoriasData from "@/data/categorias-servicos.json";
-import { buscarProfissionais, criarProfissional, getUsuarioLogado, Profissional } from "@/lib/supabase";
+import { buscarProfissionais, criarProfissional, Profissional } from "@/lib/supabase";
 import { LoginDialog } from "@/components/LoginDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AquiResolve = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [busca, setBusca] = useState("");
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +143,6 @@ const AquiResolve = () => {
       const data = await buscarProfissionais();
       setProfissionais(data);
 
-      const user = getUsuarioLogado();
       if (user) {
         // Buscar se eu já tenho cadastro (usando filtro de userId)
         const meusDados = await buscarProfissionais({ userId: user.id }); // Status não filtra aqui pois userId é passado
@@ -162,7 +163,6 @@ const AquiResolve = () => {
   }, []);
 
   const handleCadastro = async () => {
-    const user = getUsuarioLogado();
     if (!user) {
       setShowLogin(true);
       return;
@@ -398,8 +398,7 @@ const AquiResolve = () => {
                 </div>
                 {!meuPerfil && (
                   <Button size="lg" className="gap-2 font-bold" onClick={() => {
-                    const u = getUsuarioLogado();
-                    if (!u) setShowLogin(true);
+                    if (!user) setShowLogin(true);
                     else setShowCadastro(true);
                   }}>
                     <BadgeCheck className="w-5 h-5" />
@@ -500,8 +499,7 @@ const AquiResolve = () => {
                 </div>
 
                 <Button size="lg" className="font-bold text-lg px-8 py-6 h-auto gap-2" onClick={() => {
-                  const u = getUsuarioLogado();
-                  if (!u) setShowLogin(true);
+                  if (!user) setShowLogin(true);
                   else setShowCadastro(true);
                 }}>
                   <BadgeCheck className="w-5 h-5" />
