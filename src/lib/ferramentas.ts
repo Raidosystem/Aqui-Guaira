@@ -5,7 +5,7 @@
 
 export const FERRAMENTAS_URLS = {
   BUSCA_CEP: 'https://buscacep.aquiguaira.com.br/',
-  GERADOR_CURRICULO: 'https://criacurriculo.aquiguaira.com.br/',
+  GERADOR_CURRICULO: 'https://criarcurriculo.aquiguaira.com.br/',
 } as const
 
 /**
