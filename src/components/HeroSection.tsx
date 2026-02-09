@@ -48,7 +48,7 @@ const HeroSection = () => {
   const rightButtons = [
     { label: "Farmácia Plantão", sub: "Veja", icon: Pill, path: "/farmacia-plantao", color: "red" },
     { label: "Saúde na Prática", sub: "Acesse", icon: Stethoscope, path: "/saude-na-pratica", color: "green" },
-    { label: "Ocorrências", sub: "Registre", icon: AlertTriangle, path: "#", color: "amber" },
+    { label: "Ocorrências", sub: "Registre", icon: AlertTriangle, path: "/ocorrencias", color: "amber" },
     { label: "Escolas e Creches", sub: "Encontre", icon: GraduationCap, path: "/escolas-creches", color: "cyan" },
   ];
 

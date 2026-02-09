@@ -59,7 +59,7 @@ const Header = () => {
     { label: "Pets e Adoção", sub: "Ajude", icon: PawPrint, path: "/pets-perdidos", textColor: "text-pink-600" },
     { label: "Farmácia Plantão", sub: "Veja", icon: Pill, path: "/farmacia-plantao", textColor: "text-red-600" },
     { label: "Saúde na Prática", sub: "Acesse", icon: Stethoscope, path: "/saude-na-pratica", textColor: "text-emerald-600" },
-    { label: "Ocorrências", sub: "Registre", icon: AlertTriangle, path: "#", textColor: "text-amber-600" },
+    { label: "Ocorrências", sub: "Registre", icon: AlertTriangle, path: "/ocorrencias", textColor: "text-amber-600" },
     { label: "Escolas e Creches", sub: "Encontre", icon: GraduationCap, path: "/escolas-creches", textColor: "text-cyan-600" },
   ];
 

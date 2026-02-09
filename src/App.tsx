@@ -27,6 +27,7 @@ import PainelCidade from "./pages/PainelCidade";
 import EscolasCreches from "./pages/EscolasCreches";
 import AquiResolve from "./pages/AquiResolve";
 import Vagas from "./pages/Vagas";
+import Ocorrencias from "./pages/Ocorrencias";
 
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
@@ -102,6 +103,7 @@ const App = () => (
             <Route path="/pets-perdidos" element={<PetsPerdidos />} />
             <Route path="/painel-cidade" element={<PainelCidade />} />
             <Route path="/escolas-creches" element={<EscolasCreches />} />
+            <Route path="/ocorrencias" element={<Ocorrencias />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
