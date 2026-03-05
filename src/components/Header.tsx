@@ -152,24 +152,24 @@ const Header = () => {
   }, []);
 
   // Restaurar posição do scroll horizontal após navegação
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    const targetScroll = savedScrollLeft.current;
-    if (container && targetScroll > 0) {
-      isRestoring.current = true;
-      // Aplicar imediatamente
-      container.scrollLeft = targetScroll;
-      // Reforçar nos próximos frames (React pode resetar durante commit)
-      requestAnimationFrame(() => {
+  const restoreScrollPosition = (targetScroll: number) => {
+    if (targetScroll <= 0) return;
+    isRestoring.current = true;
+    let attempts = 0;
+    const maxAttempts = 20; // ~330ms total
+    const interval = setInterval(() => {
+      const container = scrollContainerRef.current;
+      if (container) {
         container.scrollLeft = targetScroll;
-        requestAnimationFrame(() => {
-          container.scrollLeft = targetScroll;
-          checkScroll();
-          isRestoring.current = false;
-        });
-      });
-    }
-  }, [location.pathname]);
+      }
+      attempts++;
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        isRestoring.current = false;
+        checkScroll();
+      }
+    }, 16); // cada frame (~60fps)
+  };
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -553,7 +553,9 @@ const Header = () => {
                   key={idx}
                   onClick={() => {
                     if (item.path !== '#') {
+                      const scrollPos = scrollContainerRef.current?.scrollLeft || 0;
                       navigate(item.path);
+                      restoreScrollPosition(scrollPos);
                     }
                   }}
                   className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors cursor-pointer"
