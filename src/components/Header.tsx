@@ -29,11 +29,25 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getBuscaCepUrl, getGeradorCurriculoUrl } from "@/lib/ferramentas";
 
-// Componente isolado com memo - NÃO re-renderiza quando o Header re-renderiza
-const QuickLinksBar = memo(({ quickLinks, navigate }: { 
-  quickLinks: Array<{ label: string; sub: string; icon: any; path: string; textColor: string }>;
-  navigate: (path: string) => void;
-}) => {
+// Dados estáticos FORA do componente - referência nunca muda
+const QUICK_LINKS = [
+  { label: "Painel da Cidade", sub: "Acesse", icon: Building2, path: "/painel-cidade", textColor: "text-blue-600" },
+  { label: "Vagas de Emprego", sub: "Trabalhe", icon: Briefcase, path: "/vagas-emprego", textColor: "text-blue-500" },
+  { label: "Serviços por Bairro", sub: "Veja", icon: Map, path: "/servicos-por-bairro", textColor: "text-purple-600" },
+  { label: "Aqui Resolve", sub: "Encontre", icon: Search, path: "/aqui-resolve", textColor: "text-indigo-600" },
+  { label: "Achados e Perdidos", sub: "Consulte", icon: Search, path: "/achados-perdidos", textColor: "text-orange-600" },
+  { label: "Pets e Adoção", sub: "Ajude", icon: PawPrint, path: "/pets-perdidos", textColor: "text-pink-600" },
+  { label: "Farmácia Plantão", sub: "Veja", icon: Pill, path: "/farmacia-plantao", textColor: "text-red-600" },
+  { label: "Saúde na Prática", sub: "Acesse", icon: Stethoscope, path: "/saude-na-pratica", textColor: "text-emerald-600" },
+  { label: "Ocorrências", sub: "Registre", icon: AlertTriangle, path: "/ocorrencias", textColor: "text-amber-600" },
+  { label: "Escolas e Creches", sub: "Encontre", icon: GraduationCap, path: "/escolas-creches", textColor: "text-cyan-600" },
+];
+
+// Ref global para navigate - atualizada pelo Header, usada pelo QuickLinksBar
+const navigateRef: { current: ((path: string) => void) | null } = { current: null };
+
+// Componente isolado - ZERO props = memo nunca re-renderiza
+const QuickLinksBar = memo(() => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(true);
@@ -77,14 +91,14 @@ const QuickLinksBar = memo(({ quickLinks, navigate }: {
           ref={scrollRef}
           className="flex overflow-x-auto no-scrollbar py-3 gap-4 px-10 md:px-12"
         >
-          {quickLinks.map((item, idx) => {
+          {QUICK_LINKS.map((item, idx) => {
             const Icon = item.icon;
             return (
               <button
                 key={idx}
                 onClick={() => {
-                  if (item.path !== '#') {
-                    navigate(item.path);
+                  if (item.path !== '#' && navigateRef.current) {
+                    navigateRef.current(item.path);
                   }
                 }}
                 className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors cursor-pointer"
@@ -119,6 +133,10 @@ QuickLinksBar.displayName = 'QuickLinksBar';
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Manter navigateRef atualizado para o QuickLinksBar usar sem re-render
+  navigateRef.current = navigate;
+  
   const [active, setActive] = useState<string>("");
   const manualOverride = useRef(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -132,19 +150,6 @@ const Header = () => {
     { icon: Building2, label: "Empresas", href: "/empresas" },
     { icon: Heart, label: "Meus Locais", href: "/meus-locais" },
     { icon: FileText, label: "Sua Empresa", href: "/sua-empresa" },
-  ];
-
-  const quickLinks = [
-    { label: "Painel da Cidade", sub: "Acesse", icon: Building2, path: "/painel-cidade", textColor: "text-blue-600" },
-    { label: "Vagas de Emprego", sub: "Trabalhe", icon: Briefcase, path: "/vagas-emprego", textColor: "text-blue-500" },
-    { label: "Serviços por Bairro", sub: "Veja", icon: Map, path: "/servicos-por-bairro", textColor: "text-purple-600" },
-    { label: "Aqui Resolve", sub: "Encontre", icon: Search, path: "/aqui-resolve", textColor: "text-indigo-600" },
-    { label: "Achados e Perdidos", sub: "Consulte", icon: Search, path: "/achados-perdidos", textColor: "text-orange-600" },
-    { label: "Pets e Adoção", sub: "Ajude", icon: PawPrint, path: "/pets-perdidos", textColor: "text-pink-600" },
-    { label: "Farmácia Plantão", sub: "Veja", icon: Pill, path: "/farmacia-plantao", textColor: "text-red-600" },
-    { label: "Saúde na Prática", sub: "Acesse", icon: Stethoscope, path: "/saude-na-pratica", textColor: "text-emerald-600" },
-    { label: "Ocorrências", sub: "Registre", icon: AlertTriangle, path: "/ocorrencias", textColor: "text-amber-600" },
-    { label: "Escolas e Creches", sub: "Encontre", icon: GraduationCap, path: "/escolas-creches", textColor: "text-cyan-600" },
   ];
 
   const ferramentasItems = [
@@ -560,7 +565,7 @@ const Header = () => {
         </div>
       </div>
 
-      <QuickLinksBar quickLinks={quickLinks} navigate={navigate} />
+      <QuickLinksBar />
 
       <LoginDialog
         open={showLogin}
