@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Sun, Moon, Monitor, Laptop, Sparkles, Calendar
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +29,93 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getBuscaCepUrl, getGeradorCurriculoUrl } from "@/lib/ferramentas";
 
+// Componente isolado com memo - NÃO re-renderiza quando o Header re-renderiza
+const QuickLinksBar = memo(({ quickLinks, navigate }: { 
+  quickLinks: Array<{ label: string; sub: string; icon: any; path: string; textColor: string }>;
+  navigate: (path: string) => void;
+}) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(true);
+
+  const updateArrows = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setShowLeft(el.scrollLeft > 10);
+    setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateArrows, { passive: true });
+    window.addEventListener('resize', updateArrows);
+    updateArrows();
+    return () => {
+      el.removeEventListener('scroll', updateArrows);
+      window.removeEventListener('resize', updateArrows);
+    };
+  }, [updateArrows]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="border-t border-border bg-background overflow-hidden relative">
+      <div className="container mx-auto px-4 relative">
+        {showLeft && (
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-primary border border-primary text-white hover:bg-primary/90 hidden lg:flex items-center justify-center"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+
+        <div
+          ref={scrollRef}
+          className="flex overflow-x-auto no-scrollbar py-3 gap-4 px-10 md:px-12"
+        >
+          {quickLinks.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={idx}
+                onClick={() => {
+                  if (item.path !== '#') {
+                    navigate(item.path);
+                  }
+                }}
+                className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors cursor-pointer"
+              >
+                <div className={`p-2 rounded-lg bg-secondary/50 border border-border/50 ${item.textColor}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] uppercase tracking-wider font-bold opacity-60 leading-none mb-0.5">{item.sub}</span>
+                  <span className="text-xs font-bold whitespace-nowrap leading-none">{item.label}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {showRight && (
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-primary border border-primary text-white hover:bg-primary/90 hidden lg:flex items-center justify-center"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
+QuickLinksBar.displayName = 'QuickLinksBar';
+
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,12 +125,6 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout: authLogout } = useAuth();
   const { theme, setTheme } = useTheme();
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const savedScrollLeft = useRef(0);
-  const isRestoring = useRef(false);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(true);
 
   const mainNavItems = [
     { icon: Info, label: "Sobre Guaíra", href: "/#sobre-guaira" },
@@ -125,58 +206,6 @@ const Header = () => {
     }
     setActive("");
   }, [location]);
-
-  const checkScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      if (!isRestoring.current) {
-        savedScrollLeft.current = scrollLeft;
-      }
-      setShowLeftArrow(scrollLeft > 10);
-      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', checkScroll);
-      checkScroll();
-      window.addEventListener('resize', checkScroll);
-      setTimeout(checkScroll, 100);
-      return () => {
-        container.removeEventListener('scroll', checkScroll);
-        window.removeEventListener('resize', checkScroll);
-      };
-    }
-  }, []);
-
-  // Restaurar posição do scroll horizontal após navegação
-  const restoreScrollPosition = (targetScroll: number) => {
-    if (targetScroll <= 0) return;
-    isRestoring.current = true;
-    let attempts = 0;
-    const maxAttempts = 20; // ~330ms total
-    const interval = setInterval(() => {
-      const container = scrollContainerRef.current;
-      if (container) {
-        container.scrollLeft = targetScroll;
-      }
-      attempts++;
-      if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        isRestoring.current = false;
-        checkScroll();
-      }
-    }, 16); // cada frame (~60fps)
-  };
-
-  const handleScroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = direction === 'left' ? -300 : 300;
-      scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -531,57 +560,7 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="border-t border-border bg-background overflow-hidden relative">
-        <div className="container mx-auto px-4 relative group/subheader">
-          {showLeftArrow && (
-            <button
-              onClick={() => handleScroll('left')}
-              className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-primary border border-primary text-white hover:bg-primary/90 hidden lg:flex items-center justify-center"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
-
-          <div
-            ref={scrollContainerRef}
-            className="flex overflow-x-auto no-scrollbar py-3 gap-4 px-10 md:px-12"
-          >
-            {quickLinks.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    if (item.path !== '#') {
-                      const scrollPos = scrollContainerRef.current?.scrollLeft || 0;
-                      navigate(item.path);
-                      restoreScrollPosition(scrollPos);
-                    }
-                  }}
-                  className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors cursor-pointer"
-                >
-                  <div className={`p-2 rounded-lg bg-secondary/50 border border-border/50 ${item.textColor}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] uppercase tracking-wider font-bold opacity-60 leading-none mb-0.5">{item.sub}</span>
-                    <span className="text-xs font-bold whitespace-nowrap leading-none">{item.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {showRightArrow && (
-            <button
-              onClick={() => handleScroll('right')}
-              className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-primary border border-primary text-white hover:bg-primary/90 hidden lg:flex items-center justify-center"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
+      <QuickLinksBar quickLinks={quickLinks} navigate={navigate} />
 
       <LoginDialog
         open={showLogin}
