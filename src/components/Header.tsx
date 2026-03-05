@@ -40,6 +40,7 @@ const Header = () => {
   const { theme, setTheme } = useTheme();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const savedScrollLeft = useRef(0);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
 
@@ -127,6 +128,7 @@ const Header = () => {
   const checkScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      savedScrollLeft.current = scrollLeft;
       setShowLeftArrow(scrollLeft > 10);
       setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
     }
@@ -145,6 +147,17 @@ const Header = () => {
       };
     }
   }, []);
+
+  // Restaurar posição do scroll horizontal após navegação
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container && savedScrollLeft.current > 0) {
+      requestAnimationFrame(() => {
+        container.scrollLeft = savedScrollLeft.current;
+        checkScroll();
+      });
+    }
+  }, [location.pathname]);
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
