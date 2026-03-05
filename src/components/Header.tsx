@@ -41,6 +41,7 @@ const Header = () => {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const savedScrollLeft = useRef(0);
+  const isRestoring = useRef(false);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
 
@@ -128,7 +129,9 @@ const Header = () => {
   const checkScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      savedScrollLeft.current = scrollLeft;
+      if (!isRestoring.current) {
+        savedScrollLeft.current = scrollLeft;
+      }
       setShowLeftArrow(scrollLeft > 10);
       setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
     }
@@ -151,10 +154,19 @@ const Header = () => {
   // Restaurar posição do scroll horizontal após navegação
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (container && savedScrollLeft.current > 0) {
+    const targetScroll = savedScrollLeft.current;
+    if (container && targetScroll > 0) {
+      isRestoring.current = true;
+      // Aplicar imediatamente
+      container.scrollLeft = targetScroll;
+      // Reforçar nos próximos frames (React pode resetar durante commit)
       requestAnimationFrame(() => {
-        container.scrollLeft = savedScrollLeft.current;
-        checkScroll();
+        container.scrollLeft = targetScroll;
+        requestAnimationFrame(() => {
+          container.scrollLeft = targetScroll;
+          checkScroll();
+          isRestoring.current = false;
+        });
       });
     }
   }, [location.pathname]);
@@ -532,7 +544,7 @@ const Header = () => {
 
           <div
             ref={scrollContainerRef}
-            className="flex overflow-x-auto no-scrollbar py-3 gap-4 scroll-smooth px-10 md:px-12"
+            className="flex overflow-x-auto no-scrollbar py-3 gap-4 px-10 md:px-12"
           >
             {quickLinks.map((item, idx) => {
               const Icon = item.icon;
