@@ -46,6 +46,8 @@ const QUICK_LINKS = [
 // Ref global para navigate - atualizada pelo Header, usada pelo QuickLinksBar
 const navigateRef: { current: ((path: string) => void) | null } = { current: null };
 
+const SCROLL_KEY = 'ql_scroll';
+
 // Componente isolado - ZERO props = memo nunca re-renderiza
 const QuickLinksBar = memo(() => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -59,9 +61,24 @@ const QuickLinksBar = memo(() => {
     setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
   }, []);
 
+  // Restaurar posição do scroll ao montar (nova página = novo Header = novo QuickLinksBar)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+
+    const saved = sessionStorage.getItem(SCROLL_KEY);
+    if (saved) {
+      const pos = parseInt(saved, 10);
+      if (pos > 0) {
+        // Aplicar imediatamente e reforçar no próximo frame
+        el.scrollLeft = pos;
+        requestAnimationFrame(() => {
+          el.scrollLeft = pos;
+          updateArrows();
+        });
+      }
+    }
+
     el.addEventListener('scroll', updateArrows, { passive: true });
     window.addEventListener('resize', updateArrows);
     updateArrows();
@@ -71,8 +88,29 @@ const QuickLinksBar = memo(() => {
     };
   }, [updateArrows]);
 
+  // Salvar posição continuamente via scroll event
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const savePos = () => {
+      sessionStorage.setItem(SCROLL_KEY, String(el.scrollLeft));
+    };
+    el.addEventListener('scroll', savePos, { passive: true });
+    return () => el.removeEventListener('scroll', savePos);
+  }, []);
+
   const scroll = (dir: 'left' | 'right') => {
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
+  };
+
+  const handleQuickLinkClick = (path: string) => {
+    if (path === '#' || !navigateRef.current) return;
+    // Salvar posição ANTES de navegar (garante que o valor está no sessionStorage)
+    const el = scrollRef.current;
+    if (el) {
+      sessionStorage.setItem(SCROLL_KEY, String(el.scrollLeft));
+    }
+    navigateRef.current(path);
   };
 
   return (
@@ -96,11 +134,7 @@ const QuickLinksBar = memo(() => {
             return (
               <button
                 key={idx}
-                onClick={() => {
-                  if (item.path !== '#' && navigateRef.current) {
-                    navigateRef.current(item.path);
-                  }
-                }}
+                onClick={() => handleQuickLinkClick(item.path)}
                 className="flex-shrink-0 flex items-center gap-2.5 p-2 px-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors cursor-pointer"
               >
                 <div className={`p-2 rounded-lg bg-secondary/50 border border-border/50 ${item.textColor}`}>
