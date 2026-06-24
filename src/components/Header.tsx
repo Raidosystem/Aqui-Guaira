@@ -269,15 +269,14 @@ const Header = () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }, 100);
             }}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+            className="flex items-center hover:opacity-90 transition-opacity cursor-pointer shrink-0"
+            aria-label="Ir para a página inicial do Aqui Guaíra"
           >
-            <div className="bg-primary rounded-lg p-2">
-              <Building2 className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Aqui Guaíra - SP</h1>
-              <p className="text-xs text-muted-foreground">Portal da Cidade</p>
-            </div>
+            <img
+              src="/images/aqui-guaira-logo.svg"
+              alt="Aqui Guaíra.com.br"
+              className="h-14 w-[240px] sm:h-16 sm:w-[285px] lg:h-20 lg:w-[350px] object-contain object-left"
+            />
           </button>
 
           <div className="lg:hidden flex items-center gap-2">
@@ -361,14 +360,13 @@ const Header = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-full sm:w-[400px] p-0 flex flex-col">
                 <SheetHeader className="p-6 border-b">
-                  <SheetTitle className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2 rounded-lg">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex flex-col items-start leading-none">
-                      <span className="text-xl font-bold">Menu Principal</span>
-                      <span className="text-xs text-muted-foreground font-medium">Aqui Guaíra - SP</span>
-                    </div>
+                  <SheetTitle className="flex items-center justify-between gap-3">
+                    <span className="text-xl font-bold">Menu Principal</span>
+                    <img
+                      src="/images/aqui-guaira-logo.svg"
+                      alt="Aqui Guaíra.com.br"
+                      className="h-10 w-40 object-contain object-right"
+                    />
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex-grow overflow-y-auto px-4 py-6">

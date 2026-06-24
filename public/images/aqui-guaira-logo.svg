@@ -1,0 +1,45 @@
+<svg width="1180" height="240" viewBox="0 0 1180 240" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Aqui Guaíra.com.br</title>
+  <desc id="desc">Logo do portal Aqui Guaíra com marcador de localização, cidade, campo e rio.</desc>
+  <defs>
+    <linearGradient id="blue" x1="42" y1="26" x2="190" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18AEEF"/>
+      <stop offset="1" stop-color="#0C43C8"/>
+    </linearGradient>
+    <linearGradient id="green" x1="462" y1="70" x2="790" y2="168" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#58BA26"/>
+      <stop offset="1" stop-color="#068A2C"/>
+    </linearGradient>
+    <linearGradient id="river" x1="46" y1="155" x2="190" y2="192" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19B9F2"/>
+      <stop offset="1" stop-color="#0C57D7"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="114" cy="221" rx="45" ry="7" fill="#000" opacity=".12"/>
+  <path d="M114 17C58.8 17 14 61.8 14 117c0 36 19.1 67.6 47.7 85.2L114 235l52.3-32.8C194.9 184.6 214 153 214 117 214 61.8 169.2 17 114 17Z" fill="url(#blue)"/>
+  <circle cx="114" cy="113" r="83" fill="white"/>
+  <path d="M45 150c33-18 82-28 136-13 3 .8 5.8 1.7 8.7 2.7-4 9.6-9.9 18.2-17.3 25.3-42-9.9-80.3-5.6-116 16.2A81.8 81.8 0 0 1 45 150Z" fill="#78C51B"/>
+  <path d="M52 173c41-13 78-8 112 8-11.5 9.5-26.2 15.1-42.2 15.1-25.7 0-48-9.1-69.8-23.1Z" fill="#38A516"/>
+  <path d="M43 196c44-5.6 83.6-27.6 139.4-33.5-5.8 8.8-13.5 16.5-22.5 22.4-22 14.4-43.8 19.1-72.2 30.1L43 196Z" fill="url(#river)"/>
+  <circle cx="79" cy="78" r="17" fill="#FDB713"/>
+  <path d="M55 119l18-14 18 14v26H55v-26Z" fill="#188CE1"/>
+  <rect x="70" y="127" width="8" height="18" fill="white"/>
+  <rect x="95" y="101" width="36" height="50" rx="3" fill="#1687DB"/>
+  <rect x="104" y="111" width="8" height="10" fill="white"/>
+  <rect x="119" y="111" width="8" height="10" fill="white"/>
+  <rect x="104" y="130" width="8" height="10" fill="white"/>
+  <rect x="119" y="130" width="8" height="10" fill="white"/>
+  <rect x="134" y="78" width="42" height="74" rx="3" fill="#126FD0"/>
+  <rect x="145" y="91" width="9" height="10" fill="white"/>
+  <rect x="162" y="91" width="9" height="10" fill="white"/>
+  <rect x="145" y="111" width="9" height="10" fill="white"/>
+  <rect x="162" y="111" width="9" height="10" fill="white"/>
+  <rect x="145" y="131" width="9" height="10" fill="white"/>
+  <path d="M167 117c0-9.4 7.6-17 17-17s17 7.6 17 17c6 2.4 10 7.8 10 14 0 8.3-6.7 15-15 15h-24c-8.3 0-15-6.7-15-15 0-6.2 4-11.6 10-14Z" fill="#37A829"/>
+  <rect x="181" y="143" width="6" height="20" rx="2" fill="#276A2B"/>
+
+  <text x="240" y="151" fill="#0D56C9" font-family="Inter, Arial, Helvetica, sans-serif" font-size="122" font-weight="800" letter-spacing="0">Aqui</text>
+  <text x="510" y="151" fill="url(#green)" font-family="Inter, Arial, Helvetica, sans-serif" font-size="122" font-weight="800" letter-spacing="0">Guaíra</text>
+  <text x="910" y="151" fill="#0B3B78" font-family="Inter, Arial, Helvetica, sans-serif" font-size="48" font-weight="800" letter-spacing="0">.com.br</text>
+</svg>
