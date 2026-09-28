@@ -1,0 +1,10 @@
+# Marcas do carrossel de parceiros
+
+- ACIG: emblema oficial obtido de https://www.acigguaira.com.br/images/logo-rodape.png, usado em `acig.png`. A versão horizontal do mesmo site foi guardada em `acig-horizontal.png`; não é usada no carrossel, pois também contém marcas de terceiros.
+- All Import: logo público já usado no cadastro da empresa no Aqui Guaíra, obtido de https://kdyjebtzuniisxecaslm.supabase.co/storage/v1/object/public/empresas-images/logos/s509b1iui1o.png. O site https://www.assistenciaallimport.com.br/ usa a marca como texto e confirmou a descrição de assistência a celulares, notebooks e consoles.
+- Grupo RaVal: versão recriada com a ferramenta integrada de geração de imagens, baseada na foto de adesivos fornecida pelo usuário em `/Users/gruporaval/Downloads/images.jpeg`. Não foi extraída do Instagram, cujo acesso não foi concluído. Arquivo aplicado: `grupo-raval.png`. Site consultado: https://www.gruporaval.com.br/.
+- A identificação das três marcas como parceiras do Aqui Guaíra foi fornecida pelo usuário. O carrossel local não cria cadastros nem grava no backend.
+
+## Prompt da reconstrução RaVal
+
+Recrie UMA única unidade limpa do logotipo RaVal mostrado repetidamente nos adesivos da foto de referência, para ser usado pequeno em um card de empresa parceira em um site. A foto é referência da identidade: fundo azul-marinho quase preto, símbolo geométrico dourado fino no topo parecido com triângulos interligados/monograma, e a palavra exata "RaVal" em serifas elegantes douradas embaixo. Preserve ao máximo a aparência do símbolo e a grafia do adesivo, mas reconstrua com linhas nítidas e proporções equilibradas. Arte gráfica plana, frontal, quadrada 1024x1024, uma marca apenas, centralizada, preenchendo bem a área com cerca de 12% de margem. Fundo sólido azul-marinho quase preto e elementos dourados sem brilho exagerado. Não reproduzir folha, mão, vários adesivos, perspectiva, distorção cromática, bordas ciano, ruído nem desfoque da foto. Não inserir telefone, slogan ou textos minúsculos ilegíveis. Somente símbolo e "RaVal". Este é um resgate fiel da marca da referência, não uma proposta de marca diferente.

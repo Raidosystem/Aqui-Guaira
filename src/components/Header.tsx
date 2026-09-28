@@ -1,3 +1,4 @@
+import PortalHeader from './portal/PortalHeader';
 import {
   Building2, Home, FileText, Settings, BarChart3, Heart,
   Image, Info, ChevronDown, User, LogOut, Shield,
@@ -607,4 +608,5 @@ const Header = () => {
   );
 };
 
-export default Header;
+export { Header as LegacyHeader };
+export default PortalHeader;

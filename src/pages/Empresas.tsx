@@ -89,34 +89,26 @@ const Empresas = () => {
     carregarDados();
   }, []);
 
-  // Verificar se há ID na URL para mostrar detalhes
+  // Apply home-page search links even when the public catalogue is empty.
   useEffect(() => {
     const empresaId = searchParams.get('id');
+    if (empresaId) {
+      navigate(`/perfil-de-empresa?id=${encodeURIComponent(empresaId)}`, { replace: true });
+      return;
+    }
     const categoriaId = searchParams.get('categoria');
+    const categoriaNome = searchParams.get('categoriaNome');
     const searchTerm = searchParams.get('search');
-
-    if (empresaId && empresas.length > 0) {
-      navigate(`/perfil-de-empresa?id=${empresaId}`, { replace: true });
-    } else {
-      // Se não tem ID na URL, limpar selecionada
-      setSelecionada(null);
+    const bairroParam = searchParams.get('bairro');
+    const localCategory = categoriasData.categorias.find(item => item.id === categoriaId || item.nome === categoriaNome);
+    const categoryName = localCategory?.nome || (categoriaId ? empresas.find(item => item.categoria_id === categoriaId)?.categoria_nome : undefined);
+    if (categoryName) setCategoria(categoryName);
+    if (searchTerm !== null) setBusca(searchTerm);
+    if (bairroParam !== null) setBairro(bairroParam || 'todos');
+    if ((categoriaId || categoriaNome || searchTerm !== null || bairroParam !== null) && (!categoriaId || categoryName || !loading)) {
+      setSearchParams({}, { replace: true });
     }
-
-    if (categoriaId && empresas.length > 0) {
-      // Buscar a empresa que tem essa categoria para pegar o nome
-      const empresaComCategoria = empresas.find(e => e.categoria_id === categoriaId);
-      if (empresaComCategoria && empresaComCategoria.categoria_nome) {
-        setCategoria(empresaComCategoria.categoria_nome);
-      }
-      // Limpar o parâmetro da URL após aplicar o filtro
-      setSearchParams({});
-    } else if (searchTerm && empresas.length > 0) {
-      // Se veio um termo de busca pela URL, aplicar no filtro
-      setBusca(searchTerm);
-      // Limpar o parâmetro da URL após aplicar o filtro
-      setSearchParams({});
-    }
-  }, [searchParams, empresas]);
+  }, [searchParams, navigate, setSearchParams, empresas, loading]);
 
   const carregarDados = async () => {
     setLoading(true);

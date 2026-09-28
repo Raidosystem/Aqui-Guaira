@@ -7,6 +7,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
+import OriginalHome from "./pages/OriginalHome";
 import NotFound from "./pages/NotFound";
 import Mural from "./pages/Mural";
 import XFeed from "./pages/XFeed";
@@ -85,6 +86,7 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<Index />} />
+            {import.meta.env.DEV && <Route path="/inicio-original" element={<OriginalHome />} />}
             <Route path="/mural" element={<Mural />} />
             <Route path="/mural/meus-posts" element={<MeusPosts />} />
             <Route path="/empresas" element={<Empresas />} />

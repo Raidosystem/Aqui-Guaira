@@ -20,9 +20,10 @@ interface LoginDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onLoginSuccess?: () => void
+  initialTab?: 'login' | 'register'
 }
 
-export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogProps) {
+export function LoginDialog({ open, onOpenChange, onLoginSuccess, initialTab = 'login' }: LoginDialogProps) {
   const { refreshUser } = useAuth();
 
   // Estado do formulário de Login
@@ -286,7 +287,7 @@ export function LoginDialog({ open, onOpenChange, onLoginSuccess }: LoginDialogP
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="login" className="w-full">
+        <Tabs defaultValue={initialTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Criar Conta</TabsTrigger>

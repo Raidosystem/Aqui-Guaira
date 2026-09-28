@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import empresasFallback from '@/data/empresas-fallback.json';
 import categoriasData from '@/data/categorias-empresas.json';
+import { validateProjectEnvironment } from './project-environment';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://hihfnlbcantamcxpisef.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpaGZubGJjYW50YW1jeHBpc2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyODIyMDMsImV4cCI6MjA3Nzg1ODIwM30._OevqLM5fIfxj_DCYapS30PoZIaEh63Iuq46Q6jdIz0'
+const { url: supabaseUrl, key: supabaseAnonKey } = validateProjectEnvironment(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
