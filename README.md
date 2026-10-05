@@ -1,4 +1,4 @@
-# 🌟 Aqui Guaíra – Portal Comunitário
+# Aqui-Guaira — Portal Comunitário
 
 <div align="center">
 

@@ -2,10 +2,22 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, Handshake, Pause, Play } from 'lucide-react';
 
-const partners = [
+type Partner = {
+  name: string;
+  headline: string;
+  description: string;
+  logo: string;
+  style: string;
+  website?: string;
+  action?: string;
+  tabLabel?: string;
+};
+
+const partners: Partner[] = [
   { name: 'ACIG', headline: 'Juntos pelo comércio local.', description: 'Quem empreende fortalece Guaíra.', logo: '/partners/acig.png', website: 'https://www.acigguaira.com.br/home', style: 'acig', action: 'Conheça a ACIG' },
   { name: 'All Import', headline: 'Seu aparelho em boas mãos.', description: 'Celulares, notebooks e consoles.', logo: '/partners/allimport.png', website: 'https://www.assistenciaallimport.com.br/#servicos', style: 'allimport', action: 'Conheça os serviços' },
   { name: 'Grupo RaVal', headline: 'Sua marca. Novas possibilidades.', description: 'Tecnologia, design e personalização.', logo: '/partners/grupo-raval.png?v=1', website: 'https://www.gruporaval.com.br/', style: 'raval', action: 'Conheça o Grupo RaVal' },
+  { name: 'D&D Supermercados', headline: 'D&D Supermercados', description: 'O lugar certo para você e sua família!', logo: '/partners/dd-supermercados.svg', style: 'dd', tabLabel: 'D&D' },
 ];
 
 export default function FeaturedPartners() {
@@ -35,11 +47,11 @@ export default function FeaturedPartners() {
     <div className="partner-slides" aria-live={paused ? 'polite' : 'off'} aria-atomic="true">
       {partners.map((partner, index) => <div className={`partner-slide partner-slide--${partner.style}`} key={partner.name} hidden={index !== active} role="group" aria-roledescription="slide" aria-label={`${index + 1} de ${partners.length}: ${partner.name}`}>
         <div className="partner-logo"><img src={partner.logo} alt={`Logo ${partner.name}`} width="200" height="160"/>{partner.style === 'acig' && <span className="partner-acig-name">ACIG</span>}</div>
-        <div className="partner-copy"><span className="partner-badge"><Handshake size={13} aria-hidden="true"/>Parceira do Aqui Guaíra</span><h3>{partner.headline}</h3><p>{partner.description}</p><a href={partner.website} target="_blank" rel="noopener noreferrer" aria-label={`Conhecer ${partner.name} (abre em nova aba)`}>{partner.action}<ArrowUpRight size={14} aria-hidden="true"/></a></div>
+        <div className="partner-copy"><span className="partner-badge"><Handshake size={13} aria-hidden="true"/>{partner.style === 'dd' ? 'Empresa em destaque' : 'Parceira do Aqui Guaíra'}</span><h3>{partner.headline}</h3><p>{partner.description}</p>{partner.website && partner.action && <a href={partner.website} target="_blank" rel="noopener noreferrer" aria-label={`Conhecer ${partner.name} (abre em nova aba)`}>{partner.action}<ArrowUpRight size={14} aria-hidden="true"/></a>}</div>
       </div>)}
     </div>
     <div className="partner-controls">
-      <div className="partner-tabs" aria-label="Selecionar empresa">{partners.map((partner, index) => <button type="button" key={partner.name} aria-label={`Mostrar ${partner.name}`} aria-current={index === active ? 'true' : undefined} onClick={() => selectPartner(index)}>{partner.name}</button>)}</div>
+      <div className="partner-tabs" aria-label="Selecionar empresa">{partners.map((partner, index) => <button type="button" key={partner.name} aria-label={`Mostrar ${partner.name}`} aria-current={index === active ? 'true' : undefined} onClick={() => selectPartner(index)}>{partner.tabLabel ?? partner.name}</button>)}</div>
       <div className="partner-arrows"><span className="partner-count" aria-hidden="true">{active + 1} / {partners.length}</span><button type="button" aria-label="Empresa anterior" onClick={() => selectPartner(active - 1)}><ChevronLeft size={16}/></button><button type="button" data-rotation-toggle aria-label={paused ? 'Iniciar alternância automática' : 'Pausar alternância automática'} onClick={() => setPaused(value => !value)}>{paused ? <Play size={13}/> : <Pause size={13}/>}</button><button type="button" aria-label="Próxima empresa" onClick={() => selectPartner(active + 1)}><ChevronRight size={16}/></button></div>
     </div>
   </section>;

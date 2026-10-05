@@ -31,6 +31,7 @@
 .portal-home .partner-slide[hidden]{display:none}
 .portal-home .partner-slide--allimport{--partner-bg:#171a1a;--partner-ink:#fff7e9;--partner-muted:#d2d4ca;--partner-accent:#ff8a38;--partner-button-ink:#1c211d}
 .portal-home .partner-slide--raval{--partner-bg:#07131c;--partner-ink:#f8ead0;--partner-muted:#cac5b8;--partner-accent:#e5c277;--partner-button-ink:#172721}
+.portal-home .partner-slide--dd{--partner-bg:#f4eee3;--partner-ink:#171916;--partner-muted:#4f584d}
 .portal-home .partner-logo{height:100%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 10px}
 .portal-home .partner-logo img{display:block;width:100%;height:156px;object-fit:contain}
 .portal-home .partner-slide--acig .partner-logo{background:#fff}
@@ -38,6 +39,7 @@
 .portal-home .partner-acig-name{font-size:18px;letter-spacing:.16em;font-weight:700;color:#285339;margin-top:2px}
 .portal-home .partner-slide--allimport .partner-logo{background:#101010}
 .portal-home .partner-slide--raval .partner-logo{background:#000}
+.portal-home .partner-slide--dd .partner-logo{background:#fff}
 .portal-home .partner-copy{min-width:0;padding:14px 19px}
 .portal-home .partner-badge{display:flex;align-items:center;gap:5px;color:var(--partner-muted);font-size:9px;font-weight:600;line-height:1.4;letter-spacing:.025em}
 .portal-home .partner-badge svg{flex:none}
