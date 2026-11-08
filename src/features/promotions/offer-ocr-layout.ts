@@ -208,7 +208,7 @@ export async function promotionalTags(
   readCaption: (crop: HTMLCanvasElement) => Promise<string>,
 ) {
   const previous = new Set<Tag>();
-  const current = new Set<Tag>();
+  const current = new Map<Tag, Tag>();
   const unresolved = new Set<Tag>();
   for (const upper of tags) {
     if (unresolved.has(upper) || current.has(upper) || upper.whole.y0 < height(upper.box) * 0.2) continue;
@@ -245,7 +245,7 @@ export async function promotionalTags(
     const cheaper = oldPrice !== null && newPrice !== null && newPrice < oldPrice;
     if (before === "de" && (after === "por" || (after === null && cheaper))) {
       previous.add(upper);
-      current.add(lower);
+      current.set(lower, upper);
     } else {
       unresolved.add(upper);
       unresolved.add(lower);
@@ -370,13 +370,15 @@ function captionLines(image: HTMLCanvasElement, box: Box) {
   return lines;
 }
 
-async function secondUnitDiscount(image: HTMLCanvasElement, tag: Tag, badges: Box[], readLine: ReadLine) {
-  const candidates = badges.filter(box => {
+function nearbyDiscountBadges(tag: Tag, badges: Box[]) {
+  return badges.filter(box => {
     const gap = tag.box.y0 - box.y1;
     return gap >= 0 && gap <= height(tag.box) * 1.4 && overlap(tag.box, box) >= -width(box) * 0.95;
   }).sort((a, b) => (tag.box.y0 - a.y1 - Math.min(0, overlap(tag.box, a))) -
     (tag.box.y0 - b.y1 - Math.min(0, overlap(tag.box, b))));
-  const badge = candidates[0];
+}
+
+async function readDiscountBadge(image: HTMLCanvasElement, badge: Box | undefined, readLine: ReadLine) {
   if (!badge) return null;
   const lines = captionLines(image, badge);
   const main = lines.reduce<Box | undefined>((tallest, line) => !tallest || height(line) > height(tallest) ? line : tallest, undefined);
@@ -401,11 +403,12 @@ async function secondUnitDiscount(image: HTMLCanvasElement, tag: Tag, badges: Bo
   const lowest = /MENOR\s+VALOR/.test(copy);
   const possibleLowest = /\bME[NM][OD0]\p{L}{1,2}\s*VA[L1I]O[RQ]\b/u.test(copy);
   const unitMention = /(?:NA\s*\S{0,4}\s*UNIDA\s*[DO]E|SEGUNDA\s+UNIDADE)\b/.test(copy);
+  const alreadyApplied = /\bJA\s+APLICAD[OA]\b/.test(copy);
   const uncertain = !second || !/%/.test(headline.text) || headline.confidence < 75 ||
     terms.some(term => term.every(value => !value)) || possibleLowest !== lowest ||
     (/PRODUTO|MENOR|VALOR/.test(copy) && !lowest);
   return {
-    percent: Number(percent[1]), second, lowest: lowest || possibleLowest, unitMention, uncertain,
+    percent: Number(percent[1]), second, lowest: lowest || possibleLowest, unitMention, uncertain, alreadyApplied,
     hasOtherTerms: terms.length > 2,
   };
 }
@@ -502,9 +505,10 @@ export async function spatialOffers(
     const ambiguousPrice = new Set(amounts.map(entry => entry.price)).size > 1;
     if (ambiguousPrice) notes.push("Há mais de um preço perto deste produto. Confira qual se aplica.");
     const extra = pairs.get(selected.tag);
+    const previous = markers.current.get(selected.tag);
     let conditions = "";
     if (extra && !ambiguousPrice) {
-      const discount = await secondUnitDiscount(image, extra, badges, readLine);
+      const discount = await readDiscountBadge(image, nearbyDiscountBadges(extra, badges)[0], readLine);
       let effectivePrice = prices.get(extra);
       if (!effectivePrice && discount) {
         const y = tags.indexOf(extra) * priceRowHeight;
@@ -531,6 +535,24 @@ export async function spatialOffers(
       } else {
         notes.push("Há um preço adicional na foto. Confira o desconto e as condições.");
       }
+    } else if (previous && !ambiguousPrice) {
+      const oldPrice = prices.get(previous);
+      const regular = parsePrice(oldPrice ?? "");
+      const current = parsePrice(selected.price);
+      let sawAppliedBadge = false;
+      // Um selo de um produto ao lado pode estar mais perto da etiqueta.
+      // Confirme o percentual com os preços impressos antes de associá-lo.
+      for (const badge of nearbyDiscountBadges(previous, badges).slice(0, 3)) {
+        const discount = await readDiscountBadge(image, badge, readLine);
+        if (!discount || discount.second || discount.unitMention) continue;
+        sawAppliedBadge ||= discount.alreadyApplied;
+        if (regular === null || current === null ||
+            Math.abs(current - regular * (1 - discount.percent / 100)) > 1) continue;
+        conditions = `${discount.percent}% de desconto já aplicado. De R$ ${oldPrice} por R$ ${selected.price}.`;
+        if (!discount.alreadyApplied) notes.push("Confira se o percentual de desconto já está aplicado no preço.");
+        break;
+      }
+      if (!conditions && sawAppliedBadge) notes.push("Confira se o percentual de desconto corresponde aos preços do encarte.");
     }
     offers.push({
       produto: product.slice(0, 120),
