@@ -16,6 +16,7 @@ const navigation = [
 ];
 const services = [
   ['Serviços', '/servicos-por-bairro'],
+  ['Ofertas dos mercados', '/ofertas'],
   ['Achados e Perdidos', '/achados-perdidos'], ['Farmácia de Plantão', '/farmacia-plantao'],
   ['Escolas e Creches', '/escolas-creches'], ['Sua Empresa', '/sua-empresa'],
   ['Sobre Guaíra', '/#sobre-guaira'],

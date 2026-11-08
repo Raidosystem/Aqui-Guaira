@@ -21,6 +21,7 @@ import {
     type Vaga
 } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import PublicMarketOffers from "@/features/promotions/PublicMarketOffers";
 
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -250,6 +251,7 @@ const PerfilEmpresa = () => {
 
                             {/* Grid de Conteúdo - Flow Vertical para maior largura individual */}
                             <div className="space-y-12">
+                                <PublicMarketOffers companyId={empresa.id} />
                                 {/* Seção Sobre */}
                                 <section className="max-w-4xl space-y-6">
                                     <div className="flex items-center gap-3">
