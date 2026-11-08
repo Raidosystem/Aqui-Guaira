@@ -1,6 +1,7 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, MapPin, Clock, AlertCircle, Building2, Stethoscope, Ambulance, ArrowLeft, Home, HeartPulse, Activity, Zap, Navigation, ExternalLink, ShieldCheck, Sparkles, Calendar, MessageSquare, Users, Star, Pill, Hospital, Siren, Mail, Globe, Instagram, Facebook, FolderHeart, Upload, FileText, Trash2, X, LogIn, Eye, Download, Loader2, Lock, Plus, FileCheck, ClipboardList, Receipt, FileWarning } from "lucide-react";
+import { Phone, MapPin, Clock, AlertCircle, Building2, Stethoscope, Ambulance, Home, HeartPulse, Activity, Zap, Navigation, ExternalLink, ShieldCheck, Sparkles, Calendar, MessageSquare, Users, Star, Pill, Hospital, Siren, Mail, Globe, Instagram, Facebook, FolderHeart, Upload, FileText, Trash2, X, LogIn, Eye, Download, Loader2, Lock, Plus, FileCheck, ClipboardList, Receipt, FileWarning } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -238,13 +239,7 @@ export default function SaudeNaPratica() {
             {/* Navegação */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
               <div className="flex gap-2">
-                <Button
-                  onClick={() => navigate(-1)}
-                  className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Voltar
-                </Button>
+                <PortalBackButton className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6" />
                 <Button
                   onClick={() => navigate('/')}
                   className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"

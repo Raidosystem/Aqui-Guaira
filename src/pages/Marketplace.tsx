@@ -1,3 +1,4 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 "use client"
 
 import { useState, useEffect } from "react";
@@ -8,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, Home, Package, ShoppingBag, Search, Tag, TrendingUp, Sparkles } from "lucide-react";
+import { MapPin, Home, Package, ShoppingBag, Search, Tag, TrendingUp, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface Category {
@@ -135,13 +136,7 @@ const Marketplace = () => {
             {/* Navegação e Botões de Ação */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-12">
               <div className="flex gap-2">
-                <Button
-                  onClick={() => navigate(-1)}
-                  className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Voltar
-                </Button>
+                <PortalBackButton className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6" />
                 <Button
                   onClick={() => navigate('/')}
                   className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"

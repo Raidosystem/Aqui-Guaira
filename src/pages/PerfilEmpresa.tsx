@@ -1,3 +1,4 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -5,7 +6,7 @@ import Footer from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Building2, Phone, Mail, Globe, Clipboard, Check, Loader2, ArrowLeft, Home, Heart, Instagram, Facebook, Briefcase } from "lucide-react";
+import { MapPin, Building2, Phone, Mail, Globe, Clipboard, Check, Loader2, Home, Heart, Instagram, Facebook, Briefcase } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { LoginDialog } from "@/components/LoginDialog";
 import {
@@ -166,13 +167,7 @@ const PerfilEmpresa = () => {
                     {/* Botões de Ação Superiores */}
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
                         <div className="flex gap-3">
-                            <Button
-                                onClick={() => navigate(-1)}
-                                className="gap-2 bg-primary hover:bg-primary/90 text-white rounded-xl px-6 font-bold shadow-lg transition-all hover:scale-105"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                Voltar
-                            </Button>
+                            <PortalBackButton className="gap-2 bg-primary hover:bg-primary/90 text-white rounded-xl px-6 font-bold shadow-lg transition-all hover:scale-105" />
                             <Button
                                 onClick={() => navigate('/')}
                                 variant="outline"

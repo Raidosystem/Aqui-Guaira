@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { PortalNavigationHistory } from "@/components/portal/PortalBackButton";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -84,36 +85,38 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <ScrollToTop />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {import.meta.env.DEV && <Route path="/inicio-original" element={<OriginalHome />} />}
-            <Route path="/mural" element={<Mural />} />
-            <Route path="/mural/meus-posts" element={<MeusPosts />} />
-            <Route path="/empresas" element={<Empresas />} />
-            <Route path="/meus-locais" element={<MeusLocais />} />
-            <Route path="/perfil-de-empresa" element={<PerfilEmpresa />} />
-            <Route path="/perfil-de-empresa/:slug" element={<PerfilEmpresa />} />
-            <Route path="/sua-empresa" element={<SuaEmpresa />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<Admin />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/ofertas" element={<Ofertas />} />
-            <Route path="/farmacia-plantao" element={<FarmaciaPlantao />} />
-            <Route path="/saude-na-pratica" element={<SaudeNaPratica />} />
-            <Route path="/servicos-por-bairro" element={<ServicosPorBairro />} />
-            <Route path="/aqui-resolve" element={<AquiResolve />} />
-            <Route path="/vagas-emprego" element={<Vagas />} />
-            <Route path="/achados-perdidos" element={<AchadosPerdidos />} />
-            <Route path="/pets-perdidos" element={<PetsPerdidos />} />
-            <Route path="/painel-cidade" element={<PainelCidade />} />
-            <Route path="/escolas-creches" element={<EscolasCreches />} />
-            <Route path="/ocorrencias" element={<Ocorrencias />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <AuthStateListener />
+          <PortalNavigationHistory>
+            <ScrollToTop />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              {import.meta.env.DEV && <Route path="/inicio-original" element={<OriginalHome />} />}
+              <Route path="/mural" element={<Mural />} />
+              <Route path="/mural/meus-posts" element={<MeusPosts />} />
+              <Route path="/empresas" element={<Empresas />} />
+              <Route path="/meus-locais" element={<MeusLocais />} />
+              <Route path="/perfil-de-empresa" element={<PerfilEmpresa />} />
+              <Route path="/perfil-de-empresa/:slug" element={<PerfilEmpresa />} />
+              <Route path="/sua-empresa" element={<SuaEmpresa />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<Admin />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/ofertas" element={<Ofertas />} />
+              <Route path="/farmacia-plantao" element={<FarmaciaPlantao />} />
+              <Route path="/saude-na-pratica" element={<SaudeNaPratica />} />
+              <Route path="/servicos-por-bairro" element={<ServicosPorBairro />} />
+              <Route path="/aqui-resolve" element={<AquiResolve />} />
+              <Route path="/vagas-emprego" element={<Vagas />} />
+              <Route path="/achados-perdidos" element={<AchadosPerdidos />} />
+              <Route path="/pets-perdidos" element={<PetsPerdidos />} />
+              <Route path="/painel-cidade" element={<PainelCidade />} />
+              <Route path="/escolas-creches" element={<EscolasCreches />} />
+              <Route path="/ocorrencias" element={<Ocorrencias />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <AuthStateListener />
+          </PortalNavigationHistory>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

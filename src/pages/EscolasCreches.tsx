@@ -1,3 +1,4 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from "@/components/Header";
@@ -9,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ArrowLeft,
   Home,
   Phone,
   MapPin,
@@ -127,13 +127,7 @@ const EscolasCreches = () => {
             {/* Navegação */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
               <div className="flex gap-2">
-                <Button
-                  onClick={() => navigate(-1)}
-                  className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Voltar
-                </Button>
+                <PortalBackButton className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6" />
                 <Button
                   onClick={() => navigate('/')}
                   className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"

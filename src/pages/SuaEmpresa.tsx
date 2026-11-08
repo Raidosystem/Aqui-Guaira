@@ -1,3 +1,4 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -13,7 +14,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/sonner";
-import { Building2, ArrowLeft, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2, Home } from "lucide-react";
+import { Building2, Lock, PlusCircle, UploadCloud, Image as ImageIcon, X, Loader2, Home } from "lucide-react";
 import { criarEmpresa, uploadImagens, buscarEmpresas, buscarEmpresaPorId, supabase } from "@/lib/supabase";
 import { BAIRROS_GUAIRA } from "@/data/bairros";
 import categoriasData from "@/data/categorias-empresas.json";
@@ -877,13 +878,7 @@ const SuaEmpresa = () => {
         <div className="container mx-auto px-4 py-12 relative space-y-10">
           {/* Botões de Navegação */}
           <div className="flex gap-2 mb-6">
-            <Button
-              onClick={() => navigate(-1)}
-              className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar
-            </Button>
+            <PortalBackButton className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6" />
             <Button
               onClick={() => navigate('/')}
               className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"

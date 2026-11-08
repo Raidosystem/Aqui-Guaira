@@ -1,3 +1,4 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -612,13 +613,7 @@ export default function ServicosPorBairro() {
           {/* Global Breadcrumb / Nav */}
           {!bairroSelecionado && (
             <div className="flex gap-2">
-              <Button
-                onClick={() => navigate(-1)}
-                className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-6"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </Button>
+              <PortalBackButton className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-6" />
               <Button
                 onClick={() => navigate('/')}
                 className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"

@@ -1,3 +1,4 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, MapPin, Calendar, Phone, AlertTriangle, ArrowLeft, Home, Loader2, X, ImagePlus, User, Tag, Clock, CheckCircle, XCircle, ShieldAlert, Zap, Droplets, TreePine, Car, Volume2, Trash2, Construction, HelpCircle, LogIn, Shield, LogOut } from "lucide-react";
+import { Search, PlusCircle, MapPin, Calendar, Phone, AlertTriangle, Home, Loader2, X, ImagePlus, User, Tag, Clock, CheckCircle, XCircle, ShieldAlert, Zap, Droplets, TreePine, Car, Volume2, Trash2, Construction, HelpCircle, LogIn, Shield, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -249,13 +250,7 @@ export default function Ocorrencias() {
             {/* Navegação */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-12">
               <div className="flex gap-2">
-                <Button
-                  onClick={() => navigate(-1)}
-                  className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Voltar
-                </Button>
+                <PortalBackButton className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6" />
                 <Button
                   onClick={() => navigate('/')}
                   className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6"

@@ -1,3 +1,4 @@
+import { PortalBackButton } from "@/components/portal/PortalBackButton";
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ImagePlus, PlusCircle, Send, Loader2, X, Clock, CheckCircle2, MapPin, ArrowLeft, Home, Sparkles, MessageSquare, TrendingUp, Trash } from "lucide-react";
+import { ImagePlus, PlusCircle, Send, Loader2, X, Clock, CheckCircle2, MapPin, Home, Sparkles, MessageSquare, TrendingUp, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { LoginDialog } from "@/components/LoginDialog";
 import { useNavigate } from "react-router-dom";
@@ -260,9 +261,7 @@ const Mural = () => {
           <div className="container mx-auto px-4 relative z-10">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-12">
               <div className="flex gap-2">
-                <Button onClick={() => navigate(-1)} className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6">
-                  <ArrowLeft className="w-4 h-4" /> Voltar
-                </Button>
+                <PortalBackButton className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6" />
                 <Button onClick={() => navigate('/')} className="gap-2 bg-green-500 hover:bg-green-600 text-white rounded-lg px-6">
                   <Home className="w-4 h-4" /> Início
                 </Button>
